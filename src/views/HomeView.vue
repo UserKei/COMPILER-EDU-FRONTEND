@@ -1,7 +1,11 @@
-<script setup lang="ts">
-</script>
-
 <template>
-  <main>
+  <main class="h-screen w-full">
+    <div class="h-full">
+      <VueFlowContainer />
+    </div>
   </main>
 </template>
+
+<script setup lang="ts">
+import VueFlowContainer from '@/components/VueFlowContainer.vue'
+</script>
