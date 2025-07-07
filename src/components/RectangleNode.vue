@@ -22,7 +22,8 @@
           @keyup.escape="cancelEditing"
         />
         <div v-else class="text-center">
-          {{ nodeText || id }}
+          <span v-if="nodeText" class="text-gray-700">{{ nodeText }}</span>
+          <span v-else class="text-gray-400 italic">Start typing...</span>
         </div>
       </div>
     </div>
@@ -108,7 +109,7 @@ const originalText = ref('')
 
 // 节点文本，同步到 data.text
 const nodeText = computed({
-  get: () => props.data.text || props.data.label || '',
+  get: () => props.data.text || '',
   set: (value: string) => {
     updateNode(props.id, {
       data: { ...props.data, text: value }
@@ -124,17 +125,17 @@ const isSelected = computed(() => {
 
 // 处理节点点击事件
 const handleNodeClick = (event: MouseEvent) => {
-  event.stopPropagation()
-
   if (isEditing.value) {
-    return // 编辑状态下不处理点击
+    event.stopPropagation()
+    return // 编辑状态下阻止所有点击事件
   }
 
   // 如果节点已经被选中，再次点击进入编辑模式
   if (isSelected.value) {
+    event.stopPropagation()
     enterEditMode()
   }
-  // 如果节点未被选中，第一次点击会由 Vue Flow 自动处理选中逻辑
+  // 如果节点未被选中，不阻止事件，让 Vue Flow 处理选中逻辑
 }
 
 // 进入编辑模式
@@ -176,6 +177,7 @@ watch(isSelected, (newSelected) => {
   border: none !important;
   width: 16px !important;
   height: 16px !important;
+  pointer-events: auto !important;
 }
 
 /* 右上角Handle样式 - 未选中状态 */

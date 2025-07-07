@@ -13,7 +13,7 @@
       }"
     />
 
-    <!-- Label on curve - draggable to control shape -->
+    <!-- Label on curve - draggable to control shape, clickable to edit -->
     <EdgeLabelRenderer>
       <div
         ref="labelRef"
@@ -22,31 +22,42 @@
           position: 'absolute',
           transform: `translate(-50%, -50%) translate(${labelPosition.x}px, ${labelPosition.y}px)`,
           zIndex: 1000,
-          cursor: 'move'
+          cursor: isDragging ? 'move' : (isEditing ? 'text' : (selected ? 'pointer' : 'pointer'))
         }"
-        class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-medium shadow-sm select-none"
+        class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-medium shadow-sm select-none transition-all duration-200"
         :class="{
-          'border-blue-500 text-blue-700 shadow-md': selected,
-          'text-gray-700': !selected
+          'border-blue-500 text-blue-700 shadow-md bg-blue-50': selected && !isEditing,
+          'border-purple-500 text-purple-700 shadow-md bg-purple-50': isEditing,
+          'text-gray-700 hover:border-gray-400': !selected && !isEditing
         }"
         @mousedown="onLabelMouseDown"
+        @click="onLabelClick"
       >
-        <slot name="label" :data="data">
-          <span>{{ data?.label || '' }}</span>
-        </slot>
+        <input
+          v-if="isEditing"
+          ref="inputRef"
+          v-model="labelText"
+          class="w-20 text-center bg-transparent border-none outline-none text-xs"
+          @blur="finishEditing"
+          @keyup.enter="finishEditing"
+          @keyup.escape="cancelEditing"
+          @mousedown.stop
+        />
+        <span v-else>{{ labelText || (selected ? 'Click to edit' : 'Label') }}</span>
       </div>
     </EdgeLabelRenderer>
   </g>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
-import { BaseEdge, EdgeLabelRenderer, useVueFlow, type EdgeProps } from '@vue-flow/core'
+import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
+import { BaseEdge, EdgeLabelRenderer, useVueFlow, type EdgeProps, type Edge } from '@vue-flow/core'
 
 interface EdgeData {
   label?: string
   controlOffset?: { x: number; y: number } // Offset from default control point
   labelT?: number // Position on curve (0-1), default 0.5
+  isEditing?: boolean // 新增：是否处于编辑状态
   [key: string]: any
 }
 
@@ -62,10 +73,93 @@ const emit = defineEmits<{
   'update:data': [data: EdgeData]
 }>()
 
-const { getSelectedEdges, getNode } = useVueFlow()
+const { getSelectedEdges, getNode, getEdges, addSelectedElements, removeSelectedElements } = useVueFlow()
 
 const labelRef = ref<HTMLElement>()
+const inputRef = ref<HTMLInputElement>()
 const isDragging = ref(false)
+const isEditing = ref(false)
+const originalText = ref('')
+
+// 更新边数据的函数
+const updateEdgeData = (newData: Partial<EdgeData>) => {
+  const edges = getEdges.value
+  const edgeIndex = edges.findIndex(edge => edge.id === props.id)
+
+  if (edgeIndex !== -1) {
+    edges[edgeIndex].data = { ...edges[edgeIndex].data, ...newData }
+  }
+}
+
+// 标签文本，同步到 data.label
+const labelText = computed({
+  get: () => props.data?.label || '',
+  set: (value: string) => {
+    updateEdgeData({ label: value })
+  }
+})
+
+// 进入编辑模式
+const enterEditMode = async () => {
+  isEditing.value = true
+  originalText.value = labelText.value
+
+  await nextTick()
+  if (inputRef.value) {
+    inputRef.value.focus()
+    inputRef.value.select()
+  }
+}
+
+// 监听 data.isEditing 变化
+watch(() => props.data?.isEditing, (newEditing) => {
+  if (newEditing && !isEditing.value) {
+    enterEditMode()
+  }
+}, { immediate: true })
+
+// 完成编辑
+const finishEditing = () => {
+  isEditing.value = false
+  // 清除编辑状态标记
+  updateEdgeData({ isEditing: false })
+}
+
+// 取消编辑
+const cancelEditing = () => {
+  labelText.value = originalText.value
+  isEditing.value = false
+  // 清除编辑状态标记
+  updateEdgeData({ isEditing: false })
+}
+
+// 处理标签点击 - 实现和节点相同的选中/编辑逻辑
+const onLabelClick = (event: MouseEvent) => {
+  if (isDragging.value) {
+    return // 拖拽状态下不处理点击
+  }
+
+  if (isEditing.value) {
+    event.stopPropagation()
+    return // 编辑状态下阻止所有点击事件
+  }
+
+  // 阻止事件冒泡，我们手动处理选中逻辑
+  event.stopPropagation()
+
+  // 如果边已经被选中，再次点击进入编辑模式
+  if (props.selected) {
+    enterEditMode()
+  } else {
+    // 如果边未被选中，手动选中它
+    const currentEdge = getEdges.value.find(edge => edge.id === props.id)
+    if (currentEdge) {
+      // 清除其他选中的元素，只选中当前边
+      removeSelectedElements()
+      addSelectedElements([currentEdge])
+    }
+  }
+}
 
 // 组件销毁时清理拖拽事件监听器
 onUnmounted(() => {
@@ -411,10 +505,9 @@ const onLabelMouseDown = (event: MouseEvent) => {
 
     // Persist to edge data when drag ends
     const newData = {
-      ...props.data,
       controlOffset: { ...controlOffset.value }
     }
-    emit('update:data', newData)
+    updateEdgeData(newData)
   }
 
   document.addEventListener('mousemove', onMouseMove)

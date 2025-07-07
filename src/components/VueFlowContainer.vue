@@ -8,6 +8,8 @@
       :default-viewport="{ zoom: 1 }"
       :min-zoom="0.2"
       :max-zoom="4"
+      :connect-on-click="false"
+      :nodes-connectable="true"
       fit-view-on-init
       class="vue-flow"
       @connect="onConnect"
@@ -105,22 +107,22 @@ const initialNodes: Node[] = [
 ]
 
 const initialEdges: Edge[] = [
-  // 只保留 label 为 "c" 的边进行调试
+  // 测试用的边，使用正确的Handle ID
   {
     id: 'e2-4',
     type: 'custom',
     source: '2',
     target: '4',
-    sourceHandle: 'node-bottom',
-    targetHandle: 'node-top-target',
-    data: { label: 'c' },
+    sourceHandle: 'center-source',
+    targetHandle: 'center-target',
+    data: { label: 'test' },
   },
 ]
 
 // Manage nodes and edges separately (recommended approach)
 const nodes = ref<Node[]>([...initialNodes])
 const edges = ref<Edge[]>([...initialEdges])
-const showDebug = ref(true)
+const showDebug = ref(false)
 
 const { getSelectedNodes, getSelectedEdges, removeEdges, onEdgesChange, updateEdge } = useVueFlow()
 
@@ -185,19 +187,27 @@ const selectedElements = computed(() => [...getSelectedNodes.value, ...getSelect
 
 // Event handlers
 const onConnect = (connection: Connection) => {
-  console.log('Connection created:', connection)
+  console.log('Connection attempt:', connection)
+  console.log('Source handle:', connection.sourceHandle)
+  console.log('Target handle:', connection.targetHandle)
 
   // 事件拦截：将交互Handle的连接转换为中心Handle
   let sourceHandle = connection.sourceHandle
   let targetHandle = connection.targetHandle
 
+  console.log('Before mapping - Source:', sourceHandle, 'Target:', targetHandle)
+
   // 如果连接来自交互Handle，转换为中心Handle
   if (sourceHandle === 'top-right') {
     sourceHandle = 'center-source'
+    console.log('Mapped source handle to center-source')
   }
   if (targetHandle === 'top-right-target') {
     targetHandle = 'center-target'
+    console.log('Mapped target handle to center-target')
   }
+
+  console.log('After mapping - Source:', sourceHandle, 'Target:', targetHandle)
 
   // 生成真正唯一的边 ID，包含时间戳和随机数
   const uniqueId = `e${connection.source}-${connection.target}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
@@ -220,10 +230,11 @@ const onConnect = (connection: Connection) => {
     sourceHandle: sourceHandle || 'center-source',
     targetHandle: targetHandle || 'center-target',
     data: {
-      label: 'new',
+      label: '',
       // 确保所有自定义数据字段都是全新的
       controlOffset: undefined,
-      labelT: undefined
+      labelT: undefined,
+      isEditing: true // 新建边自动进入编辑模式
     },
   }
 
