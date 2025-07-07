@@ -241,8 +241,18 @@ const onConnect = (connection: Connection) => {
   // 清理可能存在的旧数据（虽然ID是唯一的，但保险起见）
   edgeDataStore.value.delete(finalId)
 
+  // 确保所有现有边都退出编辑模式
+  edges.value.forEach(edge => {
+    if (edge.data?.isEditing) {
+      edge.data.isEditing = false
+    }
+  })
+
   edges.value.push(newEdge)
   console.log(`Created new edge with unique ID: ${finalId}`, newEdge)
+  console.log(`Total edges after creation: ${edges.value.length}`)
+  console.log(`New edge data:`, newEdge.data)
+  console.log(`New edge isEditing:`, newEdge.data.isEditing)
 }
 
 const onNodeClick = (event: any) => {

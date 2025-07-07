@@ -45,10 +45,14 @@
             @mousedown.stop
           />
           <span
-            :class="{ 'opacity-0': isEditing }"
+            :class="{
+              'opacity-0': isEditing,
+              'text-gray-500 italic': !labelText, // 占位符样式，和node保持一致
+              'text-gray-700': labelText // 有内容时的正常样式
+            }"
             class="text-xs"
           >
-            {{ labelText || (selected ? 'Click to edit' : 'Label') }}
+            {{ labelText || 'Click to edit' }}
           </span>
         </div>
       </div>
@@ -57,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
+import { computed, ref, watch, onUnmounted, onMounted, nextTick } from 'vue'
 import { BaseEdge, EdgeLabelRenderer, useVueFlow, type EdgeProps, type Edge } from '@vue-flow/core'
 
 interface EdgeData {
@@ -82,19 +86,29 @@ const emit = defineEmits<{
 
 const { getSelectedEdges, getNode, getEdges, addSelectedElements, removeSelectedElements } = useVueFlow()
 
+// 组件初始化时的调试信息
+console.log(`Edge ${props.id} component initialized with data:`, props.data)
+console.log(`Initial isEditing state:`, props.data?.isEditing)
+
 const labelRef = ref<HTMLElement>()
 const inputRef = ref<HTMLInputElement>()
 const isDragging = ref(false)
 const isEditing = ref(false)
 const originalText = ref('')
 
-// 更新边数据的函数
+// 组件唯一标识符，用于防止状态污染
+const componentId = ref(`edge-${props.id}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`)
+
+// 更新边数据的函数 - 使用更安全的方式避免影响其他边
 const updateEdgeData = (newData: Partial<EdgeData>) => {
   const edges = getEdges.value
   const edgeIndex = edges.findIndex(edge => edge.id === props.id)
 
   if (edgeIndex !== -1) {
-    edges[edgeIndex].data = { ...edges[edgeIndex].data, ...newData }
+    // 只更新当前边的数据，避免创建新的引用影响其他边
+    const currentEdge = edges[edgeIndex]
+    Object.assign(currentEdge.data, newData)
+    console.log(`Updated edge ${props.id} data:`, newData)
   }
 }
 
@@ -108,6 +122,12 @@ const labelText = computed({
 
 // 进入编辑模式
 const enterEditMode = async () => {
+  if (isEditing.value) {
+    console.log(`Edge ${props.id} already in edit mode, skipping`)
+    return // 如果已经在编辑模式，不要重复进入
+  }
+
+  console.log(`Edge ${props.id} entering edit mode`)
   isEditing.value = true
   originalText.value = labelText.value
 
@@ -118,26 +138,41 @@ const enterEditMode = async () => {
   }
 }
 
-// 监听 data.isEditing 变化
-watch(() => props.data?.isEditing, (newEditing) => {
-  if (newEditing && !isEditing.value) {
+// 监听 data.isEditing 变化，但只对当前边生效
+watch(() => props.data?.isEditing, (newEditing, oldEditing) => {
+  console.log(`Edge ${props.id} (${componentId.value}) watch data.isEditing: ${oldEditing} -> ${newEditing}, local isEditing: ${isEditing.value}`)
+
+  // 简化条件：如果 data.isEditing 为 true 且本地不在编辑状态，就进入编辑
+  if (newEditing === true && !isEditing.value) {
+    console.log(`Edge ${props.id} (${componentId.value}) will enter edit mode`)
     enterEditMode()
+  } else if (newEditing === false && isEditing.value) {
+    // 如果外部强制设置为 false，也要响应
+    console.log(`Edge ${props.id} (${componentId.value}) forced to exit edit mode`)
+    isEditing.value = false
   }
-}, { immediate: true })
+}, { immediate: true }) // 改为 immediate: true，确保初始化时也会检查
+
+// 监听本地编辑状态，清理 data.isEditing 标记
+watch(isEditing, (newEditing) => {
+  if (!newEditing && props.data?.isEditing) {
+    // 当本地编辑状态变为 false 时，清除 data 中的 isEditing 标记
+    console.log(`Edge ${props.id} clearing isEditing flag`)
+    updateEdgeData({ isEditing: false })
+  }
+})
 
 // 完成编辑
 const finishEditing = () => {
   isEditing.value = false
-  // 清除编辑状态标记
-  updateEdgeData({ isEditing: false })
+  // isEditing 的清理现在由 watch 处理
 }
 
 // 取消编辑
 const cancelEditing = () => {
   labelText.value = originalText.value
   isEditing.value = false
-  // 清除编辑状态标记
-  updateEdgeData({ isEditing: false })
+  // isEditing 的清理现在由 watch 处理
 }
 
 // 处理标签点击 - 实现和节点相同的选中/编辑逻辑
@@ -168,12 +203,34 @@ const onLabelClick = (event: MouseEvent) => {
   }
 }
 
-// 组件销毁时清理拖拽事件监听器
+// 组件销毁时清理拖拽事件监听器和编辑状态
 onUnmounted(() => {
+  console.log(`Edge ${props.id} (${componentId.value}) component unmounting`)
+
+  // 清理拖拽状态
   if (isDragging.value) {
     isDragging.value = false
     document.removeEventListener('mousemove', () => {})
     document.removeEventListener('mouseup', () => {})
+  }
+
+  // 清理编辑状态
+  if (isEditing.value) {
+    isEditing.value = false
+  }
+})
+
+// 组件挂载后检查是否需要进入编辑模式
+onMounted(() => {
+  console.log(`Edge ${props.id} mounted. Data:`, props.data)
+  console.log(`Should enter edit mode:`, props.data?.isEditing)
+
+  // 如果数据指示应该编辑，但本地状态不是编辑状态，则进入编辑
+  if (props.data?.isEditing === true && !isEditing.value) {
+    console.log(`Edge ${props.id} entering edit mode on mount`)
+    nextTick(() => {
+      enterEditMode()
+    })
   }
 })
 
@@ -308,10 +365,17 @@ const controlOffset = ref({ x: 0, y: 0 })
 watch(
   () => props.id,
   (newId, oldId) => {
-    if (newId !== oldId) {
-      // 边ID变化时，重置控制点偏移
+    if (newId !== oldId && oldId !== undefined) {
+      // 只有当oldId不是undefined时才重置（避免组件初始化时的重置）
       controlOffset.value = props.data?.controlOffset || { x: 0, y: 0 }
-      console.log(`Edge ID changed from ${oldId} to ${newId}, reset control offset`)
+      // 不重置编辑状态，让其他逻辑处理
+      componentId.value = `edge-${newId}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+      console.log(`Edge ID changed from ${oldId} to ${newId}, reset control offset only`)
+    } else if (oldId === undefined) {
+      // 初始化时只更新componentId和controlOffset，不影响编辑状态
+      controlOffset.value = props.data?.controlOffset || { x: 0, y: 0 }
+      componentId.value = `edge-${newId}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+      console.log(`Edge ID initialized to ${newId}`)
     }
   },
   { immediate: true }
@@ -520,4 +584,8 @@ const onLabelMouseDown = (event: MouseEvent) => {
   document.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mouseup', onMouseUp)
 }
+
+// 组件初始化时的调试信息
+console.log(`Edge ${props.id} component initialized with data:`, props.data)
+console.log(`Initial isEditing state:`, props.data?.isEditing)
 </script>
