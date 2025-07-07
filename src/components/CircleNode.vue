@@ -12,18 +12,22 @@
     <!-- Node Content -->
     <div class="relative z-10" :class="{ 'pointer-events-none': !isEditing }">
       <div class="flex items-center justify-center text-sm font-medium text-gray-700">
-        <input
-          v-if="isEditing"
-          ref="inputRef"
-          v-model="nodeText"
-          class="w-16 text-center bg-transparent border-none outline-none text-sm"
-          @blur="finishEditing"
-          @keyup.enter="finishEditing"
-          @keyup.escape="cancelEditing"
-        />
-        <div v-else class="text-center">
-          <span v-if="nodeText" class="text-gray-700">{{ nodeText }}</span>
-          <span v-else class="text-gray-400 italic text-xs">Start typing...</span>
+        <div class="text-center relative">
+          <input
+            v-if="isEditing"
+            ref="inputRef"
+            v-model="nodeText"
+            class="text-center bg-transparent border-none outline-none text-sm absolute inset-0 w-full"
+            @blur="finishEditing"
+            @keyup.enter="finishEditing"
+            @keyup.escape="cancelEditing"
+          />
+          <span
+            :class="{ 'opacity-0': isEditing }"
+            class="text-gray-700 text-xs"
+          >
+            {{ nodeText || 'Start typing...' }}
+          </span>
         </div>
       </div>
     </div>
@@ -95,8 +99,13 @@ const inputRef = ref<HTMLInputElement>()
 const isEditing = ref(false)
 const originalText = ref('')
 
-// 计算节点尺寸和Handle偏移
-const nodeSize = computed(() => props.data.size || 96) // 默认96px
+// 计算节点尺寸和Handle偏移 - 基于文本长度自适应
+const nodeSize = computed(() => {
+  const text = nodeText.value || 'Start typing...'
+  // 基于文本长度计算圆形大小，最小80px，最大160px
+  const baseSize = Math.max(80, Math.min(160, text.length * 10 + 60))
+  return props.data.size || baseSize
+})
 const handleOffset = computed(() => Math.round(nodeSize.value / 2 * 0.707)) // 45度角偏移
 
 // 动态样式

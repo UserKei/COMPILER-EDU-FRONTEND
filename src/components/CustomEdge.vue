@@ -33,17 +33,24 @@
         @mousedown="onLabelMouseDown"
         @click="onLabelClick"
       >
-        <input
-          v-if="isEditing"
-          ref="inputRef"
-          v-model="labelText"
-          class="w-20 text-center bg-transparent border-none outline-none text-xs"
-          @blur="finishEditing"
-          @keyup.enter="finishEditing"
-          @keyup.escape="cancelEditing"
-          @mousedown.stop
-        />
-        <span v-else>{{ labelText || (selected ? 'Click to edit' : 'Label') }}</span>
+        <div class="relative">
+          <input
+            v-if="isEditing"
+            ref="inputRef"
+            v-model="labelText"
+            class="text-center bg-transparent border-none outline-none text-xs absolute inset-0 w-full"
+            @blur="finishEditing"
+            @keyup.enter="finishEditing"
+            @keyup.escape="cancelEditing"
+            @mousedown.stop
+          />
+          <span
+            :class="{ 'opacity-0': isEditing }"
+            class="text-xs"
+          >
+            {{ labelText || (selected ? 'Click to edit' : 'Label') }}
+          </span>
+        </div>
       </div>
     </EdgeLabelRenderer>
   </g>

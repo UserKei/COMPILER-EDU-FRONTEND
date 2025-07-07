@@ -1,29 +1,34 @@
 <template>
   <div
     ref="nodeRef"
-    class="w-32 min-h-16 bg-white border-2 p-3 transition-all duration-200 relative cursor-default group hover:shadow-lg"
+    class="min-h-16 bg-white border-2 p-3 transition-all duration-200 relative cursor-default group hover:shadow-lg"
     :class="{
       'border-blue-500 ring-2 ring-blue-200': isSelected && !isEditing,
       'border-purple-500 ring-2 ring-purple-200 bg-purple-50': isEditing,
       'border-gray-300 hover:border-blue-400': !isSelected && !isEditing
     }"
     @click="handleNodeClick"
+    :style="{ width: dynamicWidth }"
   >
     <!-- Node Content -->
     <div class="relative z-10" :class="{ 'pointer-events-none': !isEditing }">
       <div class="flex items-center justify-center text-sm font-medium text-gray-700 min-h-8">
-        <input
-          v-if="isEditing"
-          ref="inputRef"
-          v-model="nodeText"
-          class="w-24 text-center bg-transparent border-none outline-none text-sm"
-          @blur="finishEditing"
-          @keyup.enter="finishEditing"
-          @keyup.escape="cancelEditing"
-        />
-        <div v-else class="text-center">
-          <span v-if="nodeText" class="text-gray-700">{{ nodeText }}</span>
-          <span v-else class="text-gray-400 italic">Start typing...</span>
+        <div class="text-center relative">
+          <input
+            v-if="isEditing"
+            ref="inputRef"
+            v-model="nodeText"
+            class="text-center bg-transparent border-none outline-none text-sm absolute inset-0 w-full"
+            @blur="finishEditing"
+            @keyup.enter="finishEditing"
+            @keyup.escape="cancelEditing"
+          />
+          <span
+            :class="{ 'opacity-0': isEditing }"
+            class="text-gray-700"
+          >
+            {{ nodeText || 'Start typing...' }}
+          </span>
         </div>
       </div>
     </div>
@@ -162,7 +167,15 @@ const cancelEditing = () => {
   isEditing.value = false
 }
 
-// 监听选中状态变化，当节点失去选中时退出编辑模式
+// 计算节点的动态宽度
+const dynamicWidth = computed(() => {
+  const text = nodeText.value || 'Start typing...'
+  // 基础宽度 + 字符数 * 每字符宽度，最小80px，最大240px
+  const width = Math.max(80, Math.min(240, text.length * 8 + 32))
+  return width + 'px'
+})
+
+// ...existing code...
 watch(isSelected, (newSelected) => {
   if (!newSelected && isEditing.value) {
     finishEditing()
