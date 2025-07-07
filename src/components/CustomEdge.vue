@@ -257,20 +257,123 @@ const getPointOnCurve = (t: number) => {
   }
 }
 
-// Label position on curve (at parameter t, default 0.5 = middle)
+// Label position on curve (at parameter t, default 0.5 = middle) - 基于中心计算
 const labelPosition = computed(() => {
+  const sourceNode = getNode.value(props.source)
+  const targetNode = getNode.value(props.target)
+
+  if (!sourceNode || !targetNode) {
+    // 降级处理
+    const t = props.data?.labelT || 0.5
+    return getPointOnCurve(t)
+  }
+
+  // 计算节点中心位置
+  const sourceRect = sourceNode.computedPosition || sourceNode.position
+  const targetRect = targetNode.computedPosition || targetNode.position
+
+  const sourceSize = sourceNode.dimensions || { width: 96, height: 64 }
+  const targetSize = targetNode.dimensions || { width: 96, height: 64 }
+
+  const sourceCenterX = sourceRect.x + sourceSize.width / 2
+  const sourceCenterY = sourceRect.y + sourceSize.height / 2
+  const targetCenterX = targetRect.x + targetSize.width / 2
+  const targetCenterY = targetRect.y + targetSize.height / 2
+
+  // 计算控制点
+  let controlX = (sourceCenterX + targetCenterX) / 2
+  let controlY = (sourceCenterY + targetCenterY) / 2
+
+  const offset = controlOffset.value
+  if (offset) {
+    controlX += offset.x
+    controlY += offset.y
+  }
+
+  // 在曲线上的位置（t=0.5为中点）
   const t = props.data?.labelT || 0.5
-  return getPointOnCurve(t)
+  const x = (1 - t) * (1 - t) * sourceCenterX + 2 * (1 - t) * t * controlX + t * t * targetCenterX
+  const y = (1 - t) * (1 - t) * sourceCenterY + 2 * (1 - t) * t * controlY + t * t * targetCenterY
+
+  return { x, y }
 })
 
-// Quadratic bezier path using control point
+// Quadratic bezier path using control point - 强制从节点中心绘制
 const edgePath = computed(() => {
-  const start = startPoint.value
-  const end = endPoint.value
-  const control = controlPoint.value
+  // 获取源和目标节点
+  const sourceNode = getNode.value(props.source)
+  const targetNode = getNode.value(props.target)
 
-  // Create quadratic bezier curve: M start Q control end
-  return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`
+  if (!sourceNode || !targetNode) {
+    // 降级处理，使用原始位置
+    const start = startPoint.value
+    const end = endPoint.value
+    const control = controlPoint.value
+    return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`
+  }
+
+  // 计算节点中心位置
+  const sourceRect = sourceNode.computedPosition || sourceNode.position
+  const targetRect = targetNode.computedPosition || targetNode.position
+
+  const sourceSize = sourceNode.dimensions || { width: 96, height: 64 }
+  const targetSize = targetNode.dimensions || { width: 96, height: 64 }
+
+  const sourceCenterX = sourceRect.x + sourceSize.width / 2
+  const sourceCenterY = sourceRect.y + sourceSize.height / 2
+  const targetCenterX = targetRect.x + targetSize.width / 2
+  const targetCenterY = targetRect.y + targetSize.height / 2
+
+  // 计算控制点（中点 + 偏移）
+  let controlX = (sourceCenterX + targetCenterX) / 2
+  let controlY = (sourceCenterY + targetCenterY) / 2
+
+  // 应用用户自定义偏移
+  const offset = controlOffset.value
+  if (offset) {
+    controlX += offset.x
+    controlY += offset.y
+  }
+
+  // 对于自环，特殊处理
+  if (props.source === props.target) {
+    const nodeInfo = getNodeInfo(props.source)
+    if (nodeInfo.type === 'circle') {
+      // 圆形自环
+      const radius = nodeInfo.radius
+      const startAngle = -Math.PI / 4
+      const endAngle = Math.PI / 4
+
+      const startX = sourceCenterX + radius * Math.cos(startAngle)
+      const startY = sourceCenterY + radius * Math.sin(startAngle)
+      const endX = sourceCenterX + radius * Math.cos(endAngle)
+      const endY = sourceCenterY + radius * Math.sin(endAngle)
+
+      // 控制点在外侧
+      const controlX = sourceCenterX + radius * 2
+      const controlY = sourceCenterY
+
+      return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`
+    } else {
+      // 矩形自环
+      const halfWidth = nodeInfo.width / 2
+      const halfHeight = nodeInfo.height / 2
+
+      const startX = sourceCenterX + halfWidth
+      const startY = sourceCenterY - halfHeight / 2
+      const endX = sourceCenterX + halfWidth
+      const endY = sourceCenterY + halfHeight / 2
+
+      // 控制点在右侧外面
+      const controlX = sourceCenterX + halfWidth + 60
+      const controlY = sourceCenterY
+
+      return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`
+    }
+  }
+
+  // 普通连线，从中心到中心
+  return `M ${sourceCenterX} ${sourceCenterY} Q ${controlX} ${controlY} ${targetCenterX} ${targetCenterY}`
 })
 
 // Edge style
