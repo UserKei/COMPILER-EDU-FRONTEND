@@ -1,9 +1,10 @@
 <template>
   <div
-    class="circle-node bg-white border-2 border-gray-300 rounded-full flex items-center justify-center transition-all duration-200 relative cursor-default group hover:border-blue-400 hover:shadow-lg"
+    class="circle-node bg-white border-2 rounded-full flex items-center justify-center transition-all duration-200 relative cursor-default group hover:shadow-lg"
     :class="{
-      'ring-2 ring-blue-500': isSelected,
-      'ring-4 ring-purple-500': isEditing
+      'border-blue-500 ring-2 ring-blue-200': isSelected && !isEditing,
+      'border-purple-500 ring-2 ring-purple-200 bg-purple-50': isEditing,
+      'border-gray-300 hover:border-blue-400': !isSelected && !isEditing
     }"
     @click="handleNodeClick"
     :style="nodeStyle"
@@ -15,7 +16,7 @@
           v-if="isEditing"
           ref="inputRef"
           v-model="nodeText"
-          class="w-full text-center bg-transparent border-none outline-none"
+          class="w-16 text-center bg-transparent border-none outline-none text-sm"
           @blur="finishEditing"
           @keyup.enter="finishEditing"
           @keyup.escape="cancelEditing"
@@ -119,9 +120,6 @@ const isSelected = computed(() => {
   return selectedNodes.some(node => node.id === props.id)
 })
 
-// 双击计时器
-let clickTimer: number | null = null
-
 // 处理节点点击事件
 const handleNodeClick = (event: MouseEvent) => {
   event.stopPropagation()
@@ -130,21 +128,11 @@ const handleNodeClick = (event: MouseEvent) => {
     return // 编辑状态下不处理点击
   }
 
-  if (clickTimer) {
-    // 双击：进入编辑模式
-    clearTimeout(clickTimer)
-    clickTimer = null
-
-    if (isSelected.value) {
-      enterEditMode()
-    }
-  } else {
-    // 单击：选中节点
-    clickTimer = setTimeout(() => {
-      clickTimer = null
-      // 单击逻辑由 Vue Flow 处理
-    }, 300)
+  // 如果节点已经被选中，再次点击进入编辑模式
+  if (isSelected.value) {
+    enterEditMode()
   }
+  // 如果节点未被选中，第一次点击会由 Vue Flow 自动处理选中逻辑
 }
 
 // 进入编辑模式
