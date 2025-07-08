@@ -9,6 +9,11 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
     },
+    {
+      path: '/canvas-demo',
+      name: 'canvas-demo',
+      component: () => import('../views/CanvasDemo.vue'),
+    },
     // {
     //   path: '/about',
     //   name: 'about',
