@@ -63,9 +63,9 @@ import { ref, computed, markRaw, watch } from 'vue'
 import { VueFlow, useVueFlow, type Node, type Edge, type Connection } from '@vue-flow/core'
 import { Controls } from '@vue-flow/controls'
 import { Background } from '@vue-flow/background'
-import RectangleNode from './RectangleNode.vue'
-import CircleNode from './CircleNode.vue'
-import CustomEdge from './CustomEdge.vue'
+import RectangleNode from '../flow/nodes/RectangleNode.vue'
+import CircleNode from '../flow/nodes/CircleNode.vue'
+import CustomEdge from '../flow/edges/CustomEdge.vue'
 
 // Define custom node and edge types
 const nodeTypes = {

@@ -7,5 +7,5 @@
 </template>
 
 <script setup lang="ts">
-import VueFlowContainer from '@/components/VueFlowContainer.vue'
+import VueFlowContainer from '@/components/dev/VueFlowContainer.vue'
 </script>
