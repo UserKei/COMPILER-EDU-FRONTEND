@@ -1,6 +1,12 @@
 <template>
   <div
-    class="circle-node bg-white border-2 rounded-full flex items-center justify-center transition-all duration-200 relative cursor-default group hover:shadow-lg"
+    class="
+      bg-white border-2 rounded-full
+      flex items-center justify-center
+      transition-all duration-200
+      relative cursor-default group
+      hover:shadow-lg
+    "
     :class="{
       'border-blue-500 ring-2 ring-blue-200': isSelected && !isEditing,
       'border-purple-500 ring-2 ring-purple-200 bg-purple-50': isEditing,
@@ -11,22 +17,37 @@
   >
     <!-- Node Content -->
     <div class="relative z-10" :class="{ 'pointer-events-none': !isEditing }">
-      <div class="flex items-center justify-center text-sm font-medium text-gray-700">
+      <div class="
+        flex items-center justify-center
+        text-sm font-medium text-gray-700
+      ">
         <div class="text-center relative">
           <input
             v-if="isEditing"
             ref="inputRef"
             v-model="nodeText"
-            class="text-center bg-transparent border-none outline-none text-sm absolute inset-0 w-full"
+            class="
+              text-center bg-transparent
+              border-none outline-none
+              w-full
+              text-xs
+            "
             @blur="finishEditing"
             @keyup.enter="finishEditing"
             @keyup.escape="cancelEditing"
           />
           <span
-            :class="{ 'opacity-0': isEditing }"
-            class="text-gray-700 text-xs"
+            v-if="!isEditing"
+            :class="{
+              'italic opacity-50': !nodeText,
+              'opacity-100': nodeText
+            }"
+            class="
+              text-gray-700
+              text-xs text-center
+            "
           >
-            {{ nodeText || 'Start typing...' }}
+            {{ nodeText || 'Click' }}
           </span>
         </div>
       </div>
@@ -37,7 +58,12 @@
       id="top-right"
       type="source"
       :position="Position.Right"
-      class="handle-interactive handle-top-right"
+      class="
+        handle-interactive handle-top-right
+        !bg-transparent !border-0
+        !w-4 !h-4
+        !pointer-events-auto
+      "
       data-handleid="top-right"
     />
 
@@ -46,32 +72,27 @@
       id="top-right-target"
       type="target"
       :position="Position.Right"
-      class="handle-interactive handle-top-right"
+      class="
+        handle-interactive handle-top-right
+        !bg-transparent !border-0
+        !w-4 !h-4
+        !pointer-events-auto
+      "
       data-handleid="top-right-target"
     />
 
-    <!-- Hidden Central Handle (用于实际连线渲染，不可见) -->
+    <!-- Hidden Central Handles (用于实际连线渲染，不可见) -->
     <Handle
       id="center-source"
       type="source"
       :position="Position.Top"
-      class="!absolute !w-1 !h-1 !bg-transparent !border-none !opacity-0 !pointer-events-none"
-      :style="{
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)'
-      }"
+      class="center-handle"
     />
     <Handle
       id="center-target"
       type="target"
       :position="Position.Top"
-      class="!absolute !w-1 !h-1 !bg-transparent !border-none !opacity-0 !pointer-events-none"
-      :style="{
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)'
-      }"
+      class="center-handle"
     />
   </div>
 </template>
@@ -79,6 +100,9 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
 import { Handle, Position, useVueFlow, type NodeProps } from '@vue-flow/core'
+
+// 直接使用SVG字符串作为data URI
+const arrowIconDataUri = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="white" d="m11.93 5l2.83 2.83L5 17.59L6.42 19l9.76-9.75L19 12.07V5z"/></svg>')
 
 interface NodeData {
   label?: string
@@ -99,19 +123,31 @@ const inputRef = ref<HTMLInputElement>()
 const isEditing = ref(false)
 const originalText = ref('')
 
-// 计算节点尺寸和Handle偏移 - 基于文本长度自适应
+// 计算节点尺寸和Handle偏移 - 针对DFA状态节点优化
 const nodeSize = computed(() => {
-  const text = nodeText.value || 'Start typing...'
-  // 基于文本长度计算圆形大小，最小80px，最大160px
-  const baseSize = Math.max(80, Math.min(160, text.length * 10 + 60))
-  return props.data.size || baseSize
+  const text = nodeText.value
+  // 如果用户明确设置了尺寸，优先使用用户设置
+  if (props.data.size && props.data.size > 0) {
+    return props.data.size
+  }
+  // 如果没有实际文本内容，使用固定的小尺寸
+  if (!text || text.trim() === '') {
+    return 45 // 空状态固定45px
+  }
+  // 有内容时，基于实际文本长度计算，最小45px，最大80px
+  const baseSize = Math.max(45, Math.min(80, text.length * 6 + 35))
+  return baseSize
 })
-const handleOffset = computed(() => Math.round(nodeSize.value / 2 * 0.707)) // 45度角偏移
+// Handle中心应该在圆的边界上，45度角位置
+const handleOffset = computed(() => Math.round((nodeSize.value / 2) * 0.707)) // 圆半径 * cos(45°)
 
 // 动态样式
 const nodeStyle = computed(() => ({
   '--node-size': `${nodeSize.value}px`,
-  '--handle-offset': `${handleOffset.value}px`
+  '--handle-offset': `${handleOffset.value}px`,
+  '--arrow-icon': `url(${arrowIconDataUri})`,
+  width: `${nodeSize.value}px`,
+  height: `${nodeSize.value}px`
 }))
 
 // 节点文本，同步到 data.text
@@ -178,22 +214,32 @@ watch(isSelected, (newSelected) => {
 </script>
 
 <style scoped>
-/* 圆形节点基础样式 */
-.circle-node {
-  width: var(--node-size, 96px);
-  height: var(--node-size, 96px);
-}
-
-/* 基础Handle隐藏原始样式 */
-.handle-interactive {
+/* Hidden Central Handle 样式 */
+.center-handle {
+  position: absolute !important;
+  width: 4px !important;
+  height: 4px !important;
   background: transparent !important;
   border: none !important;
-  width: 16px !important;
-  height: 16px !important;
-  pointer-events: auto !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
 }
 
-/* 右上角Handle精确定位 */
+/* 输入框文本选中样式优化 */
+input::selection {
+  background-color: rgba(59, 130, 246, 0.3); /* 蓝色半透明选中背景 */
+  color: inherit;
+}
+
+input::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
+/* 右上角Handle精确定位 - Handle中心在圆的边界线上 */
 .handle-top-right {
   position: absolute !important;
   top: calc(50% - var(--handle-offset, 34px)) !important;
@@ -201,7 +247,7 @@ watch(isSelected, (newSelected) => {
   transform: translate(50%, -50%) !important;
 }
 
-/* 右上角Handle样式 - 未选中状态 */
+/* 右上角Handle样式 - 未选中状态 (使用灰色系) */
 :deep(.vue-flow__handle[data-handleid="top-right"])::before,
 :deep(.vue-flow__handle[data-handleid="top-right-target"])::before {
   content: "";
@@ -211,7 +257,7 @@ watch(isSelected, (newSelected) => {
   transform: translate(-50%, -50%);
   width: 12px;
   height: 12px;
-  background: #3b82f6;
+  background: #6b7280; /* gray-500 */
   border: 2px solid white;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -219,34 +265,54 @@ watch(isSelected, (newSelected) => {
   cursor: crosshair;
 }
 
-/* 选中状态下的Handle样式 */
+/* 选中状态下的Handle样式 - 深灰色 */
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right"])::before {
   width: 16px;
   height: 16px;
-  background: #2563eb;
+  background: #374151; /* gray-700 */
 }
 
+/* 选中状态下显示箭头图标 */
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right"])::after {
-  content: "↗";
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 10px;
-  color: white;
-  font-weight: bold;
+  width: 10px;
+  height: 10px;
+  background-image: var(--arrow-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   z-index: 1;
 }
 
-/* Target Handle (绿色) */
+/* Target Handle 样式 (浅灰色) */
 :deep(.vue-flow__handle[data-handleid="top-right-target"])::before {
-  background: #10b981;
+  background: #9ca3af; /* gray-400 */
 }
 
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right-target"])::before {
   width: 16px;
   height: 16px;
-  background: #059669;
+  background: #6b7280; /* gray-500 */
+}
+
+/* Target Handle 选中时也显示图标 */
+.ring-2:deep(.vue-flow__handle[data-handleid="top-right-target"])::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-image: var(--arrow-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
 }
 
 /* Hover效果 */

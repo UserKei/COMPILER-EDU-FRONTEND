@@ -6,7 +6,10 @@
       :style="edgeStyle"
       :path="edgePath"
       :marker-end="markerEnd"
-      class="stroke-2 fill-none transition-all duration-200"
+      class="
+        stroke-2 fill-none
+        transition-all duration-200
+      "
       :class="{
         'stroke-blue-500': selected,
         'stroke-gray-400': !selected
@@ -18,13 +21,17 @@
       <div
         ref="labelRef"
         :style="{
-          pointerEvents: 'all',
-          position: 'absolute',
           transform: `translate(-50%, -50%) translate(${labelPosition.x}px, ${labelPosition.y}px)`,
-          zIndex: 1000,
-          cursor: isDragging ? 'move' : (isEditing ? 'text' : (selected ? 'pointer' : 'pointer'))
+          cursor: isDragging ? 'move' : (isEditing ? 'text' : 'pointer')
         }"
-        class="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-medium shadow-sm select-none transition-all duration-200"
+        class="
+          edge-label
+          px-2 py-1
+          bg-white border border-gray-300 rounded
+          text-xs font-medium
+          shadow-sm select-none
+          transition-all duration-200
+        "
         :class="{
           'border-blue-500 text-blue-700 shadow-md bg-blue-50': selected && !isEditing,
           'border-purple-500 text-purple-700 shadow-md bg-purple-50': isEditing,
@@ -33,26 +40,34 @@
         @mousedown="onLabelMouseDown"
         @click="onLabelClick"
       >
-        <div class="relative">
+        <div class="relative w-8">
           <input
             v-if="isEditing"
             ref="inputRef"
             v-model="labelText"
-            class="text-center bg-transparent border-none outline-none text-xs absolute inset-0 w-full"
+            class="
+              text-center bg-transparent
+              border-none outline-none
+              w-8 h-4 text-xs
+            "
             @blur="finishEditing"
             @keyup.enter="finishEditing"
             @keyup.escape="cancelEditing"
             @mousedown.stop
           />
           <span
+            v-if="!isEditing"
             :class="{
-              'opacity-0': isEditing,
-              'text-gray-500 italic': !labelText, // 占位符样式，和node保持一致
-              'text-gray-700': labelText // 有内容时的正常样式
+              'text-gray-500 italic opacity-50': !labelText, // 占位符样式，和node保持一致
+              'text-gray-700 opacity-100': labelText // 有内容时的正常样式
             }"
-            class="text-xs"
+            class="
+              text-xs text-center
+              block w-8 h-4 leading-4
+              truncate
+            "
           >
-            {{ labelText || 'Click to edit' }}
+            {{ labelText || 'Click' }}
           </span>
         </div>
       </div>
@@ -234,26 +249,32 @@ onMounted(() => {
   }
 })
 
-// Get node dimensions and type (简化版本，只用于自环)
+// Get node dimensions and type
 const getNodeInfo = (nodeId: string) => {
   const node = getNode.value(nodeId)
-  if (!node) return { type: 'rectangle', width: 92, height: 60, radius: 46 }
+  if (!node) return { type: 'rectangle', width: 96, height: 64, radius: 45 }
+
+  // 获取实际节点尺寸
+  const actualSize = node.dimensions || { width: 96, height: 64 }
 
   switch (node.type) {
     case 'circle':
+      // 圆形节点：使用实际尺寸或计算的尺寸
+      const circleSize = node.data?.size || Math.max(actualSize.width, actualSize.height)
       return {
         type: 'circle',
-        width: 92,
-        height: 92,
-        radius: 46
+        width: circleSize,
+        height: circleSize,
+        radius: circleSize / 2
       }
     case 'rectangle':
     case 'custom':
     default:
+      // 矩形节点：使用实际尺寸
       return {
         type: 'rectangle',
-        width: 92,
-        height: 60,
+        width: actualSize.width,
+        height: actualSize.height,
         radius: 0
       }
   }
@@ -443,9 +464,63 @@ const labelPosition = computed(() => {
   const sourceCenterX = sourceRect.x + sourceSize.width / 2
   const sourceCenterY = sourceRect.y + sourceSize.height / 2
   const targetCenterX = targetRect.x + targetSize.width / 2
-  const targetCenterY = targetRect.y + targetSize.height / 2
+  const targetCenterY = targetRect.y + targetSize.height / 2  // 对于自环，特殊处理 label 位置
+  if (props.source === props.target) {
+    const nodeInfo = getNodeInfo(props.source)
+    const offset = controlOffset.value
 
-  // 计算控制点
+    if (nodeInfo.type === 'circle') {
+      // 圆形自环：label 在右侧弧线中点
+      const radius = nodeInfo.radius
+      const baseControlX = sourceCenterX + radius * 2
+      const baseControlY = sourceCenterY
+
+      // 应用用户偏移 - 与 edgePath 保持一致
+      const controlX = baseControlX + (offset?.x || 0)
+      const controlY = baseControlY + (offset?.y || 0)
+
+      // 在自环弧线的中点位置
+      const t = props.data?.labelT || 0.5
+      const startAngle = -Math.PI / 4
+      const endAngle = Math.PI / 4
+
+      const startX = sourceCenterX + radius * Math.cos(startAngle)
+      const startY = sourceCenterY + radius * Math.sin(startAngle)
+      const endX = sourceCenterX + radius * Math.cos(endAngle)
+      const endY = sourceCenterY + radius * Math.sin(endAngle)
+
+      // 二次贝塞尔曲线上的点
+      const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * controlX + t * t * endX
+      const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * controlY + t * t * endY
+
+      return { x, y }
+    } else {
+      // 矩形自环：label 在右侧弧线中点
+      const halfWidth = nodeInfo.width / 2
+      const halfHeight = nodeInfo.height / 2
+
+      const baseControlX = sourceCenterX + halfWidth + 60
+      const baseControlY = sourceCenterY
+
+      // 应用用户偏移 - 与 edgePath 保持一致
+      const controlX = baseControlX + (offset?.x || 0)
+      const controlY = baseControlY + (offset?.y || 0)
+
+      const startX = sourceCenterX + halfWidth
+      const startY = sourceCenterY - halfHeight / 2
+      const endX = sourceCenterX + halfWidth
+      const endY = sourceCenterY + halfHeight / 2
+
+      // 在自环弧线的中点位置
+      const t = props.data?.labelT || 0.5
+      const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * controlX + t * t * endX
+      const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * controlY + t * t * endY
+
+      return { x, y }
+    }
+  }
+
+  // 普通边的 label 位置计算
   let controlX = (sourceCenterX + targetCenterX) / 2
   let controlY = (sourceCenterY + targetCenterY) / 2
 
@@ -463,7 +538,7 @@ const labelPosition = computed(() => {
   return { x, y }
 })
 
-// Quadratic bezier path using control point - 强制从节点中心绘制
+// Quadratic bezier path using control point - 连接到节点边缘
 const edgePath = computed(() => {
   // 获取源和目标节点
   const sourceNode = getNode.value(props.source)
@@ -504,7 +579,7 @@ const edgePath = computed(() => {
   if (props.source === props.target) {
     const nodeInfo = getNodeInfo(props.source)
     if (nodeInfo.type === 'circle') {
-      // 圆形自环
+      // 圆形自环 - 连接到圆周边缘
       const radius = nodeInfo.radius
       const startAngle = -Math.PI / 4
       const endAngle = Math.PI / 4
@@ -514,13 +589,15 @@ const edgePath = computed(() => {
       const endX = sourceCenterX + radius * Math.cos(endAngle)
       const endY = sourceCenterY + radius * Math.sin(endAngle)
 
-      // 控制点在外侧
-      const controlX = sourceCenterX + radius * 2
-      const controlY = sourceCenterY
+      // 控制点在外侧，应用用户偏移
+      const baseControlX = sourceCenterX + radius * 2
+      const baseControlY = sourceCenterY
+      const finalControlX = baseControlX + (offset?.x || 0)
+      const finalControlY = baseControlY + (offset?.y || 0)
 
-      return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`
+      return `M ${startX} ${startY} Q ${finalControlX} ${finalControlY} ${endX} ${endY}`
     } else {
-      // 矩形自环
+      // 矩形自环 - 连接到矩形边缘
       const halfWidth = nodeInfo.width / 2
       const halfHeight = nodeInfo.height / 2
 
@@ -529,16 +606,87 @@ const edgePath = computed(() => {
       const endX = sourceCenterX + halfWidth
       const endY = sourceCenterY + halfHeight / 2
 
-      // 控制点在右侧外面
-      const controlX = sourceCenterX + halfWidth + 60
-      const controlY = sourceCenterY
+      // 控制点在右侧外面，应用用户偏移
+      const baseControlX = sourceCenterX + halfWidth + 60
+      const baseControlY = sourceCenterY
+      const finalControlX = baseControlX + (offset?.x || 0)
+      const finalControlY = baseControlY + (offset?.y || 0)
 
-      return `M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`
+      return `M ${startX} ${startY} Q ${finalControlX} ${finalControlY} ${endX} ${endY}`
     }
   }
 
-  // 普通连线，从中心到中心
-  return `M ${sourceCenterX} ${sourceCenterY} Q ${controlX} ${controlY} ${targetCenterX} ${targetCenterY}`
+  // 普通连线 - 计算连接到节点边缘的点
+  const sourceInfo = getNodeInfo(props.source)
+  const targetInfo = getNodeInfo(props.target)
+
+  // 计算从中心到中心的方向向量
+  const dx = targetCenterX - sourceCenterX
+  const dy = targetCenterY - sourceCenterY
+  const distance = Math.sqrt(dx * dx + dy * dy)
+
+  if (distance === 0) {
+    // 如果两个节点重合，使用中心点
+    return `M ${sourceCenterX} ${sourceCenterY} Q ${controlX} ${controlY} ${targetCenterX} ${targetCenterY}`
+  }
+
+  // 单位方向向量
+  const unitX = dx / distance
+  const unitY = dy / distance
+
+  // 计算源节点边缘点
+  let sourceEdgeX, sourceEdgeY
+  if (sourceInfo.type === 'circle') {
+    // 圆形节点：从中心向目标方向的半径距离
+    sourceEdgeX = sourceCenterX + unitX * sourceInfo.radius
+    sourceEdgeY = sourceCenterY + unitY * sourceInfo.radius
+  } else {
+    // 矩形节点：计算与矩形边界的交点
+    const halfWidth = sourceInfo.width / 2
+    const halfHeight = sourceInfo.height / 2
+
+    // 使用射线与矩形边界的交点算法
+    const absDx = Math.abs(unitX)
+    const absDy = Math.abs(unitY)
+
+    if (halfHeight * absDx > halfWidth * absDy) {
+      // 交点在左右边
+      sourceEdgeX = sourceCenterX + Math.sign(unitX) * halfWidth
+      sourceEdgeY = sourceCenterY + (unitY / absDx) * halfWidth
+    } else {
+      // 交点在上下边
+      sourceEdgeX = sourceCenterX + (unitX / absDy) * halfHeight
+      sourceEdgeY = sourceCenterY + Math.sign(unitY) * halfHeight
+    }
+  }
+
+  // 计算目标节点边缘点（方向相反）
+  let targetEdgeX, targetEdgeY
+  if (targetInfo.type === 'circle') {
+    // 圆形节点：从中心向源方向的反向半径距离
+    targetEdgeX = targetCenterX - unitX * targetInfo.radius
+    targetEdgeY = targetCenterY - unitY * targetInfo.radius
+  } else {
+    // 矩形节点：计算与矩形边界的交点
+    const halfWidth = targetInfo.width / 2
+    const halfHeight = targetInfo.height / 2
+
+    const absDx = Math.abs(unitX)
+    const absDy = Math.abs(unitY)
+
+    if (halfHeight * absDx > halfWidth * absDy) {
+      // 交点在左右边
+      targetEdgeX = targetCenterX - Math.sign(unitX) * halfWidth
+      targetEdgeY = targetCenterY - (unitY / absDx) * halfWidth
+    } else {
+      // 交点在上下边
+      targetEdgeX = targetCenterX - (unitX / absDy) * halfHeight
+      targetEdgeY = targetCenterY - Math.sign(unitY) * halfHeight
+    }
+  }
+
+  // 从边缘到边缘的连线
+  return `M ${sourceEdgeX} ${sourceEdgeY} Q ${controlX} ${controlY} ${targetEdgeX} ${targetEdgeY}`
 })
 
 // Edge style
@@ -589,3 +737,22 @@ const onLabelMouseDown = (event: MouseEvent) => {
 console.log(`Edge ${props.id} component initialized with data:`, props.data)
 console.log(`Initial isEditing state:`, props.data?.isEditing)
 </script>
+
+<style scoped>
+.edge-label {
+  pointer-events: all !important;
+  position: absolute !important;
+  z-index: 1000 !important;
+}
+
+/* 输入框文本选中样式优化 */
+input::selection {
+  background-color: rgba(59, 130, 246, 0.3); /* 蓝色半透明选中背景 */
+  color: inherit;
+}
+
+input::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+</style>
