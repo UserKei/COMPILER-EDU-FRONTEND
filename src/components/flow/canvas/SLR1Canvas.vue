@@ -51,7 +51,7 @@
         :max-zoom="4"
         :connect-on-click="false"
         :nodes-connectable="true"
-        :nodes-draggable="false"
+        :nodes-draggable="true"
         :selection-on-drag="false"
         :pan-on-drag="[2]"
         :zoom-on-double-click="false"
@@ -77,13 +77,13 @@
               id="slr1-arrow"
               viewBox="0 0 10 10"
               refX="9"
-              refY="3"
+              refY="5"
               markerWidth="6"
               markerHeight="6"
               orient="auto"
               markerUnits="strokeWidth"
             >
-              <path d="M0,0 L0,6 L9,3 z" fill="#7c3aed" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed" />
             </marker>
           </defs>
         </svg>
@@ -190,7 +190,7 @@ const onConnect = (connection: Connection) => {
       label: 'GOTO',
       isEditing: true
     },
-    markerEnd: 'slr1-arrow'
+    markerEnd: 'url(#slr1-arrow)'
   }
 
   edges.value.push(newEdge)

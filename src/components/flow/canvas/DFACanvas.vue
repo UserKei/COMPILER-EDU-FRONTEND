@@ -46,7 +46,7 @@
         :max-zoom="4"
         :connect-on-click="false"
         :nodes-connectable="true"
-        :nodes-draggable="false"
+        :nodes-draggable="true"
         :selection-on-drag="false"
         :pan-on-drag="[2]"
         :zoom-on-double-click="false"
@@ -72,13 +72,13 @@
               id="dfa-arrow"
               viewBox="0 0 10 10"
               refX="9"
-              refY="3"
+              refY="5"
               markerWidth="6"
               markerHeight="6"
               orient="auto"
               markerUnits="strokeWidth"
             >
-              <path d="M0,0 L0,6 L9,3 z" fill="#3b82f6" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
             </marker>
           </defs>
         </svg>
@@ -163,7 +163,7 @@ const onConnect = (connection: Connection) => {
       label: '',
       isEditing: true
     },
-    markerEnd: 'dfa-arrow'
+    markerEnd: 'url(#dfa-arrow)'
   }
 
   edges.value.push(newEdge)
