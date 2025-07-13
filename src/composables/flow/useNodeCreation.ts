@@ -1,5 +1,6 @@
-import { ref, watch, type Ref } from 'vue'
+import { ref, watch, nextTick, type Ref } from 'vue'
 import { type Node, type Edge, useVueFlow } from '@vue-flow/core'
+import { gsap } from 'gsap'
 
 export interface NodeCreationOptions {
   nodeType: 'circle' | 'rectangle'
@@ -22,22 +23,29 @@ export function useNodeCreation(
     return `${options.nodeType}-${timestamp}-${random}`
   }
 
+  // 全局计数器，确保标签唯一且递增
+  const nodeCounter = ref(0)
+
   // 默认标签生成器
   const defaultGenerateLabel = (id: string): string => {
     if (options.nodeType === 'circle') {
-      // 为圆形节点生成状态编号
+      // 为圆形节点生成纯数字编号，从1开始
       const existingLabels = nodes.value
         .filter(node => node.type === 'circle')
-        .map(node => node.data?.label || node.data?.text || '')
-        .filter(label => /^q?\d+$/.test(label))
-        .map(label => parseInt(label.replace('q', '')))
-        .filter(num => !isNaN(num))
+        .map(node => {
+          const label = node.data?.label || node.data?.text || ''
+          return parseInt(label)
+        })
+        .filter(num => !isNaN(num) && num > 0)
 
-      let newNumber = 0
-      while (existingLabels.includes(newNumber)) {
-        newNumber++
-      }
-      return `q${newNumber}`
+      // 找到最大的现有编号
+      const maxNumber = existingLabels.length > 0 ? Math.max(...existingLabels) : 0
+
+      // 新编号为最大编号+1，最小为1
+      const newNumber = Math.max(maxNumber + 1, 1)
+      nodeCounter.value = newNumber
+
+      return newNumber.toString()
     } else {
       // 为矩形节点生成项目集编号
       const existingLabels = nodes.value
@@ -60,10 +68,17 @@ export function useNodeCreation(
     const id = options.generateId ? options.generateId() : defaultGenerateId()
     const label = options.generateLabel ? options.generateLabel(id) : defaultGenerateLabel(id)
 
+    // 计算节点中心位置 - 假设圆形节点直径为60px，矩形节点为120x60px
+    const nodeSize = options.nodeType === 'circle' ? { width: 60, height: 60 } : { width: 120, height: 60 }
+    const centeredPosition = {
+      x: position.x - nodeSize.width / 2,
+      y: position.y - nodeSize.height / 2
+    }
+
     const newNode: Node = {
       id,
       type: options.nodeType,
-      position: { x: position.x - 30, y: position.y - 30 },
+      position: centeredPosition,
       data: {
         label,
         text: label,
@@ -73,11 +88,44 @@ export function useNodeCreation(
         } : {
           pros: []
         })
-      }
+      },
+      draggable: true, // 确保节点可拖拽
+      selectable: true, // 确保节点可选择
     }
 
     nodes.value.push(newNode)
     console.log(`Created new ${options.nodeType} node:`, newNode)
+
+    // 添加出现动画
+    nextTick(() => {
+      animateNodeAppearance(id)
+    })
+  }
+
+  // 节点出现动画
+  const animateNodeAppearance = (nodeId: string) => {
+    const nodeElement = document.querySelector(`[data-id="${nodeId}"]`)
+    if (nodeElement) {
+      // 设置初始状态：缩放为0，透明度为0
+      gsap.set(nodeElement, {
+        scale: 0,
+        opacity: 0,
+        transformOrigin: 'center center'
+      })
+
+      // 执行弹性出现动画
+      gsap.to(nodeElement, {
+        scale: 1,
+        opacity: 1,
+        duration: 0.5,
+        ease: 'back.out(1.7)',
+        onComplete: () => {
+          console.log(`Node ${nodeId} animation completed`)
+        }
+      })
+    } else {
+      console.warn(`Node element with id ${nodeId} not found for animation`)
+    }
   }
 
   // 双击事件处理器
@@ -118,8 +166,8 @@ export function useNodeCreation(
       // 备用方案：使用相对坐标
       const rect = flowContainer.getBoundingClientRect()
       const position = {
-        x: mouseEvent.clientX - rect.left - 30,
-        y: mouseEvent.clientY - rect.top - 30
+        x: mouseEvent.clientX - rect.left,
+        y: mouseEvent.clientY - rect.top
       }
 
       console.log('使用备用坐标:', position)
@@ -160,10 +208,17 @@ export function useNodeCreation(
     const id = options.generateId ? options.generateId() : defaultGenerateId()
     const label = options.generateLabel ? options.generateLabel(id) : defaultGenerateLabel(id)
 
+    // 计算节点中心位置
+    const nodeSize = options.nodeType === 'circle' ? { width: 60, height: 60 } : { width: 120, height: 60 }
+    const centeredPosition = {
+      x: position.x - nodeSize.width / 2,
+      y: position.y - nodeSize.height / 2
+    }
+
     const newNode: Node = {
       id,
       type: options.nodeType,
-      position,
+      position: centeredPosition,
       data: {
         label,
         text: label,
@@ -174,10 +229,18 @@ export function useNodeCreation(
         } : {
           pros: []
         })
-      }
+      },
+      draggable: true, // 确保节点可拖拽
+      selectable: true, // 确保节点可选择
     }
 
     nodes.value.push(newNode)
+
+    // 添加出现动画
+    nextTick(() => {
+      animateNodeAppearance(id)
+    })
+
     return newNode
   }
 
@@ -185,6 +248,8 @@ export function useNodeCreation(
   const clearAll = () => {
     nodes.value = []
     edges.value = []
+    // 重置计数器
+    nodeCounter.value = 0
   }
 
   // 节点状态管理
@@ -217,6 +282,7 @@ export function useNodeCreation(
     clearAll,
     setNodeAsInitial,
     setNodeAsFinal,
-    resetNodeState
+    resetNodeState,
+    animateNodeAppearance
   }
 }

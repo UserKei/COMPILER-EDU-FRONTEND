@@ -40,55 +40,24 @@
     <main class="canvas-wrapper">
       <!-- NFA 画布 -->
       <div v-if="activeTab === 'nfa'" class="canvas-content">
-        <div class="canvas-info">
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">NFA 编辑器</h3>
-          <p class="text-gray-600 text-sm">非确定有限自动机可视化编辑器</p>
-        </div>
-        <div class="canvas-placeholder">
-          <Icon icon="lucide:git-branch" class="w-16 h-16 text-gray-400 mb-4" />
-          <h4 class="text-xl font-semibold text-gray-600 mb-2">NFA 画布组件</h4>
-          <p class="text-gray-500">待开发：NFA 状态图编辑器</p>
-        </div>
+        <NFACanvas />
       </div>
 
       <!-- DFA 画布 -->
       <div v-if="activeTab === 'dfa'" class="canvas-content">
-        <div class="canvas-info">
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">DFA 编辑器</h3>
-          <p class="text-gray-600 text-sm">确定有限自动机可视化编辑器</p>
-        </div>
-        <div class="canvas-placeholder">
-          <Icon icon="lucide:workflow" class="w-16 h-16 text-gray-400 mb-4" />
-          <h4 class="text-xl font-semibold text-gray-600 mb-2">DFA 画布组件</h4>
-          <p class="text-gray-500">待开发：DFA 状态图编辑器</p>
-        </div>
+        <DFACanvas />
       </div>
 
-      <!-- LR0 画布 -->
+      <!-- LR项目画布暂时废弃 -->
+      <!--
       <div v-if="activeTab === 'lr0'" class="canvas-content">
-        <div class="canvas-info">
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">LR0 项目集</h3>
-          <p class="text-gray-600 text-sm">LR0 项目集规范族可视化</p>
-        </div>
-        <div class="canvas-placeholder">
-          <Icon icon="lucide:layers" class="w-16 h-16 text-gray-400 mb-4" />
-          <h4 class="text-xl font-semibold text-gray-600 mb-2">LR0 项目集画布</h4>
-          <p class="text-gray-500">待开发：LR0 项目集可视化组件</p>
-        </div>
+        <LR0Canvas />
       </div>
 
-      <!-- SLR1 画布 -->
       <div v-if="activeTab === 'slr1'" class="canvas-content">
-        <div class="canvas-info">
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">SLR1 项目集</h3>
-          <p class="text-gray-600 text-sm">SLR1 项目集规范族可视化</p>
-        </div>
-        <div class="canvas-placeholder">
-          <Icon icon="lucide:zap" class="w-16 h-16 text-gray-400 mb-4" />
-          <h4 class="text-xl font-semibold text-gray-600 mb-2">SLR1 项目集画布</h4>
-          <p class="text-gray-500">待开发：SLR1 项目集可视化组件</p>
-        </div>
+        <SLR1Canvas />
       </div>
+      -->
     </main>
   </div>
 </template>
@@ -96,13 +65,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
+import DFACanvas from '@/components/flow/canvas/DFACanvas.vue'
+import NFACanvas from '@/components/flow/canvas/NFACanvas.vue'
+// LR项目画布暂时废弃，注释掉导入
+// import LR0Canvas from '@/components/flow/canvas/LR0Canvas.vue'
+// import SLR1Canvas from '@/components/flow/canvas/SLR1Canvas.vue'
 
 // 选项卡配置
 const tabs = [
   { id: 'nfa', name: 'NFA 编辑器', icon: 'lucide:git-branch' },
   { id: 'dfa', name: 'DFA 编辑器', icon: 'lucide:workflow' },
-  { id: 'lr0', name: 'LR0 项目集', icon: 'lucide:layers' },
-  { id: 'slr1', name: 'SLR1 项目集', icon: 'lucide:zap' }
+  // LR项目画布暂时废弃
+  // { id: 'lr0', name: 'LR0 项目集', icon: 'lucide:layers' },
+  // { id: 'slr1', name: 'SLR1 项目集', icon: 'lucide:zap' }
 ]
 
 // 当前活动选项卡
@@ -143,21 +118,5 @@ const activeTab = ref('nfa')
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.canvas-info {
-  background: white;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.canvas-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 4rem;
 }
 </style>

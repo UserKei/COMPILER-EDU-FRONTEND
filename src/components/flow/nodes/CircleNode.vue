@@ -14,6 +14,7 @@
     }"
     @click="handleNodeClick"
     :style="nodeStyle"
+    :data-id="props.id"
   >
     <!-- Node Content -->
     <div class="relative z-10" :class="{ 'pointer-events-none': !isEditing }">

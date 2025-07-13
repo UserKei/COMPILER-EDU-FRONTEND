@@ -50,7 +50,6 @@
         :selection-on-drag="false"
         :pan-on-drag="[2]"
         :zoom-on-double-click="false"
-        fit-view-on-init
         class="vue-flow"
         @connect="onConnect"
         @node-click="onNodeClick"

@@ -31,6 +31,13 @@
         >
           重置状态
         </button>
+        <button
+          @click="deleteSelected"
+          class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          :disabled="selectedNodes.length === 0 && selectedEdges.length === 0"
+        >
+          删除选中
+        </button>
       </div>
     </div>
 
@@ -50,7 +57,6 @@
         :selection-on-drag="false"
         :pan-on-drag="[2]"
         :zoom-on-double-click="false"
-        fit-view-on-init
         class="vue-flow"
         @connect="onConnect"
         @node-click="onNodeClick"
@@ -95,13 +101,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, onMounted } from 'vue'
-import { VueFlow, useVueFlow, type Node, type Edge, type Connection } from '@vue-flow/core'
+import { ref, computed, onMounted, markRaw, nextTick } from 'vue'
+import { VueFlow, type Node, type Edge, type Connection, useVueFlow } from '@vue-flow/core'
 import { Controls } from '@vue-flow/controls'
 import { Background } from '@vue-flow/background'
 import CircleNode from '../nodes/CircleNode.vue'
 import CustomEdge from '../edges/CustomEdge.vue'
 import { useNodeCreation } from '@/composables/flow/useNodeCreation'
+import { gsap } from 'gsap'
 
 // 定义节点和边类型
 const nodeTypes = {
@@ -116,7 +123,7 @@ const edgeTypes = {
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
-const { getSelectedNodes, getSelectedEdges, onEdgesChange, updateEdge } = useVueFlow()
+const { getSelectedNodes, getSelectedEdges, onEdgesChange, onNodesChange, updateEdge, removeNodes, removeEdges } = useVueFlow()
 
 // 使用节点创建功能
 const {
@@ -200,6 +207,45 @@ const resetSelectedState = () => {
   })
 }
 
+const deleteSelected = () => {
+  const selectedNodeIds = selectedNodes.value.map(node => node.id)
+  const selectedEdgeIds = selectedEdges.value.map(edge => edge.id)
+
+  // 先执行删除动画，然后删除数据
+  if (selectedNodeIds.length > 0) {
+    animateNodeDeletion(selectedNodeIds, () => {
+      // 动画完成后使用VueFlow的删除方法
+      removeNodes(selectedNodeIds)
+      console.log(`Deleted ${selectedNodeIds.length} nodes and related edges`)
+    })
+  }
+
+  // 使用VueFlow的方法删除选中的边
+  if (selectedEdgeIds.length > 0) {
+    removeEdges(selectedEdgeIds)
+    console.log(`Deleted ${selectedEdgeIds.length} edges`)
+  }
+}
+
+// 删除动画函数
+const animateNodeDeletion = (nodeIds: string[], onComplete: () => void) => {
+  const elements = nodeIds.map(nodeId => document.querySelector(`[data-id="${nodeId}"]`)).filter(Boolean)
+
+  if (elements.length === 0) {
+    onComplete()
+    return
+  }
+
+  gsap.to(elements, {
+    scale: 0,
+    opacity: 0,
+    duration: 0.3,
+    ease: 'back.in(1.7)',
+    stagger: 0.05,
+    onComplete
+  })
+}
+
 // 生命周期 - 现在双击事件通过 useNodeCreation 中的 watch 自动绑定
 const onPaneReady = (vueFlowInstance: any) => {
   console.log('NFA Pane ready')
@@ -219,7 +265,19 @@ onEdgesChange((changes) => {
   changes.forEach((change) => {
     if (change.type === 'remove') {
       console.log(`Removed edge: ${change.id}`)
+      // VueFlow会自动处理边的移除，不需要手动操作数组
     }
+  })
+})
+
+// 节点变化处理
+onNodesChange((changes) => {
+  changes.forEach((change) => {
+    if (change.type === 'remove') {
+      console.log(`Removed node: ${change.id}`)
+      // VueFlow会自动处理节点的移除，不需要手动操作数组
+    }
+    // 移除位置更新逻辑，让VueFlow自己处理位置同步
   })
 })
 
@@ -228,6 +286,7 @@ defineExpose({
   getNodes: () => nodes.value,
   getEdges: () => edges.value,
   clearCanvas,
+  deleteSelected,
   addNode: (node: Node) => nodes.value.push(node),
   addEdge: (edge: Edge) => edges.value.push(edge)
 })
