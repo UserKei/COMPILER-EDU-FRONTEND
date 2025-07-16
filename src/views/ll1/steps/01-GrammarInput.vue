@@ -1,291 +1,251 @@
 <template>
-  <div class="grammar-input-step-wrapper">
-    <div class="grammar-input-step">
-      <div class="step-header">
-        <div class="flex items-center gap-4">
-          <div class="step-icon">
-            <Icon icon="lucide:file-text" class="w-6 h-6 text-green-600" />
-          </div>
-          <div>
-            <h2 class="text-2xl font-bold text-gray-900">输入文法</h2>
-            <p class="text-gray-600 mt-1">第一步：定义上下文无关文法规则</p>
+  <div>
+    <div class="grammar-input-step-wrapper">
+      <div class="grammar-input-step">
+        <div class="step-header">
+          <div class="flex items-center gap-4">
+            <div class="step-icon">
+              <Icon icon="lucide:file-text" class="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">输入文法</h2>
+              <p class="text-gray-600 mt-1">第一步：定义上下文无关文法规则</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="step-content">
-        <div class="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 gap-8">
+        <div class="step-content">
+          <div class="grid grid-cols-1 lg:grid-cols-2 grid-rows-2 gap-8">
 
-          <!-- 左上角：文法规则输入 -->
-          <div class="row-start-1 col-start-1">
-            <div class="input-section bg-white rounded-lg p-6 border">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">文法规则输入</h3>
+            <!-- 左上角：文法规则输入 -->
+            <div class="row-start-1 col-start-1">
+              <div class="input-section bg-white rounded-lg p-6 border">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">文法规则输入</h3>
 
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  产生式规则
-                </label>
-                <div class="space-y-3">
-                  <div
-                    v-for="(rule, index) in grammarRules"
-                    :key="index"
-                    class="flex items-center gap-2"
-                  >
-                    <input
-                      v-model="rule.left"
-                      type="text"
-                      placeholder="A"
-                      maxlength="1"
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-sm font-mono"
-                      :class="{
-                        'border-red-300 focus:ring-red-500 focus:border-red-500': rule.left && !/^[A-Z]$/.test(rule.left.trim())
-                      }"
-                    />
-                    <span class="text-gray-500 font-medium">-></span>
-                    <input
-                      v-model="rule.right"
-                      type="text"
-                      placeholder="aB|ε"
-                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-sm font-mono"
-                    />
-                    <button
-                      @click="removeRule(index)"
-                      class="px-2 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      :disabled="grammarRules.length <= 1"
-                    >
-                      <Icon icon="lucide:trash-2" class="w-4 h-4" />
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    产生式规则
+                  </label>
+                  <div class="space-y-3">
+                    <div v-for="(rule, index) in grammarRules" :key="index" class="flex items-center gap-2">
+                      <input v-model="rule.left" type="text" placeholder="A" maxlength="1"
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-sm font-mono"
+                        :class="{
+                          'border-red-300 focus:ring-red-500 focus:border-red-500': rule.left && !/^[A-Z]$/.test(rule.left.trim())
+                        }" />
+                      <span class="text-gray-500 font-medium">-></span>
+                      <input v-model="rule.right" type="text" placeholder="aB|ε"
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors text-sm font-mono" />
+                      <button @click="removeRule(index)"
+                        class="px-2 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        :disabled="grammarRules.length <= 1">
+                        <Icon icon="lucide:trash-2" class="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <button @click="addRule"
+                    class="mt-3 px-4 py-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors border border-green-200">
+                    <Icon icon="lucide:plus" class="w-4 h-4 inline mr-2" />
+                    添加规则
+                  </button>
+                </div>
+
+                <div class="mb-6">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    快速示例
+                  </label>
+                  <div class="flex flex-wrap gap-2">
+                    <button v-for="example in examples" :key="example.name" @click="loadExample(example.rules)"
+                      class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">
+                      {{ example.name }}
                     </button>
                   </div>
                 </div>
 
-                <button
-                  @click="addRule"
-                  class="mt-3 px-4 py-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
-                >
-                  <Icon icon="lucide:plus" class="w-4 h-4 inline mr-2" />
-                  添加规则
-                </button>
-              </div>
-
-              <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  快速示例
-                </label>
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    v-for="example in examples"
-                    :key="example.name"
-                    @click="loadExample(example.rules)"
-                    class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors"
-                  >
-                    {{ example.name }}
+                <div class="flex gap-3">
+                  <button @click="validateGrammar" :disabled="!isGrammarValid"
+                    class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors">
+                    <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-2" />
+                    验证文法
+                  </button>
+                  <button @click="clearGrammar"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Icon icon="lucide:x" class="w-4 h-4 inline mr-2" />
+                    清空
                   </button>
                 </div>
-              </div>
 
-              <div class="flex gap-3">
-                <button
-                  @click="validateGrammar"
-                  :disabled="!isGrammarValid"
-                  class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-2" />
-                  验证文法
-                </button>
-                <button
-                  @click="clearGrammar"
-                  class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Icon icon="lucide:x" class="w-4 h-4 inline mr-2" />
-                  清空
-                </button>
-              </div>
-
-              <div v-if="validationResult" class="mt-4">
-                <div
-                  :class="[
+                <div v-if="validationResult" class="mt-4">
+                  <div :class="[
                     'p-3 rounded-lg',
                     validationResult.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-                  ]"
-                >
-                  <div class="flex items-start gap-2">
-                    <Icon
-                      :icon="validationResult.valid ? 'lucide:check-circle' : 'lucide:alert-circle'"
-                      :class="[
+                  ]">
+                    <div class="flex items-start gap-2">
+                      <Icon :icon="validationResult.valid ? 'lucide:check-circle' : 'lucide:alert-circle'" :class="[
                         'w-5 h-5 flex-shrink-0 mt-0.5',
                         validationResult.valid ? 'text-green-600' : 'text-red-600'
-                      ]"
-                    />
-                    <div class="flex-1">
-                      <p
-                        :class="[
+                      ]" />
+                      <div class="flex-1">
+                        <p :class="[
                           'font-medium',
                           validationResult.valid ? 'text-green-800' : 'text-red-800'
-                        ]"
-                      >
-                        {{ validationResult.valid ? '文法有效' : '文法无效' }}
-                      </p>
-                      <p
-                        :class="[
+                        ]">
+                          {{ validationResult.valid ? '文法有效' : '文法无效' }}
+                        </p>
+                        <p :class="[
                           'text-sm mt-1',
                           validationResult.valid ? 'text-green-600' : 'text-red-600'
-                        ]"
-                      >
-                        {{ validationResult.message }}
-                      </p>
-                      <div v-if="!validationResult.valid" class="mt-2 text-xs text-red-600">
-                        <p><strong>提示：</strong></p>
-                        <ul class="list-disc list-inside space-y-1 mt-1">
-                          <li>确保非终结符为单个大写字母</li>
-                          <li>检查是否包含中文或特殊字符</li>
-                          <li>确保没有重复的产生式</li>
-                          <li>检查是否存在左递归</li>
-                          <li>确保所有非终结符都有候选式</li>
-                        </ul>
+                        ]">
+                          {{ validationResult.message }}
+                        </p>
+                        <div v-if="!validationResult.valid" class="mt-2 text-xs text-red-600">
+                          <p><strong>提示：</strong></p>
+                          <ul class="list-disc list-inside space-y-1 mt-1">
+                            <li>确保非终结符为单个大写字母</li>
+                            <li>检查是否包含中文或特殊字符</li>
+                            <li>确保没有重复的产生式</li>
+                            <li>检查是否存在左递归</li>
+                            <li>确保所有非终结符都有候选式</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- 右上角：文法格式说明 -->
-          <div class="row-start-1 col-start-2">
-            <div class="info-section bg-green-50 rounded-lg p-6 border">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">文法格式说明</h3>
-              <div class="space-y-2 text-sm">
-                <div>1. 每个产生式格式为：<code class="px-1 bg-white rounded text-green-600 font-mono">非终结符->产生式右部</code></div>
-                <div>2. 非终结符必须为单个大写字母（如A、B、E、S等）</div>
-                <div>3. 终结符为单个小写字母或特殊符号（如a、b、+、*、(、)等）</div>
-                <div>4. 右部不同选项用<code class="px-1 bg-white rounded text-green-600 font-mono">|</code>分隔</div>
-                <div>5. 空串用<code class="px-1 bg-white rounded text-green-600 font-mono">ε</code>表示，且只能单独作为一个候选式</div>
-                <div>6. 不允许包含中文、空格或特殊字符</div>
-                <div>7. 不允许重复的产生式</div>
-                <div>8. 所有非终结符必须有候选式</div>
-                <div>9. 不允许存在左递归（直接或间接）</div>
-                <div>10. 第一个产生式的左部为开始符号</div>
-                <div class="mt-2">示例：</div>
-                <pre class="bg-white border border-green-200 rounded p-2 text-green-700 font-mono text-sm leading-6">
+            <!-- 右上角：文法格式说明 -->
+            <div class="row-start-1 col-start-2">
+              <div class="info-section bg-green-50 rounded-lg p-6 border">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">文法格式说明</h3>
+                <div class="space-y-2 text-sm">
+                  <div>1. 每个产生式格式为：<code class="px-1 bg-white rounded text-green-600 font-mono">非终结符->产生式右部</code></div>
+                  <div>2. 非终结符必须为单个大写字母（如A、B、E、S等）</div>
+                  <div>3. 终结符为单个小写字母或特殊符号（如a、b、+、*、(、)等）</div>
+                  <div>4. 右部不同选项用<code class="px-1 bg-white rounded text-green-600 font-mono">|</code>分隔</div>
+                  <div>5. 空串用<code class="px-1 bg-white rounded text-green-600 font-mono">ε</code>表示，且只能单独作为一个候选式</div>
+                  <div>6. 不允许包含中文、空格或特殊字符</div>
+                  <div>7. 不允许重复的产生式</div>
+                  <div>8. 所有非终结符必须有候选式</div>
+                  <div>9. 不允许存在左递归（直接或间接）</div>
+                  <div>10. 第一个产生式的左部为开始符号</div>
+                  <div class="mt-2">示例：</div>
+                  <pre class="bg-white border border-green-200 rounded p-2 text-green-700 font-mono text-sm leading-6">
 S->aA|bB
 A->a|ε
 B->b|ε
 G->+TG|ε
                 </pre>
-                <div class="mt-2 text-xs text-gray-500">
-                  <strong>注意：</strong>输入前请确保文法已消除左递归，符合LL1文法要求
-                </div>
-                <div class="mt-2 text-xs text-gray-500">
-                  <strong>ε符号说明：</strong>ε只能单独作为一个候选式，如<code class="px-1 bg-gray-100 rounded">G->+TG|ε</code>是正确的，但<code class="px-1 bg-gray-100 rounded">G->+TGε</code>是错误的
+                  <div class="mt-2 text-xs text-gray-500">
+                    <strong>注意：</strong>输入前请确保文法已消除左递归，符合LL1文法要求
+                  </div>
+                  <div class="mt-2 text-xs text-gray-500">
+                    <strong>ε符号说明：</strong>ε只能单独作为一个候选式，如<code
+                      class="px-1 bg-gray-100 rounded">G->+TG|ε</code>是正确的，但<code
+                      class="px-1 bg-gray-100 rounded">G->+TGε</code>是错误的
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- 左下角：当前文法 -->
-          <div class="row-start-2 col-start-1">
-            <div v-if="grammarText" class="bg-white border rounded-lg p-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">当前文法</h3>
-              <div class="font-mono text-sm bg-gray-100 p-3 rounded border space-y-1">
-                <div v-for="(rule, index) in grammarRules" :key="index" class="text-gray-800">
-                  {{ rule.left }}->{{ rule.right }}
+            <!-- 左下角：当前文法 -->
+            <div class="row-start-2 col-start-1">
+              <div v-if="grammarText" class="bg-white border rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">当前文法</h3>
+                <div class="font-mono text-sm bg-gray-100 p-3 rounded border space-y-1">
+                  <div v-for="(rule, index) in grammarRules" :key="index" class="text-gray-800">
+                    {{ rule.left }}->{{ rule.right }}
+                  </div>
                 </div>
-              </div>
-              <div v-if="grammarInfo" class="mt-4 text-sm text-gray-600">
-                <p><strong>文法信息：</strong></p>
-                <ul class="list-disc list-inside space-y-1 mt-2">
-                  <li>非终结符：{{ grammarInfo.nonTerminals.join(', ') }}</li>
-                  <li>终结符：{{ grammarInfo.terminals.join(', ') }}</li>
-                  <li>产生式数量：{{ grammarInfo.ruleCount }}</li>
-                  <li>开始符号：{{ grammarInfo.nonTerminals[0] || '未指定' }}</li>
-                </ul>
+                <div v-if="grammarInfo" class="mt-4 text-sm text-gray-600">
+                  <p><strong>文法信息：</strong></p>
+                  <ul class="list-disc list-inside space-y-1 mt-2">
+                    <li>非终结符：{{ grammarInfo.nonTerminals.join(', ') }}</li>
+                    <li>终结符：{{ grammarInfo.terminals.join(', ') }}</li>
+                    <li>产生式数量：{{ grammarInfo.ruleCount }}</li>
+                    <li>开始符号：{{ grammarInfo.nonTerminals[0] || '未指定' }}</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- 右下角：已验证文法快照 -->
-          <div class="row-start-2 col-start-2">
-            <div v-if="verifiedSnapshot" class="bg-green-50 border border-green-200 rounded-lg p-6">
-              <h3 class="text-lg font-semibold text-green-700 mb-4">已验证文法快照</h3>
-              <div class="font-mono text-sm bg-white p-3 rounded border space-y-1">
-                <div v-for="(rule, index) in verifiedSnapshot.rules" :key="'snap-'+index" class="text-gray-800">
-                  {{ rule.left }}->{{ rule.right }}
+            <!-- 右下角：已验证文法快照 -->
+            <div class="row-start-2 col-start-2">
+              <div v-if="verifiedSnapshot" class="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 class="text-lg font-semibold text-green-700 mb-4">已验证文法快照</h3>
+                <div class="font-mono text-sm bg-white p-3 rounded border space-y-1">
+                  <div v-for="(rule, index) in verifiedSnapshot.rules" :key="'snap-' + index" class="text-gray-800">
+                    {{ rule.left }}->{{ rule.right }}
+                  </div>
                 </div>
-              </div>
-              <div v-if="verifiedSnapshot.info" class="mt-4 text-sm text-green-700">
-                <p><strong>文法信息：</strong></p>
-                <ul class="list-disc list-inside space-y-1 mt-2">
-                  <li>非终结符：{{ verifiedSnapshot.info.nonTerminals.join(', ') }}</li>
-                  <li>终结符：{{ verifiedSnapshot.info.terminals.join(', ') }}</li>
-                  <li>产生式数量：{{ verifiedSnapshot.info.ruleCount }}</li>
-                  <li>开始符号：{{ verifiedSnapshot.info.nonTerminals[0] || '未指定' }}</li>
-                </ul>
-              </div>
-              <div v-if="verifiedSnapshot.ll1Result" class="mt-2 text-xs text-green-700">
-                <strong>后端分析 isLL1：</strong> {{ verifiedSnapshot.ll1Result.isLL1 ? '是' : '否' }}
-              </div>
-              <div class="mt-2 text-xs text-gray-500">验证时间：{{ verifiedSnapshot.timestamp }}</div>
-              <!-- <button
+                <div v-if="verifiedSnapshot.info" class="mt-4 text-sm text-green-700">
+                  <p><strong>文法信息：</strong></p>
+                  <ul class="list-disc list-inside space-y-1 mt-2">
+                    <li>非终结符：{{ verifiedSnapshot.info.nonTerminals.join(', ') }}</li>
+                    <li>终结符：{{ verifiedSnapshot.info.terminals.join(', ') }}</li>
+                    <li>产生式数量：{{ verifiedSnapshot.info.ruleCount }}</li>
+                    <li>开始符号：{{ verifiedSnapshot.info.nonTerminals[0] || '未指定' }}</li>
+                  </ul>
+                </div>
+                <div v-if="verifiedSnapshot.ll1Result" class="mt-2 text-xs text-green-700">
+                  <strong>后端分析 isLL1：</strong> {{ verifiedSnapshot.ll1Result.isLL1 ? '是' : '否' }}
+                </div>
+                <div class="mt-2 text-xs text-gray-500">验证时间：{{ verifiedSnapshot.timestamp }}</div>
+                <!-- <button
                 class="mt-4 px-4 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-xs"
                 @click="openJsonDialog"
               >
                 查看后端返回JSON
               </button> -->
-            </div>
-            <div v-else class="bg-gray-50 border border-gray-200 rounded-lg p-6 flex items-center justify-center h-full text-gray-400 text-sm" style="min-height: 180px;">
-              暂无已验证文法，请先输入并点击"验证文法"按钮
+              </div>
+              <div v-else
+                class="bg-gray-50 border border-gray-200 rounded-lg p-6 flex items-center justify-center h-full text-gray-400 text-sm"
+                style="min-height: 180px;">
+                暂无已验证文法，请先输入并点击"验证文法"按钮
+              </div>
             </div>
           </div>
+
         </div>
 
-      </div>
+        <div class="step-actions">
+          <div class="flex justify-between items-center">
+            <button @click="$emit('prev-step')" disabled
+              class="px-6 py-2 border border-gray-300 text-gray-400 rounded-lg cursor-not-allowed">
+              <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
+              上一步
+            </button>
 
-      <div class="step-actions">
-        <div class="flex justify-between items-center">
-          <button
-            @click="$emit('prev-step')"
-            disabled
-            class="px-6 py-2 border border-gray-300 text-gray-400 rounded-lg cursor-not-allowed"
-          >
-            <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
-            上一步
-          </button>
+            <div class="text-sm text-gray-500">
+              步骤 1 / 4
+            </div>
 
-          <div class="text-sm text-gray-500">
-            步骤 1 / 4
-          </div>
-
-          <button
-            @click="proceedToNext"
-            :disabled="!isValidAndReady"
-            :class="[
+            <button @click="proceedToNext" :disabled="!isValidAndReady" :class="[
               'px-6 py-2 rounded-lg transition-colors',
               isValidAndReady
                 ? 'bg-green-600 text-white hover:bg-green-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            ]"
-          >
-            下一步
-            <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
-          </button>
+            ]">
+              下一步
+              <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 消息提示弹窗 -->
-    <transition name="fade">
-      <div
-        v-if="message"
-        class="fixed bottom-8 right-8 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2"
-        :class="messageType === 'success'
-          ? 'bg-green-600 text-white'
-          : 'bg-red-600 text-white'"
-      >
-        <Icon :icon="messageType === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" class="w-5 h-5" />
-        <span>{{ message }}</span>
-      </div>
-    </transition>
-    <!--
+      <!-- 消息提示弹窗 -->
+      <transition name="fade">
+        <div v-if="message" class="fixed bottom-8 right-8 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2"
+          :class="messageType === 'success'
+            ? 'bg-green-600 text-white'
+            : 'bg-red-600 text-white'">
+          <Icon :icon="messageType === 'success' ? 'lucide:check-circle' : 'lucide:alert-circle'" class="w-5 h-5" />
+          <span>{{ message }}</span>
+        </div>
+      </transition>
+      <!--
       JSON弹窗
       <transition name="fade">
         <div v-if="showJsonDialog" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
@@ -298,6 +258,7 @@ G->+TG|ε
           </div>
         </div>
       </transition> -->
+    </div>
   </div>
 </template>
 
@@ -670,19 +631,42 @@ onMounted(() => {
 // function closeJsonDialog() {
 //   showJsonDialog.value = false
 // }
-</script >
+</script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #dcfce7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #dcfce7;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-content {
+  padding: 2rem;
+}
+
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 
 /* 验证文法的消息提示动画 */
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.3s;
 }
-.fade-enter-from, .fade-leave-to {
+
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 </style>
