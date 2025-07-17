@@ -163,9 +163,10 @@ G->+TG|ε
                   <p><strong>文法信息：</strong></p>
                   <ul class="list-disc list-inside space-y-1 mt-2">
                     <li>非终结符：{{ grammarInfo.nonTerminals.join(', ') }}</li>
-                    <li>终结符：{{ grammarInfo.terminals.join(', ') }}</li>
+                    <li>终结符：{{ grammarInfo.terminals.filter(t => t !== 'ε').join(', ') }}</li>
                     <li>产生式数量：{{ grammarInfo.ruleCount }}</li>
                     <li>开始符号：{{ grammarInfo.nonTerminals[0] || '未指定' }}</li>
+                    <div class="mt-1 text-xs text-gray-500">ε（空串）不是终结符，也不是非终结符，仅用于表示空串。</div>
                   </ul>
                 </div>
               </div>
@@ -184,9 +185,10 @@ G->+TG|ε
                   <p><strong>文法信息：</strong></p>
                   <ul class="list-disc list-inside space-y-1 mt-2">
                     <li>非终结符：{{ verifiedSnapshot.info.nonTerminals.join(', ') }}</li>
-                    <li>终结符：{{ verifiedSnapshot.info.terminals.join(', ') }}</li>
+                    <li>终结符：{{ verifiedSnapshot.info.terminals.filter(t => t !== 'ε').join(', ') }}</li>
                     <li>产生式数量：{{ verifiedSnapshot.info.ruleCount }}</li>
                     <li>开始符号：{{ verifiedSnapshot.info.nonTerminals[0] || '未指定' }}</li>
+                    <div class="mt-1 text-xs text-gray-500">ε（空串）不是终结符，也不是非终结符，仅用于表示空串。</div>
                   </ul>
                 </div>
                 <div v-if="verifiedSnapshot.ll1Result" class="mt-2 text-xs text-green-700">
@@ -366,22 +368,33 @@ const grammarInfo = computed(() => {
   if (!grammarText.value) return null
   const nonTerminals = new Set<string>()
   const terminals = new Set<string>()
+  // 支持的终结符符号（小写字母和常见英文符号，不含#）
+  const terminalPattern = /^[a-z]|[+*()\-\/=,;:'\[\]{}<>!&|?~^%$@_.]/
   grammarRules.value.forEach(rule => {
     if (rule.left.trim()) {
       nonTerminals.add(rule.left.trim())
     }
     const rightParts = rule.right.split('|').map(part => part.trim())
     rightParts.forEach(part => {
-      const symbols = part.split(/\s+/)
-      symbols.forEach(symbol => {
-        if (symbol && !symbol.startsWith('(') && !symbol.endsWith(')')) {
-          if (symbol === 'ε' || symbol === 'id' || symbol === 'true' || symbol === 'false') {
-            terminals.add(symbol)
-          } else if (symbol.length === 1 && /[a-z]/.test(symbol)) {
-            terminals.add(symbol)
-          }
+      // 拆分为单字符
+      for (let i = 0; i < part.length; i++) {
+        const symbol = part[i]
+        // ε、id、true、false 特判
+        if (symbol === 'ε') {
+          terminals.add('ε')
+        } else if (part.slice(i, i + 2) === 'id') {
+          terminals.add('id')
+          i++
+        } else if (part.slice(i, i + 4) === 'true') {
+          terminals.add('true')
+          i += 3
+        } else if (part.slice(i, i + 5) === 'false') {
+          terminals.add('false')
+          i += 4
+        } else if (terminalPattern.test(symbol) && symbol !== '#') {
+          terminals.add(symbol)
         }
-      })
+      }
     })
   })
   return {
