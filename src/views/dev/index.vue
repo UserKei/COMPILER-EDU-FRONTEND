@@ -98,6 +98,14 @@ const currentTime = ref('')
 // 开发工具列表
 const devTools = ref([
   {
+    name: 'api-test',
+    title: 'API连接测试',
+    description: '测试前后端API连接状态和各功能模块',
+    icon: 'lucide:wifi',
+    route: '/dev/api-test',
+    status: 'active'
+  },
+  {
     name: 'canvas',
     title: '画布测试',
     description: 'Vue Flow 画布组件和自定义节点测试',
