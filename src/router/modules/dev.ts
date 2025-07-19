@@ -11,6 +11,15 @@ const devRoutes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/dev/api-test',
+    name: 'dev-api-test',
+    component: () => import('../../views/dev/pages/api-test.vue'),
+    meta: {
+      title: 'API测试',
+      description: '前后端API连接测试'
+    }
+  },
+  {
     path: '/dev/canvas',
     name: 'dev-canvas',
     component: () => import('../../views/dev/pages/CanvasFlowTest.vue'),

@@ -1,29 +1,58 @@
 <template>
-  <div class="lr0-analysis">
-    <div class="analysis-header">
-      <div class="header-content">
-        <div class="title-section">
-          <h1 class="text-3xl font-bold text-gray-900">LR0 语法分析</h1>
-          <p class="text-gray-600 mt-2">
-            LR0是一种自底向上的语法分析方法，通过构造项目集规范族和LR分析表进行语法分析
-          </p>
-        </div>
-        <div class="badge">
-          <Icon icon="lucide:layers" class="w-5 h-5" />
-          <span>自底向上分析</span>
+  <div class="lr0-layout h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <!-- 头部导航 -->
+    <header class="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <router-link to="/" class="text-2xl font-bold text-purple-600 hover:text-purple-800 transition-colors">
+              编译原理可视化
+            </router-link>
+            <span class="text-gray-400">|</span>
+            <h1 class="text-xl font-semibold text-gray-800">LR0 语法分析</h1>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              @click="resetProgress"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              重置进度
+            </button>
+            <router-link
+              to="/slr1"
+              class="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              SLR1分析 →
+            </router-link>
+          </div>
         </div>
       </div>
-    </div>
+    </header>
 
-    <div class="flow-section">
-      <StepFlowChart :steps="lr0Steps" :current-step="currentStep" @step-click="handleStepClick" />
-    </div>
+    <!-- 主要内容区域 -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+      <!-- 流程图导航 -->
+      <div class="mb-8">
+        <StepFlowChart
+          :steps="lr0Steps"
+          :current-step="currentStep"
+          @step-click="handleStepClick"
+        />
+      </div>
 
-    <div class="step-container">
-      <Transition name="step-slide" mode="out-in">
-        <component :is="currentStepComponent" @next-step="nextStep" @prev-step="prevStep" @complete="completeAnalysis" />
-      </Transition>
-    </div>
+      <!-- 步骤内容 -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <Transition name="step-slide" mode="out-in">
+          <component
+            :is="currentStepComponent"
+            :key="currentStep"
+            @next-step="nextStep"
+            @prev-step="prevStep"
+            @complete="completeAnalysis"
+          />
+        </Transition>
+      </div>
+    </main>
   </div>
 </template>
 
@@ -102,62 +131,29 @@ const completeAnalysis = (data: any) => {
   console.log('LR0 Analysis completed:', data)
   // 可以添加完成后的逻辑
 }
+
+// 重置进度
+const resetProgress = () => {
+  if (confirm('确定要重置所有进度吗？')) {
+    handleStepClick(1)
+  }
+}
 </script>
 
 <style scoped>
-.lr0-analysis {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.analysis-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 2rem;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #f3e8ff;
-  color: #7c3aed;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-}
-
-.flow-section {
-  background: white;
-  padding: 3rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.step-container {
-  background: white;
-  min-height: 60vh;
-}
-
+/* 页面切换动画 */
 .step-slide-enter-active,
 .step-slide-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.3s ease-out;
 }
 
 .step-slide-enter-from {
+  transform: translateX(20px);
   opacity: 0;
-  transform: translateX(30px);
 }
 
 .step-slide-leave-to {
+  transform: translateX(-20px);
   opacity: 0;
-  transform: translateX(-30px);
 }
 </style>

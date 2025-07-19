@@ -1,11 +1,11 @@
 <template>
-  <div class="ll1-layout h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+  <div class="ll1-layout h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
     <!-- 头部导航 -->
     <header class="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <router-link to="/" class="text-2xl font-bold text-green-600 hover:text-green-800 transition-colors">
+            <router-link to="/" class="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors">
               编译原理可视化
             </router-link>
             <span class="text-gray-400">|</span>
@@ -20,9 +20,9 @@
             </button>
             <router-link
               to="/lr0"
-              class="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              LR0分析 →
+              LR0 分析 →
             </router-link>
           </div>
         </div>
@@ -36,19 +36,19 @@
         <StepFlowChart
           :steps="ll1Steps"
           :current-step="currentStep"
-          @step-click="navigateToStep"
+          @step-click="handleStepClick"
         />
       </div>
 
       <!-- 步骤内容 -->
       <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-        <Transition name="slide-fade" mode="out-in">
+        <Transition name="step-slide" mode="out-in">
           <component
             :is="currentStepComponent"
             :key="currentStep"
             @next-step="nextStep"
             @prev-step="prevStep"
-            @complete="onStepComplete"
+            @complete="completeAnalysis"
           />
         </Transition>
       </div>
@@ -144,15 +144,18 @@ const prevStep = () => {
 }
 
 // 步骤完成回调
-const onStepComplete = (data: any) => {
+const completeAnalysis = (data: any) => {
   console.log('LL1 Step completed:', currentStep.value, data)
+}
+
+// 处理步骤点击
+const handleStepClick = (stepId: number) => {
+  navigateToStep(stepId)
 }
 
 // 重置进度
 const resetProgress = () => {
-  if (confirm('确定要重置所有进度吗？')) {
-    navigateToStep(1)
-  }
+  navigateToStep(1)
 }
 
 // 组件挂载时从路由获取步骤
@@ -166,18 +169,37 @@ onMounted(() => {
 
 <style scoped>
 /* 页面切换动画 */
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-  transition: all 0.3s ease-out;
+.step-slide-enter-active,
+.step-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.slide-fade-enter-from {
+.step-slide-enter-from {
+  opacity: 0;
   transform: translateX(20px);
-  opacity: 0;
 }
 
-.slide-fade-leave-to {
-  transform: translateX(-20px);
+.step-slide-leave-to {
   opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* 按钮悬停效果 */
+button:hover,
+a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .text-2xl {
+    font-size: 1.5rem;
+  }
 }
 </style>

@@ -1,29 +1,58 @@
 <template>
-  <div class="slr1-analysis">
-    <div class="analysis-header">
-      <div class="header-content">
-        <div class="title-section">
-          <h1 class="text-3xl font-bold text-gray-900">SLR1 语法分析</h1>
-          <p class="text-gray-600 mt-2">
-            SLR1是LR0的改进版本，通过引入FOLLOW集减少冲突，提高语法分析的准确性
-          </p>
-        </div>
-        <div class="badge">
-          <Icon icon="lucide:zap" class="w-5 h-5" />
-          <span>改进分析</span>
+  <div class="slr1-layout h-screen bg-gradient-to-br from-emerald-50 to-teal-100">
+    <!-- 头部导航 -->
+    <header class="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <router-link to="/" class="text-2xl font-bold text-emerald-600 hover:text-emerald-800 transition-colors">
+              编译原理可视化
+            </router-link>
+            <span class="text-gray-400">|</span>
+            <h1 class="text-xl font-semibold text-gray-800">SLR1 语法分析</h1>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              @click="resetProgress"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              重置进度
+            </button>
+            <router-link
+              to="/fa"
+              class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              有限自动机 →
+            </router-link>
+          </div>
         </div>
       </div>
-    </div>
+    </header>
 
-    <div class="flow-section">
-      <StepFlowChart :steps="slr1Steps" :current-step="currentStep" @step-click="handleStepClick" />
-    </div>
+    <!-- 主要内容区域 -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+      <!-- 流程图导航 -->
+      <div class="mb-8">
+        <StepFlowChart
+          :steps="slr1Steps"
+          :current-step="currentStep"
+          @step-click="handleStepClick"
+        />
+      </div>
 
-    <div class="step-container">
-      <Transition name="step-slide" mode="out-in">
-        <component :is="currentStepComponent" @next-step="nextStep" @prev-step="prevStep" @complete="completeAnalysis" />
-      </Transition>
-    </div>
+      <!-- 步骤内容 -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <Transition name="step-slide" mode="out-in">
+          <component
+            :is="currentStepComponent"
+            :key="currentStep"
+            @next-step="nextStep"
+            @prev-step="prevStep"
+            @complete="completeAnalysis"
+          />
+        </Transition>
+      </div>
+    </main>
   </div>
 </template>
 
@@ -104,51 +133,47 @@ const completeAnalysis = (data: any) => {
   console.log('SLR1 Analysis completed:', data)
   // 可以添加完成后的逻辑
 }
+
+const resetProgress = () => {
+  router.push('/slr1/1')
+}
 </script>
 
 <style scoped>
-.slr1-analysis {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.analysis-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 2rem;
-}
-
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #fef3c7;
-  color: #d97706;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-}
-
-.flow-section {
-  background: white;
-  padding: 3rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.step-container {
-  background: white;
-  min-height: 60vh;
-}
-
+/* 页面切换动画 */
 .step-slide-enter-active,
+.step-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.step-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* 按钮悬停效果 */
+button:hover,
+a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .flex {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .text-2xl {
+    font-size: 1.5rem;
+  }
+}
 .step-slide-leave-active {
   transition: all 0.3s ease;
 }
