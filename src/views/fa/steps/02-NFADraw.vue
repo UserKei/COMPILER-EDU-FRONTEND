@@ -176,6 +176,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import NFACanvas from '@/components/flow/canvas/NFACanvas.vue'
+import type { FAResult } from '@/types'
 
 defineEmits<{
   'next-step': []
@@ -183,8 +184,25 @@ defineEmits<{
   'complete': [data: any]
 }>()
 
-// 从上一步获取正则表达式
-const regexPattern = ref('(a|b)*abb') // 这里应该从状态管理或props获取
+// 从上一步获取数据
+const regexPattern = ref('')
+const faData = ref<FAResult | null>(null)
+const nfaDotString = ref('')
+
+// 从localStorage获取上一步的数据
+onMounted(() => {
+  try {
+    const savedData = localStorage.getItem('fa-step1-data')
+    if (savedData) {
+      const stepData = JSON.parse(savedData)
+      regexPattern.value = stepData.regex || ''
+      faData.value = stepData.faResult || null
+      nfaDotString.value = stepData.faResult?.NFA_dot_str || ''
+    }
+  } catch (error) {
+    console.error('读取上一步数据失败：', error)
+  }
+})
 
 // 构造步骤定义
 const constructionSteps = [

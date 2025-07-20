@@ -56,11 +56,14 @@
             <div class="flex gap-3">
               <button
                 @click="validateRegex"
-                :disabled="!regexInput.trim()"
+                :disabled="!regexInput.trim() || isProcessing"
                 class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
-                <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-2" />
-                验证正则
+                <Icon
+                  :icon="isProcessing ? 'lucide:loader-2' : 'lucide:check-circle'"
+                  :class="['w-4 h-4 inline mr-2', isProcessing ? 'animate-spin' : '']"
+                />
+                {{ isProcessing ? '验证中...' : '验证正则' }}
               </button>
               <button
                 @click="clearInput"
@@ -196,6 +199,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { getDFAM } from '@/api/fa'
+import type { FAResult } from '@/types'
 
 defineEmits<{
   'next-step': []
@@ -205,6 +210,8 @@ defineEmits<{
 
 // 正则表达式输入
 const regexInput = ref('')
+const isProcessing = ref(false)
+const faResult = ref<FAResult | null>(null)
 
 // 验证结果
 const validationResult = ref<{
@@ -249,11 +256,12 @@ const parsedInfo = computed(() => {
 
 // 是否验证通过且准备就绪
 const isValidAndReady = computed(() => {
-  return validationResult.value?.valid === true
+  return validationResult.value?.valid === true && faResult.value !== null && !isProcessing.value
 })
 
 // 验证正则表达式
-const validateRegex = () => {
+// 验证正则表达式并调用后端API
+const validateRegex = async () => {
   if (!regexInput.value.trim()) {
     validationResult.value = {
       valid: false,
@@ -262,9 +270,18 @@ const validateRegex = () => {
     return
   }
 
+  // 基本语法检查
   try {
-    // 基本语法检查
-    const pattern = regexInput.value
+    const pattern = regexInput.value.trim()
+
+    // 检查是否包含中文
+    if (/[\u4e00-\u9fa5]/.test(pattern)) {
+      validationResult.value = {
+        valid: false,
+        message: '输入不能包含中文字符'
+      }
+      return
+    }
 
     // 检查括号匹配
     let openCount = 0
@@ -292,10 +309,33 @@ const validateRegex = () => {
       throw new Error('正则表达式不能以 | 结尾')
     }
 
-    validationResult.value = {
-      valid: true,
-      message: '正则表达式语法正确，可以转换为 NFA'
+    // 调用后端API验证
+    isProcessing.value = true
+    try {
+      const response = await getDFAM(pattern.replace(/ +/g, '')) // 移除空格
+
+      if (response.data.code === 0 && response.data.data) {
+        faResult.value = response.data.data
+        validationResult.value = {
+          valid: true,
+          message: '正则表达式验证成功，已生成 NFA/DFA'
+        }
+      } else {
+        validationResult.value = {
+          valid: false,
+          message: response.data.message || response.data.msg || '后端验证失败'
+        }
+      }
+    } catch (apiError) {
+      console.error('API调用失败：', apiError)
+      validationResult.value = {
+        valid: false,
+        message: '网络错误或服务器异常，请稍后重试'
+      }
+    } finally {
+      isProcessing.value = false
     }
+
   } catch (error) {
     validationResult.value = {
       valid: false,
@@ -308,26 +348,27 @@ const validateRegex = () => {
 const clearInput = () => {
   regexInput.value = ''
   validationResult.value = null
+  faResult.value = null
 }
 
 // 进入下一步
 const proceedToNext = () => {
-  if (isValidAndReady.value) {
-    // 发送完成事件，传递正则表达式数据
+  if (isValidAndReady.value && faResult.value) {
+    // 发送完成事件，传递正则表达式数据和FA结果
     const stepData = {
       regex: regexInput.value,
       parsedInfo: parsedInfo.value,
+      faResult: faResult.value,
       timestamp: new Date().toISOString()
     }
 
     // 触发完成事件
     setTimeout(() => {
-      // 模拟一些处理时间
       console.log('Step 1 completed with data:', stepData)
 
       // 进入下一步
-      if (confirm('确认使用此正则表达式进行 Thompson 构造生成 NFA？')) {
-        // 这里可以保存数据到状态管理
+      if (confirm('确认使用此正则表达式进行后续步骤？')) {
+        // 保存数据到状态管理
         localStorage.setItem('fa-step1-data', JSON.stringify(stepData))
 
         // 进入下一步
@@ -342,6 +383,7 @@ watch(regexInput, (newValue) => {
   if (newValue && validationResult.value) {
     // 清空之前的验证结果，用户修改时重新验证
     validationResult.value = null
+    faResult.value = null
   }
 })
 </script>
