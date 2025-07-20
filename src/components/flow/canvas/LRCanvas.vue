@@ -54,6 +54,7 @@
         @node-click="onNodeClick"
         @edge-click="onEdgeClick"
         @pane-click="onPaneClick"
+        @pane-double-click="onPaneDoubleClick"
         @pane-context-menu="onPaneContextMenu"
         @pane-ready="onPaneReady"
       >
@@ -152,16 +153,7 @@ const {
       newNumber++
     }
     return `I${newNumber}`
-  },
-  generateNodeData: (label: string) => ({
-    title: label,
-    items: [
-      {
-        id: `item-${Date.now()}`,
-        text: ''
-      }
-    ]
-  })
+  }
 })
 
 // 计算属性
@@ -199,13 +191,29 @@ const onPaneClick = (event: MouseEvent) => {
   console.log('LR Pane clicked')
 }
 
+const onPaneDoubleClick = (event: MouseEvent) => {
+  addItemSet()
+}
+
 const onPaneContextMenu = (event: MouseEvent) => {
   event.preventDefault()
 }
 
 // 工具栏操作
 const addItemSet = () => {
-  const newNumber = nodes.value.length
+  // 生成新的项目集编号
+  const existingLabels = nodes.value
+    .filter(node => node.type === 'rectangle')
+    .map(node => node.data?.title || node.data?.label || '')
+    .filter(label => /^I\d+$/.test(label))
+    .map(label => parseInt(label.replace('I', '')))
+    .filter(num => !isNaN(num))
+
+  let newNumber = 0
+  while (existingLabels.includes(newNumber)) {
+    newNumber++
+  }
+
   const newNode: Node = {
     id: `node-${Date.now()}`,
     type: 'rectangle',
