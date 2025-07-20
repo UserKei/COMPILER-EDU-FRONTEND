@@ -3,18 +3,18 @@
     <div class="step-header">
       <div class="flex items-center gap-4">
         <div class="step-icon">
-          <Icon icon="lucide:layers" class="w-6 h-6 text-blue-600" />
+          <Icon icon="lucide:shuffle" class="w-6 h-6 text-blue-600" />
         </div>
         <div>
-          <h2 class="text-2xl font-bold text-gray-900">First集和Follow集</h2>
-          <p class="text-gray-600 mt-1">第二步：计算文法符号的First集和Follow集</p>
+          <h2 class="text-2xl font-bold text-gray-900">求First集和Follow集</h2>
+          <p class="text-gray-600 mt-1">第二步：计算文法中所有非终结符的First集和Follow集</p>
         </div>
       </div>
     </div>
 
     <div class="step-content">
       <div class="max-w-6xl mx-auto">
-        <!-- First集 -->
+        <!-- First集计算 -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Icon icon="lucide:arrow-right" class="w-5 h-5 mr-2 text-blue-600" />

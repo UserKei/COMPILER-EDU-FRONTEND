@@ -117,19 +117,19 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useLL1API } from '@/composables/api/useLL1API'
+import { getLL1AnalyseAPI } from '@/api/ll1'
+import type { LL1AnalysisResult } from '@/types'
 
 const emit = defineEmits<{
-  'next-step': []
+  'next-step': [data: LL1AnalysisResult]
   'prev-step': []
 }>()
-
-const { analyseGrammar, loading } = useLL1API()
 
 const grammarInput = ref('')
 const errorMessage = ref('')
 const isValid = ref(false)
-const analysisResult = ref<any>(null)
+const analysisResult = ref<LL1AnalysisResult | null>(null)
+const loading = ref(false)
 
 const exampleGrammars = [
   {
@@ -160,6 +160,7 @@ const validateGrammar = async () => {
   }
 
   try {
+    loading.value = true
     // 前端验证
     const lines = grammarInput.value.trim().split('\n').filter(line => line.trim())
 
@@ -172,9 +173,62 @@ const validateGrammar = async () => {
       }
     }
 
+    // 构建文法字典检查逻辑错误
+    const checkFormulas: Record<string, string[]> = {}
+    for (const pro of lines) {
+      const [left, right] = pro.split('->')
+      if (right.includes('|')) {
+        const rList = right.split('|')
+        if (!checkFormulas[left]) {
+          checkFormulas[left] = []
+        }
+        for (const r of rList) {
+          if (!checkFormulas[left].includes(r)) {
+            checkFormulas[left].push(r)
+          }
+        }
+      } else {
+        if (!checkFormulas[left]) {
+          checkFormulas[left] = []
+        }
+        checkFormulas[left].push(right)
+      }
+    }
+
+    // 获取所有非终结符
+    const checkVn = Array.from(lines.join('').match(/[A-Z]/g) || [])
+    for (const vn of checkVn) {
+      if (!checkFormulas[vn]) {
+        errorMessage.value = `非终结符 ${vn} 没有定义产生式！`
+        return
+      }
+    }
+
+    // 检查左递归
+    const visited = new Set<string>()
+    function dfs(vn: string): boolean {
+      visited.add(vn)
+      for (const str of checkFormulas[vn]) {
+        const symbol = str[0]
+        if (visited.has(symbol)) return true
+        if (/[A-Z]/.test(symbol) && checkFormulas[symbol]) {
+          if (dfs(symbol)) return true
+        }
+      }
+      return false
+    }
+    for (const vn of checkVn) {
+      if (!visited.has(vn)) {
+        if (dfs(vn)) {
+          errorMessage.value = '存在直接或间接左递归，请输入消除左递归后的文法！'
+          return
+        }
+      }
+    }
+
     // 发送到后端验证
-    const response = await analyseGrammar(lines)
-    const result = response.data
+    const response = await getLL1AnalyseAPI(lines)
+    const result = response.data?.data
 
     if (result && result.isLL1) {
       isValid.value = true
@@ -183,7 +237,10 @@ const validateGrammar = async () => {
       errorMessage.value = '不符合LL1文法，请重新输入'
     }
   } catch (error) {
+    console.error('Grammar analysis error:', error)
     errorMessage.value = '文法分析失败，请检查输入格式'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -193,9 +250,9 @@ const useExample = (example: any) => {
 }
 
 const nextStep = () => {
-  if (canProceed.value) {
-    // 保存数据到全局状态或传递给父组件
-    emit('next-step')
+  if (canProceed.value && analysisResult.value) {
+    // 传递分析结果到下一步
+    emit('next-step', analysisResult.value)
   }
 }
 
