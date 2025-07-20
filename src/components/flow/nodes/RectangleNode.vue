@@ -2,62 +2,105 @@
   <div
     ref="nodeRef"
     class="
-      min-h-16 bg-white border-2 p-3
+      bg-white border-2 rounded-lg p-3
       transition-all duration-200
       relative cursor-default group
       hover:shadow-lg
     "
     :class="{
-      'border-blue-500 ring-2 ring-blue-200': isSelected && !isEditing,
-      'border-purple-500 ring-2 ring-purple-200 bg-purple-50': isEditing,
-      'border-gray-300 hover:border-blue-400': !isSelected && !isEditing
+      'border-blue-500 ring-2 ring-blue-200': isSelected && !hasEditingItem,
+      'border-purple-500 ring-2 ring-purple-200 bg-purple-50': hasEditingItem,
+      'border-gray-300 hover:border-blue-400': !isSelected && !hasEditingItem
     }"
-  @click="handleNodeClick"
-  :style="{
-    width: dynamicWidth,
-    '--arrow-icon': `url(${arrowIconDataUri})`
-  }"
+    @click="handleNodeClick"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
-    <!-- Node Content -->
-    <div class="relative z-10" :class="{ 'pointer-events-none': !isEditing }">
-      <div class="
-        flex items-center justify-center
-        text-sm font-medium text-gray-700
-        min-h-8
-      ">
-        <div class="text-center relative">
+    <!-- Node Title (可选) -->
+    <div v-if="nodeData.title" class="text-center text-xs font-semibold text-gray-600 mb-2 border-b border-gray-200 pb-1">
+      {{ nodeData.title }}
+    </div>
+
+    <!-- LR Items Container -->
+    <div class="flex flex-col gap-1">
+      <div
+        v-for="(item, index) in itemList"
+        :key="item.id"
+        class="
+          flex items-center gap-2 min-h-6 px-2 py-1
+          rounded transition-colors duration-150
+          hover:bg-gray-50 group/item
+        "
+        @click.stop="editItem(item.id)"
+      >
+        <!-- Item Content -->
+        <div class="flex-1 min-w-0">
           <input
-            v-if="isEditing"
-            ref="inputRef"
-            v-model="nodeText"
+            v-if="editingItemId === item.id"
+            ref="editInputRef"
+            v-model="editingText"
             class="
-              text-center bg-transparent
-              border-none outline-none
-              w-full
-              text-xs
+              w-full bg-transparent border-none outline-none
+              text-xs text-gray-700 cursor-text font-normal
+              placeholder-gray-400
             "
-            @blur="finishEditing"
-            @keyup.enter="finishEditing"
-            @keyup.escape="cancelEditing"
+            placeholder="Enter LR item..."
+            @blur="finishEditingItem"
+            @keyup.enter="finishEditingItem"
+            @keyup.escape="cancelEditingItem"
           />
           <span
-            v-if="!isEditing"
-            :class="{
-              'italic opacity-50': !nodeText,
-              'opacity-100': nodeText
-            }"
+            v-else
             class="
-              text-gray-700
-              text-xs text-center
+              text-xs text-gray-700 cursor-text
+              block truncate
             "
+            :class="{
+              'italic opacity-50': !item.text,
+              'opacity-100': item.text
+            }"
           >
-            {{ nodeText || 'Click' }}
+            {{ item.text || 'Click to edit...' }}
           </span>
         </div>
+
+        <!-- Delete Button (hover时显示) -->
+        <button
+          v-if="itemList.length > 1 && editingItemId !== item.id"
+          @click.stop="deleteItem(item.id)"
+          class="
+            opacity-0 group-hover/item:opacity-100
+            w-4 h-4 rounded-full
+            bg-red-100 hover:bg-red-200
+            text-red-600 text-xs
+            flex items-center justify-center
+            transition-all duration-150
+          "
+        >
+          ×
+        </button>
       </div>
     </div>
 
-    <!-- Interactive Handle (右上角，用户可见可交互) - Handle中心在矩形右上角边框线上 -->
+    <!-- Add Button (节点悬停时显示) -->
+    <button
+      v-if="isHovered"
+      @click.stop="addNewItem"
+      class="
+        w-full mt-2 py-1
+        border border-dashed border-gray-300
+        rounded text-xs text-gray-500
+        hover:border-blue-400 hover:text-blue-600
+        hover:bg-blue-50
+        transition-all duration-150
+        flex items-center justify-center gap-1
+      "
+    >
+      <span class="text-sm">+</span>
+      Add Item
+    </button>
+
+    <!-- Interactive Handles -->
     <Handle
       id="top-right"
       type="source"
@@ -66,7 +109,6 @@
       data-handleid="top-right"
     />
 
-    <!-- Interactive Target Handle -->
     <Handle
       id="top-right-target"
       type="target"
@@ -75,7 +117,7 @@
       data-handleid="top-right-target"
     />
 
-    <!-- Hidden Central Handles (用于实际连线渲染，不可见) -->
+    <!-- Hidden Central Handles -->
     <Handle
       id="center-source"
       type="source"
@@ -95,12 +137,16 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import { Handle, Position, useVueFlow, type NodeProps } from '@vue-flow/core'
 
-// 直接使用SVG字符串作为data URI，fill设为white确保在蓝色/绿色背景下可见
 const arrowIconDataUri = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="white" d="m11.93 5l2.83 2.83L5 17.59L6.42 19l9.76-9.75L19 12.07V5z"/></svg>')
 
+interface LRItem {
+  id: string
+  text: string
+}
+
 interface NodeData {
-  label?: string
-  text?: string
+  title?: string
+  items?: LRItem[]
   [key: string]: any
 }
 
@@ -113,19 +159,33 @@ const props = defineProps<Props>()
 const { getSelectedNodes, updateNode } = useVueFlow()
 
 const nodeRef = ref<HTMLElement>()
-const inputRef = ref<HTMLInputElement>()
-const isEditing = ref(false)
+const editInputRef = ref<HTMLInputElement>()
+const isHovered = ref(false)
+const editingItemId = ref<string | null>(null)
+const editingText = ref('')
 const originalText = ref('')
 
-// 节点文本，同步到 data.text
-const nodeText = computed({
-  get: () => props.data.text || '',
-  set: (value: string) => {
+// 初始化项目列表
+const nodeData = computed(() => props.data)
+
+const itemList = computed({
+  get: () => {
+    const items = nodeData.value.items || []
+    // 如果没有项目，创建一个默认项目
+    if (items.length === 0) {
+      return [{ id: generateId(), text: '' }]
+    }
+    return items
+  },
+  set: (value: LRItem[]) => {
     updateNode(props.id, {
-      data: { ...props.data, text: value }
+      data: { ...props.data, items: value }
     })
   }
 })
+
+// 检查是否有正在编辑的项目
+const hasEditingItem = computed(() => editingItemId.value !== null)
 
 // 检查节点是否被选中
 const isSelected = computed(() => {
@@ -133,67 +193,150 @@ const isSelected = computed(() => {
   return selectedNodes.some(node => node.id === props.id)
 })
 
-// 处理节点点击事件
-const handleNodeClick = (event: MouseEvent) => {
-  if (isEditing.value) {
-    event.stopPropagation()
-    return // 编辑状态下阻止所有点击事件
-  }
+// 生成唯一ID
+const generateId = () => `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-  // 如果节点已经被选中，再次点击进入编辑模式
-  if (isSelected.value) {
-    event.stopPropagation()
-    enterEditMode()
-  }
-  // 如果节点未被选中，不阻止事件，让 Vue Flow 处理选中逻辑
-}
-
-// 进入编辑模式
-const enterEditMode = async () => {
-  isEditing.value = true
-  originalText.value = nodeText.value
-
-  await nextTick()
-  if (inputRef.value) {
-    inputRef.value.focus()
-    inputRef.value.select()
-  }
-}
-
-// 完成编辑
-const finishEditing = () => {
-  isEditing.value = false
-  // nodeText 的 setter 会自动更新数据
-}
-
-// 取消编辑
-const cancelEditing = () => {
-  nodeText.value = originalText.value
-  isEditing.value = false
-}
-
-// 计算节点的动态宽度
+// 计算动态宽度
 const dynamicWidth = computed(() => {
-  const text = nodeText.value
-  // 如果没有实际文本内容，使用最小宽度
-  if (!text || text.trim() === '') {
-    return '80px' // 空状态最小宽度
-  }
-  // 基础宽度 + 字符数 * 每字符宽度，最小80px，最大240px
-  const width = Math.max(80, Math.min(240, text.length * 8 + 32))
-  return width + 'px'
+  const items = itemList.value
+  const title = nodeData.value.title || ''
+
+  // 找到最长的文本
+  let maxLength = title.length
+  items.forEach(item => {
+    if (item.text) {
+      maxLength = Math.max(maxLength, item.text.length)
+    }
+  })
+
+  // 基础宽度计算，考虑最小宽度和最大宽度
+  const baseWidth = 120
+  const charWidth = 8
+  const padding = 40
+
+  const calculatedWidth = Math.max(baseWidth, Math.min(300, maxLength * charWidth + padding))
+  return calculatedWidth + 'px'
 })
 
-// ...existing code...
+// 计算动态高度
+const dynamicHeight = computed(() => {
+  const items = itemList.value
+  const titleHeight = nodeData.value.title ? 30 : 0
+  const itemHeight = 28 // 每个项目的高度
+  const padding = 24 // 上下内边距
+  const addButtonHeight = isHovered.value ? 32 : 0 // 悬停时就显示添加按钮
+
+  return titleHeight + (items.length * itemHeight) + padding + addButtonHeight + 'px'
+})
+
+// 处理节点点击
+const handleNodeClick = (event: MouseEvent) => {
+  if (hasEditingItem.value) {
+    event.stopPropagation()
+    return
+  }
+
+  // 如果节点已选中且只有一个空项目，直接编辑
+  if (isSelected.value && itemList.value.length === 1 && !itemList.value[0].text) {
+    event.stopPropagation()
+    editItem(itemList.value[0].id)
+  }
+}
+
+// 添加新项目
+const addNewItem = () => {
+  const newItem: LRItem = {
+    id: generateId(),
+    text: ''
+  }
+
+  const updatedItems = [...itemList.value, newItem]
+  itemList.value = updatedItems
+
+  // 立即编辑新项目
+  nextTick(() => {
+    editItem(newItem.id)
+  })
+}
+
+// 编辑项目
+const editItem = async (itemId: string) => {
+  const item = itemList.value.find(i => i.id === itemId)
+  if (!item) return
+
+  editingItemId.value = itemId
+  editingText.value = item.text
+  originalText.value = item.text
+
+  await nextTick()
+  if (editInputRef.value) {
+    editInputRef.value.focus()
+    editInputRef.value.select()
+  }
+}
+
+// 完成编辑项目
+const finishEditingItem = () => {
+  if (editingItemId.value) {
+    const itemIndex = itemList.value.findIndex(i => i.id === editingItemId.value)
+    if (itemIndex !== -1) {
+      const updatedItems = [...itemList.value]
+      updatedItems[itemIndex] = {
+        ...updatedItems[itemIndex],
+        text: editingText.value.trim()
+      }
+      itemList.value = updatedItems
+    }
+  }
+
+  editingItemId.value = null
+  editingText.value = ''
+  originalText.value = ''
+}
+
+// 取消编辑项目
+const cancelEditingItem = () => {
+  editingText.value = originalText.value
+  editingItemId.value = null
+  originalText.value = ''
+}
+
+// 删除项目
+const deleteItem = (itemId: string) => {
+  if (itemList.value.length <= 1) return // 至少保留一个项目
+
+  const updatedItems = itemList.value.filter(i => i.id !== itemId)
+  itemList.value = updatedItems
+}
+
+// 监听选中状态变化
 watch(isSelected, (newSelected) => {
-  if (!newSelected && isEditing.value) {
-    finishEditing()
+  if (!newSelected && hasEditingItem.value) {
+    finishEditingItem()
+  }
+})
+
+// 监听编辑状态变化，更新输入框引用
+watch(editingItemId, async () => {
+  if (editingItemId.value) {
+    await nextTick()
+    if (editInputRef.value) {
+      editInputRef.value.focus()
+      editInputRef.value.select()
+    }
   }
 })
 </script>
 
 <style scoped>
-/* Rectangle Handle 交互样式 */
+/* 节点容器动态样式 */
+.bg-white {
+  width: v-bind(dynamicWidth);
+  height: v-bind(dynamicHeight);
+  --arrow-icon: v-bind('`url(${arrowIconDataUri})`');
+}
+
+/* Handle 样式继承原有设计 */
 .rectangle-handle-interactive {
   position: absolute !important;
   top: -8px !important;
@@ -206,7 +349,6 @@ watch(isSelected, (newSelected) => {
   transform: translate(0%, 0%) !important;
 }
 
-/* Hidden Central Handle 样式 */
 .center-handle {
   position: absolute !important;
   width: 4px !important;
@@ -220,9 +362,50 @@ watch(isSelected, (newSelected) => {
   transform: translate(-50%, -50%) !important;
 }
 
-/* 输入框文本选中样式优化 */
+/* 输入框样式 - 更精确的字体继承 */
+input {
+  font: inherit !important;
+  font-size: 0.75rem !important; /* 明确设置为 text-xs */
+  font-weight: normal !important;
+  line-height: 1rem !important;
+  letter-spacing: inherit !important;
+}
+
+/* Placeholder 样式 - 确保字体一致 */
+input::placeholder {
+  font: inherit !important;
+  font-size: 0.75rem !important;
+  font-weight: normal !important;
+  color: rgb(156, 163, 175) !important; /* text-gray-400 */
+  opacity: 1 !important;
+}
+
+input::-webkit-input-placeholder {
+  font: inherit !important;
+  font-size: 0.75rem !important;
+  font-weight: normal !important;
+  color: rgb(156, 163, 175) !important;
+  opacity: 1 !important;
+}
+
+input::-moz-placeholder {
+  font: inherit !important;
+  font-size: 0.75rem !important;
+  font-weight: normal !important;
+  color: rgb(156, 163, 175) !important;
+  opacity: 1 !important;
+}
+
+input:-ms-input-placeholder {
+  font: inherit !important;
+  font-size: 0.75rem !important;
+  font-weight: normal !important;
+  color: rgb(156, 163, 175) !important;
+  opacity: 1 !important;
+}
+
 input::selection {
-  background-color: rgba(59, 130, 246, 0.3); /* 蓝色半透明选中背景 */
+  background-color: rgba(59, 130, 246, 0.3);
   color: inherit;
 }
 
@@ -231,7 +414,7 @@ input::-moz-selection {
   color: inherit;
 }
 
-/* 右上角Handle样式 - 未选中状态 (使用灰色系) */
+/* Handle 样式 */
 :deep(.vue-flow__handle[data-handleid="top-right"])::before,
 :deep(.vue-flow__handle[data-handleid="top-right-target"])::before {
   content: "";
@@ -241,7 +424,7 @@ input::-moz-selection {
   transform: translate(-50%, -50%);
   width: 12px;
   height: 12px;
-  background: #6b7280; /* gray-500 */
+  background: #6b7280;
   border: 2px solid white;
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -249,11 +432,10 @@ input::-moz-selection {
   cursor: crosshair;
 }
 
-/* 选中状态下的Handle样式 - 深灰色 */
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right"])::before {
   width: 16px;
   height: 16px;
-  background: #374151; /* gray-700 */
+  background: #374151;
 }
 
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right"])::after {
@@ -271,18 +453,16 @@ input::-moz-selection {
   z-index: 1;
 }
 
-/* Target Handle 样式 (浅灰色) */
 :deep(.vue-flow__handle[data-handleid="top-right-target"])::before {
-  background: #9ca3af; /* gray-400 */
+  background: #9ca3af;
 }
 
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right-target"])::before {
   width: 16px;
   height: 16px;
-  background: #6b7280; /* gray-500 */
+  background: #6b7280;
 }
 
-/* Target Handle 选中时也显示图标 */
 .ring-2:deep(.vue-flow__handle[data-handleid="top-right-target"])::after {
   content: "";
   position: absolute;
@@ -298,7 +478,6 @@ input::-moz-selection {
   z-index: 1;
 }
 
-/* Hover效果 */
 :deep(.vue-flow__handle[data-handleid="top-right"]:hover)::before,
 :deep(.vue-flow__handle[data-handleid="top-right-target"]:hover)::before {
   transform: translate(-50%, -50%) scale(1.1);
