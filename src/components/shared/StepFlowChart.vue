@@ -31,7 +31,6 @@
               'completed': isStepCompleted(step.id)
             }
           ]"
-          :aria-label="`Go to ${step.name}`"
         >
           <!-- 步骤圆圈 -->
           <div
@@ -72,13 +71,6 @@
             ]"
           >
             {{ step.name }}
-          </span>
-
-          <!-- 悬停提示 -->
-          <span
-            class="tooltip absolute -top-10 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30"
-          >
-            {{ step.title }}
           </span>
         </button>
       </div>
@@ -134,9 +126,6 @@ defineEmits<{
   'step-click': [stepId: number]
 }>()
 
-const svgRef = ref<SVGElement>()
-const pathRef = ref<SVGPathElement>()
-const progressPathRef = ref<SVGPathElement>()
 const ballRef = ref<HTMLElement>()
 const timelineContainerRef = ref<HTMLElement>()
 const progressBackgroundRef = ref<HTMLElement>()
@@ -320,74 +309,9 @@ const colors = {
   active: '#8b5cf6'      // Purple for active state
 }
 
-// 生成弧形路径数据
-const pathData = computed(() => {
-  const numSteps = props.steps.length
-  const width = 1200
-  const height = 96
-  const stepWidth = width / (numSteps - 1)
-
-  let path = `M 0,${height / 2}`
-
-  for (let i = 1; i < numSteps; i++) {
-    const x = i * stepWidth
-    const y = height / 2
-    const controlY = height / 2 - 20 // 向上的弧度
-
-    const prevX = (i - 1) * stepWidth
-    const midX = (prevX + x) / 2
-
-    path += ` Q ${midX},${controlY} ${x},${y}`
-  }
-
-  return path
-})
-
-// 进度偏移量
-const progressOffset = computed(() => {
-  const totalLength = 1000 // 假设路径总长度
-  const progress = Math.max(0, (props.currentStep - 1) / (props.steps.length - 1))
-  return totalLength - (totalLength * progress)
-})
-
 // 判断步骤状态
 const isStepActive = (stepId: number) => stepId === props.currentStep
 const isStepCompleted = (stepId: number) => stepId < props.currentStep
-
-// 判断是否为重要步骤 (类似 Google 的 markerLarge)
-const isImportantStep = (stepId: number) => {
-  // 可以根据业务逻辑定义重要步骤，这里简单以奇数步骤为例
-  return stepId % 2 === 1 || stepId === props.steps.length
-}
-
-// 获取下一步的颜色 (类似 Google 的 bar-color)
-const getNextStepColor = (stepId: number) => {
-  const step = props.steps.find(s => s.id === stepId)
-  const nextStep = props.steps.find(s => s.id === stepId + 1)
-
-  if (!nextStep) return 'transparent'
-
-  // 根据步骤类型返回不同颜色
-  if (isStepCompleted(stepId)) {
-    return colors.success
-  } else if (isStepActive(stepId)) {
-    return colors.primary
-  }
-  return colors.background
-}
-
-// 球形指示器位置计算
-const ballPosition = computed(() => {
-  const progress = Math.max(0, (props.currentStep - 1) / (props.steps.length - 1))
-  return `translateX(${progress * 100}%)`
-})
-
-// 进度百分比计算
-const progressPercentage = computed(() => {
-  if (props.steps.length <= 1) return 0
-  const progress = Math.max(0, (props.currentStep - 1) / (props.steps.length - 1))
-  return progress * 100
-})
 
 // 获取当前步骤对象
 const getCurrentStep = () => {
@@ -633,12 +557,6 @@ onMounted(() => {
 /* 步骤标签 */
 .step-label {
   line-height: 1.2;
-}
-
-/* 悬停提示 */
-.tooltip {
-  backdrop-filter: blur(8px);
-  z-index: 50;
 }
 
 /* 进度球 */

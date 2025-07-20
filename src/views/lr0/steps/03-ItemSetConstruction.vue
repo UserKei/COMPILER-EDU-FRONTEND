@@ -6,8 +6,8 @@
           <Icon icon="lucide:git-merge" class="w-6 h-6 text-purple-600" />
         </div>
         <div>
-          <h2 class="text-2xl font-bold text-gray-900">项目集构造</h2>
-          <p class="text-gray-600 mt-1">第二步：构造LR0项目集规范族</p>
+          <h2 class="text-2xl font-bold text-gray-900">画DFA</h2>
+          <p class="text-gray-600 mt-1">第三步：构造LR0项目集规范族DFA</p>
         </div>
       </div>
     </div>
@@ -26,7 +26,7 @@
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
-        <div class="text-sm text-gray-500">步骤 2 / 4</div>
+        <div class="text-sm text-gray-500">步骤 3 / 5</div>
         <button @click="nextStep" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
           下一步
           <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
@@ -50,7 +50,7 @@ const nextStep = () => {
     timestamp: new Date().toISOString()
   }
 
-  localStorage.setItem('lr0-step2-data', JSON.stringify(stepData))
+  localStorage.setItem('lr0-step3-data', JSON.stringify(stepData))
   emit('next-step')
 }
 </script>

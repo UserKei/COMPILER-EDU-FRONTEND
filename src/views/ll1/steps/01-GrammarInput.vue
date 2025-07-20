@@ -13,10 +13,79 @@
     </div>
 
     <div class="step-content">
-      <div class="text-center py-20">
-        <Icon icon="lucide:construction" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 class="text-xl font-semibold text-gray-600 mb-2">组件开发中</h3>
-        <p class="text-gray-500">LL1 文法输入组件正在开发中...</p>
+      <div class="max-w-4xl mx-auto">
+        <!-- 文法输入区域 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">输入产生式</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                文法规则 (每行一个产生式，格式: A->α|β)
+              </label>
+              <textarea
+                v-model="grammarInput"
+                placeholder="例如：&#10;S->AB&#10;A->a|ε&#10;B->b"
+                class="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                @input="validateGrammar"
+              />
+            </div>
+
+            <!-- 错误提示 -->
+            <div v-if="errorMessage" class="bg-red-50 border border-red-200 rounded-md p-3">
+              <div class="flex">
+                <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-400 mr-2 mt-0.5" />
+                <p class="text-sm text-red-700">{{ errorMessage }}</p>
+              </div>
+            </div>
+
+            <!-- 成功提示 -->
+            <div v-if="isValid && grammarInput.trim()" class="bg-green-50 border border-green-200 rounded-md p-3">
+              <div class="flex">
+                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-400 mr-2 mt-0.5" />
+                <p class="text-sm text-green-700">文法格式正确，符合LL1规范</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 示例文法 -->
+        <div class="bg-gray-50 rounded-lg p-6 mb-6">
+          <h4 class="text-md font-semibold text-gray-900 mb-3">示例文法</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              v-for="(example, index) in exampleGrammars"
+              :key="index"
+              class="bg-white rounded-md p-4 border border-gray-200 cursor-pointer hover:border-green-300 transition-colors"
+              @click="useExample(example)"
+            >
+              <h5 class="font-medium text-gray-800 mb-2">{{ example.name }}</h5>
+              <pre class="text-sm text-gray-600 font-mono">{{ example.grammar }}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- 分析结果 -->
+        <div v-if="analysisResult" class="bg-blue-50 rounded-lg p-6">
+          <h4 class="text-md font-semibold text-gray-900 mb-3">文法分析结果</h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span class="font-medium text-gray-700">起始符号:</span>
+              <span class="ml-2 text-blue-600">{{ analysisResult.S }}</span>
+            </div>
+            <div>
+              <span class="font-medium text-gray-700">非终结符:</span>
+              <span class="ml-2 text-blue-600">{{ analysisResult.Vn.join(', ') }}</span>
+            </div>
+            <div>
+              <span class="font-medium text-gray-700">终结符:</span>
+              <span class="ml-2 text-blue-600">{{ analysisResult.Vt.join(', ') }}</span>
+            </div>
+            <div>
+              <span class="font-medium text-gray-700">产生式数:</span>
+              <span class="ml-2 text-blue-600">{{ analysisResult.formulas_dict.length }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -27,7 +96,16 @@
           上一步
         </button>
         <div class="text-sm text-gray-500">步骤 1 / 4</div>
-        <button @click="$emit('next-step')" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+        <button
+          @click="nextStep"
+          :disabled="!canProceed"
+          :class="[
+            'px-6 py-2 rounded-lg transition-colors',
+            canProceed
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          ]"
+        >
           下一步
           <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
         </button>
@@ -37,13 +115,131 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
-defineEmits<{ 'next-step': [], 'prev-step': [], 'complete': [data: any] }>()
+import { useLL1API } from '@/composables/api/useLL1API'
+
+const emit = defineEmits<{
+  'next-step': []
+  'prev-step': []
+}>()
+
+const { analyseGrammar, loading } = useLL1API()
+
+const grammarInput = ref('')
+const errorMessage = ref('')
+const isValid = ref(false)
+const analysisResult = ref<any>(null)
+
+const exampleGrammars = [
+  {
+    name: '简单算术表达式',
+    grammar: 'E->TE1\nE1->+TE1|ε\nT->FT1\nT1->*FT1|ε\nF->(E)|id'
+  },
+  {
+    name: '条件语句',
+    grammar: 'S->if(E)S|if(E)SES1|a\nS1->eS|ε\nE->b'
+  },
+  {
+    name: '基础文法',
+    grammar: 'S->AB\nA->a|ε\nB->b'
+  }
+]
+
+const canProceed = computed(() => {
+  return isValid.value && analysisResult.value && grammarInput.value.trim()
+})
+
+const validateGrammar = async () => {
+  errorMessage.value = ''
+  isValid.value = false
+  analysisResult.value = null
+
+  if (!grammarInput.value.trim()) {
+    return
+  }
+
+  try {
+    // 前端验证
+    const lines = grammarInput.value.trim().split('\n').filter(line => line.trim())
+
+    // 检查格式
+    for (const line of lines) {
+      const match = line.match(/^([A-Z])->((?:[^|]+\|)*[^|]+)$/)
+      if (!match) {
+        errorMessage.value = '产生式格式不正确，请使用格式: A->α|β'
+        return
+      }
+    }
+
+    // 发送到后端验证
+    const response = await analyseGrammar(lines)
+    const result = response.data
+
+    if (result && result.isLL1) {
+      isValid.value = true
+      analysisResult.value = result
+    } else {
+      errorMessage.value = '不符合LL1文法，请重新输入'
+    }
+  } catch (error) {
+    errorMessage.value = '文法分析失败，请检查输入格式'
+  }
+}
+
+const useExample = (example: any) => {
+  grammarInput.value = example.grammar
+  validateGrammar()
+}
+
+const nextStep = () => {
+  if (canProceed.value) {
+    // 保存数据到全局状态或传递给父组件
+    emit('next-step')
+  }
+}
+
+// 监听输入变化
+watch(grammarInput, () => {
+  if (grammarInput.value.trim()) {
+    // 防抖验证
+    setTimeout(validateGrammar, 500)
+  } else {
+    errorMessage.value = ''
+    isValid.value = false
+    analysisResult.value = null
+  }
+})
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #dcfce7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.step-content {
+  margin-bottom: 2rem;
+}
+
+.step-actions {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1.5rem;
+}
+
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background-color: #dcfce7;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
 </style>

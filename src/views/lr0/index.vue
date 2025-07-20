@@ -65,16 +65,18 @@ import StepFlowChart from '@/components/shared/StepFlowChart.vue'
 // 动态导入所有步骤组件
 const stepComponents = {
   'GrammarInput': () => import('./steps/01-GrammarInput.vue'),
-  'ItemSetConstruction': () => import('./steps/02-ItemSetConstruction.vue'),
-  'LR0TableBuild': () => import('./steps/03-LR0TableBuild.vue'),
-  'StringAnalysis': () => import('./steps/04-StringAnalysis.vue')
+  'AugmentedGrammar': () => import('./steps/02-AugmentedGrammar.vue'),
+  'ItemSetConstruction': () => import('./steps/03-ItemSetConstruction.vue'),
+  'LR0TableBuild': () => import('./steps/04-LR0TableBuild.vue'),
+  'StringAnalysis': () => import('./steps/05-StringAnalysis.vue')
 }
 
 const lr0Steps = [
   { id: 1, name: '文法输入', title: '文法输入', key: 'GrammarInput', description: '输入LR0文法并进行预处理', color: '#3b82f6', component: 'GrammarInput' },
-  { id: 2, name: '项目集构造', title: '项目集构造', key: 'ItemSetConstruction', description: '构造LR0项目集规范族', color: '#8b5cf6', component: 'ItemSetConstruction' },
-  { id: 3, name: 'LR0表构建', title: 'LR0表构建', key: 'LR0TableBuild', description: '构建LR0分析表', color: '#10b981', component: 'LR0TableBuild' },
-  { id: 4, name: '字符串分析', title: '字符串分析', key: 'StringAnalysis', description: '使用LR0分析表分析字符串', color: '#f59e0b', component: 'StringAnalysis' }
+  { id: 2, name: '增广文法', title: '增广文法', key: 'AugmentedGrammar', description: '写出增广文法和产生式编号', color: '#8b5cf6', component: 'AugmentedGrammar' },
+  { id: 3, name: '画DFA', title: '画DFA', key: 'ItemSetConstruction', description: '构造LR0项目集规范族DFA', color: '#10b981', component: 'ItemSetConstruction' },
+  { id: 4, name: 'LR0分析表', title: 'LR0分析表', key: 'LR0TableBuild', description: '构建LR0分析表', color: '#f59e0b', component: 'LR0TableBuild' },
+  { id: 5, name: '分析输入串', title: '分析输入串', key: 'StringAnalysis', description: '使用LR0分析表分析输入串', color: '#ef4444', component: 'StringAnalysis' }
 ]
 
 const route = useRoute()
