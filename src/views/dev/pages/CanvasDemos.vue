@@ -48,16 +48,10 @@
         <DFACanvas />
       </div>
 
-      <!-- LR项目画布暂时废弃 -->
-      <!--
-      <div v-if="activeTab === 'lr0'" class="canvas-content">
-        <LR0Canvas />
+      <!-- LR 项目集画布 -->
+      <div v-if="activeTab === 'lr'" class="canvas-content">
+        <LRCanvas />
       </div>
-
-      <div v-if="activeTab === 'slr1'" class="canvas-content">
-        <SLR1Canvas />
-      </div>
-      -->
     </main>
   </div>
 </template>
@@ -67,17 +61,13 @@ import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import DFACanvas from '@/components/flow/canvas/DFACanvas.vue'
 import NFACanvas from '@/components/flow/canvas/NFACanvas.vue'
-// LR项目画布暂时废弃，注释掉导入
-// import LR0Canvas from '@/components/flow/canvas/LR0Canvas.vue'
-// import SLR1Canvas from '@/components/flow/canvas/SLR1Canvas.vue'
+import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
 
 // 选项卡配置
 const tabs = [
   { id: 'nfa', name: 'NFA 编辑器', icon: 'lucide:git-branch' },
   { id: 'dfa', name: 'DFA 编辑器', icon: 'lucide:workflow' },
-  // LR项目画布暂时废弃
-  // { id: 'lr0', name: 'LR0 项目集', icon: 'lucide:layers' },
-  // { id: 'slr1', name: 'SLR1 项目集', icon: 'lucide:zap' }
+  { id: 'lr', name: 'LR 项目集', icon: 'lucide:layers' }
 ]
 
 // 当前活动选项卡
