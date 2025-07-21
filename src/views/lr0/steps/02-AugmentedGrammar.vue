@@ -86,7 +86,7 @@
                 <div class="font-mono text-sm">
                   <!-- 新增的产生式 -->
                   <div class="py-1 bg-yellow-100 px-2 rounded mb-2 border border-yellow-300">
-                    <span class="text-yellow-800 font-medium">S' → {{ stepData.analysisResult.S }}</span>
+                    <span class="text-yellow-800 font-medium">S' -> {{ stepData.analysisResult.S }}</span>
                     <span class="text-xs text-yellow-600 ml-2">(新增)</span>
                   </div>
                   <!-- 原有产生式 -->

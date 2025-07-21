@@ -84,23 +84,6 @@
       </VueFlow>
     </div>
 
-    <!-- 项目集信息面板 -->
-    <div class="info-panel" v-if="selectedNodes.length === 1">
-      <h4 class="font-semibold text-gray-800 mb-2">项目集信息</h4>
-      <div class="text-sm text-gray-600">
-        <p>项目集 ID: {{ selectedNodes[0].data.title || selectedNodes[0].data.label }}</p>
-        <p>LR项目数量: {{ selectedNodes[0].data.items?.length || 0 }}</p>
-        <div v-if="selectedNodes[0].data.items?.length" class="mt-2">
-          <p class="font-medium">包含的LR项目:</p>
-          <ul class="list-disc list-inside ml-2">
-            <li v-for="item in selectedNodes[0].data.items" :key="item.id" class="text-xs">
-              {{ item.text || '空项目' }}
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
     <!-- 提示信息 -->
     <div class="help-text">
       <p class="text-sm text-gray-600">
@@ -352,13 +335,6 @@ defineExpose({
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
-}
-
-.info-panel {
-  padding: 1rem;
-  background: white;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .help-text {

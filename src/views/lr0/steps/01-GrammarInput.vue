@@ -241,7 +241,13 @@ const analyzeGrammar = async () => {
     }
 
     // 保存分析结果供其他步骤使用
-    localStorage.setItem('lr0-analysis-result', JSON.stringify(result.data))
+    const step1Data = {
+      analysisResult: result.data,
+      originalProductions: productions, // 保存原始产生式数组
+      grammarInput: grammarInput.value, // 保存原始输入文本
+      timestamp: new Date().toISOString()
+    }
+    localStorage.setItem('lr0-step1-data', JSON.stringify(step1Data))
 
   } catch (error: any) {
     analysisResult.value = {
