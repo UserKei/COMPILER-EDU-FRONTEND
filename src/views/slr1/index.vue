@@ -44,12 +44,17 @@
       <div class="bg-white rounded-xl shadow-lg overflow-hidden">
         <Transition name="step-slide" mode="out-in">
           <component
+            v-if="currentStepComponent"
             :is="currentStepComponent"
             :key="currentStep"
             @next-step="nextStep"
             @prev-step="prevStep"
             @complete="completeAnalysis"
           />
+          <div v-else class="p-8 text-center text-gray-500">
+            <Icon icon="lucide:loader-2" class="w-8 h-8 animate-spin mx-auto mb-4" />
+            <p>加载中...</p>
+          </div>
         </Transition>
       </div>
     </main>
@@ -57,18 +62,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StepFlowChart from '@/components/shared/StepFlowChart.vue'
 
 // 动态导入所有步骤组件
 const stepComponents = {
-  'GrammarInput': () => import('./steps/01-GrammarInput.vue'),
-  'AugmentedGrammar': () => import('./steps/02-AugmentedGrammar.vue'),
-  'ItemSetConstruction': () => import('./steps/03-ItemSetConstruction.vue'),
-  'SLR1TableBuild': () => import('./steps/04-SLR1TableBuild.vue'),
-  'StringAnalysis': () => import('./steps/05-StringAnalysis.vue')
+  'GrammarInput': defineAsyncComponent(() => import('./steps/01-GrammarInput.vue')),
+  'AugmentedGrammar': defineAsyncComponent(() => import('./steps/02-AugmentedGrammar.vue')),
+  'ItemSetConstruction': defineAsyncComponent(() => import('./steps/03-ItemSetConstruction.vue')),
+  'SLR1TableBuild': defineAsyncComponent(() => import('./steps/04-SLR1TableBuild.vue')),
+  'StringAnalysis': defineAsyncComponent(() => import('./steps/05-StringAnalysis.vue'))
 }
 
 const slr1Steps = [
