@@ -16,6 +16,28 @@
     <!-- 主要内容 -->
     <div class="step-content">
       <div class="space-y-6">
+        <!-- NFA 参考图 -->
+        <div class="nfa-reference">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <div class="border-b border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+                <Icon icon="lucide:share-2" class="w-5 h-5 text-blue-600" />
+                NFA 图（参考）
+              </h3>
+              <p class="text-sm text-gray-600 mt-1">根据此 NFA 图填写下方的转换表和状态转换矩阵</p>
+            </div>
+            <div class="p-6">
+              <div v-if="faData?.NFA_dot_str" class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
+                <div v-html="nfaSvg" class="flex justify-center"></div>
+              </div>
+              <div v-else class="text-center py-8 text-gray-500">
+                <Icon icon="lucide:image-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p>暂无 NFA 图数据</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 转换表区域 -->
         <div class="conversion-table-section">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -405,6 +427,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import type { FAResult } from '@/types'
+import { instance } from '@viz-js/viz'
 
 defineEmits<{
   'next-step': []
@@ -415,6 +438,23 @@ defineEmits<{
 // 从上一步获取数据
 const faData = ref<FAResult | null>(null)
 const regexPattern = ref('')
+
+// NFA SVG 渲染
+const nfaSvg = ref('')
+
+// 渲染 NFA SVG
+const renderNFASvg = async () => {
+  if (faData.value?.NFA_dot_str) {
+    try {
+      const viz = await instance()
+      const svg = viz.renderSVGElement(faData.value.NFA_dot_str)
+      nfaSvg.value = svg.outerHTML
+    } catch (error) {
+      console.error('渲染 NFA SVG 失败：', error)
+      nfaSvg.value = ''
+    }
+  }
+}
 
 // 用户填写的表格
 const userConversionTable = ref<Array<{
@@ -483,6 +523,8 @@ onMounted(() => {
         extractAlphabetFromFAData(stepData.faResult)
         // 生成答案数据
         generateAnswerData(stepData.faResult)
+        // 渲染 NFA SVG
+        renderNFASvg()
       }
     }
   } catch (error) {
