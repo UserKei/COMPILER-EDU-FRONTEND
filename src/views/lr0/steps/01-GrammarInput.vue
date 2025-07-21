@@ -20,9 +20,9 @@
           <div>
             <h3 class="text-lg font-semibold text-blue-900 mb-2">LR0文法输入格式</h3>
             <ul class="space-y-1 text-sm text-blue-800">
-              <li>• 每行一个产生式，格式：A → αβγ</li>
+              <li>• 每行一个产生式，格式：A -> αβγ</li>
               <li>• 左侧为非终结符，右侧为产生式体</li>
-              <li>• 使用 → 或 -> 表示产生</li>
+              <li>• 使用 -> 表示产生</li>
               <li>• 使用 | 表示或者关系</li>
               <li>• 使用 ε 或 epsilon 表示空串</li>
             </ul>
@@ -38,7 +38,7 @@
           </label>
           <textarea
             v-model="grammarInput"
-            placeholder="请输入文法产生式，例如：&#10;S → aAb&#10;A → c&#10;A → ε"
+            placeholder="请输入文法产生式，例如：&#10;S -> aAb&#10;A -> c&#10;A -> ε"
             class="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
             @input="onInputChange"
           ></textarea>
@@ -49,13 +49,13 @@
           <div>
             <h4 class="font-medium text-gray-900 mb-2">示例文法1</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <pre class="text-xs font-mono text-gray-700">S → E
-E → E + T
-E → T
-T → T * F
-T → F
-F → ( E )
-F → id</pre>
+              <pre class="text-xs font-mono text-gray-700">S -> E
+E -> E + T
+E -> T
+T -> T * F
+T -> F
+F -> ( E )
+F -> id</pre>
               <button
                 @click="loadExample(1)"
                 class="mt-2 text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -68,9 +68,9 @@ F → id</pre>
           <div>
             <h4 class="font-medium text-gray-900 mb-2">示例文法2</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <pre class="text-xs font-mono text-gray-700">S → aAb
-A → c
-A → ε</pre>
+              <pre class="text-xs font-mono text-gray-700">S -> aAb
+A -> c
+A -> ε</pre>
               <button
                 @click="loadExample(2)"
                 class="mt-2 text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -202,16 +202,16 @@ const onInputChange = () => {
 // 加载示例文法
 const loadExample = (exampleId: number) => {
   const examples = {
-    1: `S → E
-E → E + T
-E → T
-T → T * F
-T → F
-F → ( E )
-F → id`,
-    2: `S → aAb
-A → c
-A → ε`
+    1: `S -> E
+E -> E + T
+E -> T
+T -> T * F
+T -> F
+F -> ( E )
+F -> id`,
+    2: `S -> aAb
+A -> c
+A -> ε`
   }
 
   grammarInput.value = examples[exampleId as keyof typeof examples] || ''
@@ -231,7 +231,6 @@ const analyzeGrammar = async () => {
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0)
-      .map(line => line.replace(/\s*->\s*/, ' → '))
 
     const result = await lr0API.analyseGrammar(productions)
 
