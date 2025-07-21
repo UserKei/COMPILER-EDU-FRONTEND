@@ -46,7 +46,8 @@
           <component
             :is="currentStepComponent"
             :key="currentStep"
-            @next-step="nextStep"
+            :data="ll1Data"
+            @next-step="handleNextStep"
             @prev-step="prevStep"
             @complete="completeAnalysis"
           />
@@ -60,6 +61,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import StepFlowChart from '@/components/shared/StepFlowChart.vue'
+import type { LL1AnalysisResult } from '@/types'
 
 // 导入步骤组件
 import GrammarInput from './steps/01-GrammarInput.vue'
@@ -69,6 +71,9 @@ import StringAnalysis from './steps/04-StringAnalysis.vue'
 
 const router = useRouter()
 const route = useRoute()
+
+// LL1分析数据
+const ll1Data = ref<LL1AnalysisResult | null>(null)
 
 // LL1流程步骤定义
 const ll1Steps = [
@@ -134,6 +139,17 @@ const nextStep = () => {
   if (currentStep.value < ll1Steps.length) {
     navigateToStep(currentStep.value + 1)
   }
+}
+
+// 处理步骤完成和数据传递
+const handleNextStep = (data?: LL1AnalysisResult) => {
+  // 如果是第一步，保存文法分析数据
+  if (currentStep.value === 1 && data) {
+    ll1Data.value = data
+  }
+
+  // 进入下一步
+  nextStep()
 }
 
 // 上一步
