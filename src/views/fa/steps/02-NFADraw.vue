@@ -20,117 +20,102 @@
 
     <!-- 主要内容 -->
     <div class="step-content">
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <!-- 左侧：构造步骤 -->
-        <div class="construction-steps">
-          <div class="bg-gray-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">构造步骤</h3>
-
-            <div class="space-y-3">
-              <div
-                v-for="(step, index) in constructionSteps"
-                :key="index"
-                :class="[
-                  'p-3 rounded-lg border transition-all duration-300',
-                  index <= currentConstructionStep
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-white border-gray-200'
-                ]"
-              >
-                <div class="flex items-start gap-3">
-                  <div
-                    :class="[
-                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
-                      index <= currentConstructionStep
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-300 text-gray-600'
-                    ]"
-                  >
-                    {{ index + 1 }}
-                  </div>
-                  <div class="flex-1">
-                    <p
-                      :class="[
-                        'font-medium',
-                        index <= currentConstructionStep ? 'text-blue-900' : 'text-gray-700'
-                      ]"
-                    >
-                      {{ step.title }}
-                    </p>
-                    <p
-                      :class="[
-                        'text-sm mt-1',
-                        index <= currentConstructionStep ? 'text-blue-700' : 'text-gray-500'
-                      ]"
-                    >
-                      {{ step.description }}
-                    </p>
-                  </div>
-                </div>
-              </div>
+      <div class="space-y-6">
+        <!-- 上方：用户画图区域 -->
+        <div class="user-draw-area">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <!-- 用户画布 -->
+            <div class="h-[700px] p-4">
+              <NFACanvas
+                ref="userCanvasRef"
+                :readonly="false"
+              />
             </div>
+          </div>
 
-            <div class="mt-6 flex gap-2">
-              <button
-                @click="startConstruction"
-                :disabled="isConstructing"
-                :class="[
-                  'flex-1 px-4 py-2 rounded-lg transition-colors',
-                  isConstructing
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-purple-600 text-white hover:bg-purple-700'
-                ]"
-              >
-                <Icon
-                  :icon="isConstructing ? 'lucide:loader-2' : 'lucide:play'"
-                  :class="['w-4 h-4 inline mr-2', isConstructing ? 'animate-spin' : '']"
-                />
-                {{ isConstructing ? '构造中...' : '开始构造' }}
-              </button>
-              <button
-                @click="resetConstruction"
-                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Icon icon="lucide:rotate-ccw" class="w-4 h-4 inline mr-2" />
-                重置
-              </button>
+          <!-- 画图提示 -->
+          <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <Icon icon="lucide:lightbulb" class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 class="font-medium text-blue-800">绘制提示</h4>
+                <ul class="text-sm text-blue-700 mt-2 space-y-1">
+                  <li>• 使用 Thompson 构造法构造 NFA</li>
+                  <li>• 为每个基本符号创建状态和转换</li>
+                  <li>• 处理连接、选择和闭包操作</li>
+                  <li>• 确保有明确的初始状态和接受状态</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 中间：NFA 画布 -->
-        <div class="nfa-canvas-area xl:col-span-2">
-          <div class="bg-white border border-gray-200 rounded-lg h-96">
-            <div class="h-full relative">
-              <!-- 画布头部 -->
-              <div class="border-b border-gray-200 p-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-gray-900">NFA 状态图</h3>
-                  <div class="flex items-center gap-2 text-sm text-gray-500">
-                    <Icon icon="lucide:info" class="w-4 h-4" />
-                    <span>Thompson 构造结果</span>
-                  </div>
+        <!-- 下方：答案区域 -->
+        <div class="answer-area">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <!-- 答案区域头部 -->
+            <div class="border-b border-gray-200 p-4">
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">标准答案</h3>
+                <button
+                  @click="toggleAnswer"
+                  :class="[
+                    'px-4 py-2 rounded-lg transition-colors',
+                    showAnswer
+                      ? 'bg-gray-600 text-white hover:bg-gray-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  ]"
+                >
+                  <Icon
+                    :icon="showAnswer ? 'lucide:eye-off' : 'lucide:eye'"
+                    class="w-4 h-4 inline mr-2"
+                  />
+                  {{ showAnswer ? '隐藏答案' : '查看答案' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 答案内容 -->
+            <div class="h-80 p-4">
+              <div v-if="!showAnswer" class="h-full flex items-center justify-center">
+                <div class="text-center text-gray-500">
+                  <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p class="text-lg font-medium">答案已隐藏</p>
+                  <p class="text-sm mt-1">完成你的绘制后点击"查看答案"按钮</p>
                 </div>
               </div>
 
-              <!-- 画布主体 -->
-              <div class="h-full p-4">
-                <NFACanvas ref="nfaCanvasRef" />
+              <div v-else class="h-full">
+                <!-- SVG 渲染的答案 -->
+                <div v-if="nfaDotString" class="h-full">
+                  <div
+                    ref="answerSvgContainer"
+                    class="h-full w-full flex items-center justify-center bg-gray-50 rounded"
+                  >
+                    <!-- SVG 内容将通过 JavaScript 渲染到这里 -->
+                  </div>
+                </div>
+                <div v-else class="h-full flex items-center justify-center text-gray-500">
+                  <div class="text-center">
+                    <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
+                    <p>暂无答案数据</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- 构造信息 -->
-          <div v-if="constructionResult" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 class="font-medium text-green-800">NFA 构造完成</h4>
-                <div class="text-sm text-green-700 mt-2 space-y-1">
-                  <p>• 状态数量: {{ constructionResult.stateCount }}</p>
-                  <p>• 转换数量: {{ constructionResult.transitionCount }}</p>
-                  <p>• 初始状态: {{ constructionResult.initialState }}</p>
-                  <p>• 接受状态: {{ constructionResult.finalStates.join(', ') }}</p>
+            <!-- 答案分析 -->
+            <div v-if="showAnswer && faData" class="border-t border-gray-200 bg-green-50 p-4">
+              <div class="flex items-start gap-3">
+                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 class="font-medium text-green-800">NFA 构造分析</h4>
+                  <div class="text-sm text-green-700 mt-2 space-y-1">
+                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ regexPattern }}</code></p>
+                    <p>• NFA 构造完成</p>
+                    <p>• 使用 Thompson 构造法生成</p>
+                    <p>• 可进行下一步 NFA → DFA 转换</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -189,6 +174,13 @@ const regexPattern = ref('')
 const faData = ref<FAResult | null>(null)
 const nfaDotString = ref('')
 
+// 答案显示控制
+const showAnswer = ref(false)
+
+// 用户画图相关
+const userCanvasRef = ref<InstanceType<typeof NFACanvas>>()
+const answerSvgContainer = ref<HTMLElement>()
+
 // 从localStorage获取上一步的数据
 onMounted(() => {
   try {
@@ -204,243 +196,55 @@ onMounted(() => {
   }
 })
 
-// 构造步骤定义
-const constructionSteps = [
-  {
-    title: '解析正则表达式',
-    description: '将正则表达式解析为语法树'
-  },
-  {
-    title: '基本状态构造',
-    description: '为每个基本符号创建状态'
-  },
-  {
-    title: '连接操作处理',
-    description: '处理连接操作，连接相邻的自动机'
-  },
-  {
-    title: '选择操作处理',
-    description: '处理选择操作（|），创建分支'
-  },
-  {
-    title: '闭包操作处理',
-    description: '处理闭包操作（*和+）'
-  },
-  {
-    title: '最终优化',
-    description: '优化状态转换，生成最终NFA'
+// 答案控制
+const toggleAnswer = async () => {
+  showAnswer.value = !showAnswer.value
+
+  if (showAnswer.value && nfaDotString.value && answerSvgContainer.value) {
+    // 使用 viz.js 或其他库渲染 DOT 图
+    await renderDotToSvg()
   }
-]
+}
 
-// 当前构造步骤
-const currentConstructionStep = ref(-1)
-const isConstructing = ref(false)
-const constructionResult = ref<{
-  stateCount: number
-  transitionCount: number
-  initialState: string
-  finalStates: string[]
-} | null>(null)
+// 渲染DOT字符串为SVG
+const renderDotToSvg = async () => {
+  if (!answerSvgContainer.value || !nfaDotString.value) return
 
-// NFA 画布引用
-const nfaCanvasRef = ref<InstanceType<typeof NFACanvas>>()
+  try {
+    // 这里需要使用 viz.js 或类似的库来渲染DOT
+    // 由于没有安装相关库，暂时显示占位内容
+    answerSvgContainer.value.innerHTML = `
+      <div class="text-center text-gray-600">
+        <p class="mb-2">NFA 状态图</p>
+        <p class="text-sm">正则表达式: ${regexPattern.value}</p>
+        <div class="mt-4 text-xs bg-gray-100 p-2 rounded">
+          <pre>${nfaDotString.value}</pre>
+        </div>
+      </div>
+    `
+  } catch (error) {
+    console.error('渲染DOT图失败：', error)
+    answerSvgContainer.value.innerHTML = '<div class="text-red-500">渲染失败</div>'
+  }
+}
 
-// 是否构造完成
+// 是否构造完成（用户是否已绘制）
 const isConstructionComplete = computed(() => {
-  return constructionResult.value !== null
+  // 可以检查用户是否已经绘制了一些内容
+  return userCanvasRef.value?.getNodes && userCanvasRef.value.getNodes().length > 0
 })
-
-// 开始构造
-const startConstruction = async () => {
-  if (isConstructing.value) return
-
-  isConstructing.value = true
-  currentConstructionStep.value = -1
-  constructionResult.value = null
-
-  // 清空画布
-  if (nfaCanvasRef.value) {
-    nfaCanvasRef.value.clearCanvas()
-  }
-
-  // 模拟构造过程
-  for (let i = 0; i < constructionSteps.length; i++) {
-    await new Promise(resolve => setTimeout(resolve, 800))
-    currentConstructionStep.value = i
-
-    // 在画布上添加相应的状态和转换
-    await simulateConstructionStep(i)
-  }
-
-  // 构造完成
-  await new Promise(resolve => setTimeout(resolve, 500))
-  isConstructing.value = false
-
-  // 设置构造结果
-  constructionResult.value = {
-    stateCount: 8,
-    transitionCount: 10,
-    initialState: 'q0',
-    finalStates: ['q7']
-  }
-}
-
-// 模拟构造步骤
-const simulateConstructionStep = async (step: number) => {
-  if (!nfaCanvasRef.value) return
-
-  const canvas = nfaCanvasRef.value
-
-  switch (step) {
-    case 0: // 解析正则表达式
-      // 不需要在画布上显示
-      break
-
-    case 1: // 基本状态构造
-      // 添加初始状态
-      canvas.addNode({
-        id: 'q0',
-        type: 'circle',
-        position: { x: 100, y: 200 },
-        data: {
-          label: 'q0',
-          isInitial: true,
-          isFinal: false
-        }
-      })
-      break
-
-    case 2: // 连接操作处理
-      // 添加 'a' 转换的状态
-      canvas.addNode({
-        id: 'q1',
-        type: 'circle',
-        position: { x: 250, y: 200 },
-        data: { label: 'q1' }
-      })
-      canvas.addEdge({
-        id: 'e1',
-        type: 'custom',
-        source: 'q0',
-        target: 'q1',
-        data: { label: 'a' },
-        markerEnd: 'url(#nfa-arrow)'
-      })
-      break
-
-    case 3: // 选择操作处理
-      // 添加 'b' 分支
-      canvas.addNode({
-        id: 'q2',
-        type: 'circle',
-        position: { x: 250, y: 100 },
-        data: { label: 'q2' }
-      })
-      canvas.addEdge({
-        id: 'e2',
-        type: 'custom',
-        source: 'q0',
-        target: 'q2',
-        data: { label: 'b' },
-        markerEnd: 'url(#nfa-arrow)'
-      })
-      break
-
-    case 4: // 闭包操作处理
-      // 添加闭包状态
-      canvas.addNode({
-        id: 'q3',
-        type: 'circle',
-        position: { x: 400, y: 150 },
-        data: { label: 'q3' }
-      })
-      // 添加 ε 转换
-      canvas.addEdge({
-        id: 'e3',
-        type: 'custom',
-        source: 'q1',
-        target: 'q3',
-        data: { label: 'ε' },
-        markerEnd: 'url(#nfa-arrow)'
-      })
-      canvas.addEdge({
-        id: 'e4',
-        type: 'custom',
-        source: 'q2',
-        target: 'q3',
-        data: { label: 'ε' },
-        markerEnd: 'url(#nfa-arrow)'
-      })
-      break
-
-    case 5: // 最终优化
-      // 添加最终状态
-      canvas.addNode({
-        id: 'q7',
-        type: 'circle',
-        position: { x: 700, y: 200 },
-        data: {
-          label: 'q7',
-          isFinal: true
-        }
-      })
-      // 添加 'abb' 序列的其余部分
-      const states = ['q4', 'q5', 'q6']
-      const labels = ['a', 'b', 'b']
-
-      for (let i = 0; i < states.length; i++) {
-        canvas.addNode({
-          id: states[i],
-          type: 'circle',
-          position: { x: 500 + i * 100, y: 200 },
-          data: { label: states[i] }
-        })
-
-        const sourceId = i === 0 ? 'q3' : states[i - 1]
-        canvas.addEdge({
-          id: `e${5 + i}`,
-          type: 'custom',
-          source: sourceId,
-          target: states[i],
-          data: { label: labels[i] },
-          markerEnd: 'url(#nfa-arrow)'
-        })
-      }
-
-      // 最后连接到终态
-      canvas.addEdge({
-        id: 'e8',
-        type: 'custom',
-        source: 'q6',
-        target: 'q7',
-        data: { label: 'ε' },
-        markerEnd: 'url(#nfa-arrow)'
-      })
-      break
-  }
-}
-
-// 重置构造
-const resetConstruction = () => {
-  currentConstructionStep.value = -1
-  isConstructing.value = false
-  constructionResult.value = null
-
-  if (nfaCanvasRef.value) {
-    nfaCanvasRef.value.clearCanvas()
-  }
-}
 
 // 进入下一步
 const proceedToNext = () => {
   if (isConstructionComplete.value) {
     const stepData = {
       nfa: {
-        states: nfaCanvasRef.value?.getNodes() || [],
-        transitions: nfaCanvasRef.value?.getEdges() || [],
-        ...constructionResult.value
-      },
-      timestamp: new Date().toISOString()
+        userDraw: {
+          nodes: userCanvasRef.value?.getNodes() || [],
+          edges: userCanvasRef.value?.getEdges() || []
+        },
+        timestamp: new Date().toISOString()
+      }
     }
 
     // 保存数据
@@ -450,15 +254,6 @@ const proceedToNext = () => {
     document.dispatchEvent(new CustomEvent('next-step'))
   }
 }
-
-// 组件挂载时加载上一步数据
-onMounted(() => {
-  const step1Data = localStorage.getItem('fa-step1-data')
-  if (step1Data) {
-    const data = JSON.parse(step1Data)
-    regexPattern.value = data.regex
-  }
-})
 </script>
 
 <style scoped>

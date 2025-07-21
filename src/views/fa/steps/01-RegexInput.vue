@@ -117,28 +117,68 @@
         <!-- 右侧：说明和预览 -->
         <div class="info-section">
           <div class="bg-blue-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">支持的语法</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">输入规则说明</h3>
 
-            <div class="space-y-3 text-sm">
-              <div class="flex items-start gap-3">
-                <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">a|b</code>
-                <span class="text-gray-700">选择：匹配 a 或 b</span>
+            <!-- 运算符规定 -->
+            <div class="mb-6">
+              <h4 class="font-medium text-gray-900 mb-3">1. 运算符规定</h4>
+              <div class="space-y-2 text-sm ml-4">
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">•</code>
+                  <span class="text-gray-700">连接运算符，可省略不写。例如：ab 等同于 a•b</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">|</code>
+                  <span class="text-gray-700">或运算符，用于表示多个选择。例如：a|b 表示匹配 a 或 b</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">*</code>
+                  <span class="text-gray-700">闭包运算符，表示前面的元素可以出现0次或多次。例如：a* 表示可以匹配0个或多个 a</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">()</code>
+                  <span class="text-gray-700">辅助括号，用来改变运算优先级。例如：(a|b)•c</span>
+                </div>
+                <div class="text-gray-600 text-xs mt-2">
+                  <strong>运算优先级：</strong>括号内的表达式 > 闭包运算符 * > 连接运算符 • > 或运算符 |
+                </div>
               </div>
-              <div class="flex items-start gap-3">
-                <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">ab</code>
-                <span class="text-gray-700">连接：匹配 a 后跟 b</span>
+            </div>
+
+            <!-- 字符规定 -->
+            <div class="mb-6">
+              <h4 class="font-medium text-gray-900 mb-3">2. 字符规定</h4>
+              <div class="space-y-2 text-sm ml-4">
+                <div class="text-gray-700">• 可输入字母、数字、标点符等ASCII表中编号范围为32-126的可显示字符</div>
+                <div class="text-gray-700">• 以及特殊字符 <code class="px-1 bg-white rounded text-blue-600 font-mono">ε</code></div>
+                <div class="text-gray-700">• 输入的空格不会被视为有效字符参与正则表达式匹配</div>
               </div>
-              <div class="flex items-start gap-3">
-                <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">a*</code>
-                <span class="text-gray-700">克林闭包：匹配零个或多个 a</span>
+            </div>
+
+            <!-- 注意事项 -->
+            <div>
+              <h4 class="font-medium text-gray-900 mb-3">3. 注意事项</h4>
+              <div class="text-sm text-gray-700 ml-4">
+                • 请在英文键盘下输入正则表达式
               </div>
-              <div class="flex items-start gap-3">
-                <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">a+</code>
-                <span class="text-gray-700">正闭包：匹配一个或多个 a</span>
-              </div>
-              <div class="flex items-start gap-3">
-                <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">(ab)</code>
-                <span class="text-gray-700">分组：将 ab 作为一个整体</span>
+            </div>
+
+            <!-- 示例 -->
+            <div class="mt-6 pt-4 border-t border-blue-200">
+              <h4 class="font-medium text-gray-900 mb-3">常用示例</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">(a|b)*abb</code>
+                  <span class="text-gray-700">以 abb 结尾的字符串</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">a*b+</code>
+                  <span class="text-gray-700">零个或多个 a 后跟一个或多个 b</span>
+                </div>
+                <div class="flex items-start gap-3">
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">(0|1)*101</code>
+                  <span class="text-gray-700">二进制数以 101 结尾</span>
+                </div>
               </div>
             </div>
           </div>
@@ -281,6 +321,18 @@ const validateRegex = async () => {
         message: '输入不能包含中文字符'
       }
       return
+    }
+
+    // 检查ASCII字符范围（32-126）和特殊字符ε
+    for (const char of pattern) {
+      const charCode = char.charCodeAt(0)
+      if (char !== 'ε' && (charCode < 32 || charCode > 126)) {
+        validationResult.value = {
+          valid: false,
+          message: `字符 "${char}" 不在允许范围内。只能输入ASCII字符(32-126)和特殊字符ε`
+        }
+        return
+      }
     }
 
     // 检查括号匹配
