@@ -158,10 +158,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import NFACanvas from '@/components/flow/canvas/NFACanvas.vue'
 import type { FAResult } from '@/types'
+import { instance } from '@viz-js/viz'
 
 defineEmits<{
   'next-step': []
@@ -190,6 +191,9 @@ onMounted(() => {
       regexPattern.value = stepData.regex || ''
       faData.value = stepData.faResult || null
       nfaDotString.value = stepData.faResult?.NFA_dot_str || ''
+
+      console.log('Step 2 loaded data:', stepData)
+      console.log('NFA DOT string:', nfaDotString.value)
     }
   } catch (error) {
     console.error('读取上一步数据失败：', error)
@@ -198,33 +202,89 @@ onMounted(() => {
 
 // 答案控制
 const toggleAnswer = async () => {
+  console.log('toggleAnswer called, current showAnswer:', showAnswer.value)
   showAnswer.value = !showAnswer.value
+  console.log('New showAnswer value:', showAnswer.value)
 
-  if (showAnswer.value && nfaDotString.value && answerSvgContainer.value) {
-    // 使用 viz.js 或其他库渲染 DOT 图
-    await renderDotToSvg()
+  if (showAnswer.value && nfaDotString.value) {
+    // 等待DOM更新
+    await nextTick()
+    console.log('After nextTick, container exists:', !!answerSvgContainer.value)
+
+    if (answerSvgContainer.value) {
+      console.log('开始渲染，条件检查：', {
+        showAnswer: showAnswer.value,
+        hasDotString: !!nfaDotString.value,
+        hasContainer: !!answerSvgContainer.value
+      })
+      // 使用 viz.js 渲染 DOT 图
+      await renderDotToSvg()
+    } else {
+      console.error('answerSvgContainer ref is null after nextTick')
+    }
+  } else {
+    console.log('跳过渲染，条件不满足：', {
+      showAnswer: showAnswer.value,
+      hasDotString: !!nfaDotString.value
+    })
   }
 }
 
 // 渲染DOT字符串为SVG
 const renderDotToSvg = async () => {
-  if (!answerSvgContainer.value || !nfaDotString.value) return
+  if (!answerSvgContainer.value || !nfaDotString.value) {
+    console.warn('renderDotToSvg: 缺少必要条件', {
+      hasContainer: !!answerSvgContainer.value,
+      hasDotString: !!nfaDotString.value
+    })
+    return
+  }
 
   try {
-    // 这里需要使用 viz.js 或类似的库来渲染DOT
-    // 由于没有安装相关库，暂时显示占位内容
+    console.log('开始渲染DOT...')
+    console.log('Container:', answerSvgContainer.value)
+    console.log('DOT String:', nfaDotString.value)
+
+    // 清除之前的内容
+    answerSvgContainer.value.innerHTML = ''
+
+    // 显示加载状态
+    answerSvgContainer.value.innerHTML = '<div class="text-center text-blue-600">正在渲染图形...</div>'
+
+    // 使用 viz.js 渲染 DOT 字符串
+    console.log('正在初始化 viz.js...')
+    const viz = await instance()
+    console.log('viz.js 初始化成功:', viz)
+
+    console.log('正在渲染 SVG...')
+    const svg = viz.renderSVGElement(nfaDotString.value)
+    console.log('SVG 渲染成功:', svg)
+
+    // 清除加载状态
+    answerSvgContainer.value.innerHTML = ''
+
+    // 添加样式使 SVG 适应容器
+    svg.style.maxWidth = '100%'
+    svg.style.maxHeight = '100%'
+    svg.style.height = 'auto'
+    svg.style.width = 'auto'
+
+    // 将 SVG 添加到容器
+    answerSvgContainer.value.appendChild(svg)
+
+    console.log('DOT rendered successfully, SVG added to container')
+    console.log('Container children count:', answerSvgContainer.value.children.length)
+  } catch (error) {
+    console.error('渲染DOT图失败：', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
     answerSvgContainer.value.innerHTML = `
-      <div class="text-center text-gray-600">
-        <p class="mb-2">NFA 状态图</p>
-        <p class="text-sm">正则表达式: ${regexPattern.value}</p>
-        <div class="mt-4 text-xs bg-gray-100 p-2 rounded">
-          <pre>${nfaDotString.value}</pre>
+      <div class="text-center text-red-500">
+        <p>渲染失败: ${errorMessage}</p>
+        <div class="mt-4 text-xs bg-gray-100 p-2 rounded text-left">
+          <pre class="whitespace-pre-wrap">${nfaDotString.value}</pre>
         </div>
       </div>
     `
-  } catch (error) {
-    console.error('渲染DOT图失败：', error)
-    answerSvgContainer.value.innerHTML = '<div class="text-red-500">渲染失败</div>'
   }
 }
 
