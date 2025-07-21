@@ -119,7 +119,7 @@
           <div class="bg-white border border-gray-200 rounded-lg">
             <!-- 用户画布 -->
             <div class="h-[700px] p-4">
-              <DFACanvas ref="dfaCanvasRef" />
+              <FACanvas ref="dfaCanvasRef" mode="dfa" />
             </div>
           </div>
 
@@ -314,7 +314,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import DFACanvas from '@/components/flow/canvas/DFACanvas.vue'
+import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import type { FAResult } from '@/types'
 import { instance } from '@viz-js/viz'
 
@@ -348,7 +348,7 @@ const dfaResult = ref<{
 } | null>(null)
 
 // DFA 画布引用
-const dfaCanvasRef = ref<InstanceType<typeof DFACanvas>>()
+const dfaCanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
 // 计算属性

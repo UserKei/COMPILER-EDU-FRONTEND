@@ -26,8 +26,9 @@
           <div class="bg-white border border-gray-200 rounded-lg">
             <!-- 用户画布 -->
             <div class="h-[700px] p-4">
-              <NFACanvas
+              <FACanvas
                 ref="userCanvasRef"
+                mode="nfa"
                 :readonly="false"
               />
             </div>
@@ -160,7 +161,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
-import NFACanvas from '@/components/flow/canvas/NFACanvas.vue'
+import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import type { FAResult } from '@/types'
 import { instance } from '@viz-js/viz'
 
@@ -179,7 +180,7 @@ const nfaDotString = ref('')
 const showAnswer = ref(false)
 
 // 用户画图相关
-const userCanvasRef = ref<InstanceType<typeof NFACanvas>>()
+const userCanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
 // 从localStorage获取上一步的数据

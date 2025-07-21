@@ -40,12 +40,12 @@
     <main class="canvas-wrapper">
       <!-- NFA 画布 -->
       <div v-if="activeTab === 'nfa'" class="canvas-content">
-        <NFACanvas />
+        <FACanvas mode="nfa" />
       </div>
 
       <!-- DFA 画布 -->
       <div v-if="activeTab === 'dfa'" class="canvas-content">
-        <DFACanvas />
+        <FACanvas mode="dfa" />
       </div>
 
       <!-- LR 项目集画布 -->
@@ -59,8 +59,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import DFACanvas from '@/components/flow/canvas/DFACanvas.vue'
-import NFACanvas from '@/components/flow/canvas/NFACanvas.vue'
+import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
 
 // 选项卡配置

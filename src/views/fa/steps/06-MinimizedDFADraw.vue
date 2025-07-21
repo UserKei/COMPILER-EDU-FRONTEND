@@ -110,7 +110,7 @@
 
               <!-- 画布主体 -->
               <div class="h-full p-4">
-                <DFACanvas ref="minimizedDFACanvasRef" />
+                <FACanvas ref="minimizedDFACanvasRef" mode="dfa" title="最小化 DFA" />
               </div>
             </div>
           </div>
@@ -177,7 +177,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import DFACanvas from '@/components/flow/canvas/DFACanvas.vue'
+import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import type { FAResult } from '@/types'
 
 const emit = defineEmits<{
@@ -204,7 +204,7 @@ const minimizedResult = ref<{
 } | null>(null)
 
 // 最小化DFA画布引用
-const minimizedDFACanvasRef = ref<InstanceType<typeof DFACanvas>>()
+const minimizedDFACanvasRef = ref<InstanceType<typeof FACanvas>>()
 
 // 计算属性
 const optimizationInfo = computed(() => {

@@ -1,8 +1,10 @@
 <template>
-  <div class="dfa-canvas">
+  <div class="fa-canvas">
     <!-- 工具栏 -->
     <div class="toolbar">
-      <h3 class="text-lg font-semibold text-gray-800">DFA 编辑器</h3>
+      <h3 class="text-lg font-semibold text-gray-800">
+        {{ displayTitle }} 编辑器
+      </h3>
       <div class="controls">
         <button
           @click="clearCanvas"
@@ -31,6 +33,13 @@
         >
           重置状态
         </button>
+        <button
+          @click="deleteSelected"
+          class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+          :disabled="selectedNodes.length === 0 && selectedEdges.length === 0"
+        >
+          删除选中
+        </button>
       </div>
     </div>
 
@@ -51,6 +60,7 @@
         :pan-on-drag="[2]"
         :zoom-on-double-click="false"
         class="vue-flow"
+        :class="mode"
         @connect="onConnect"
         @node-click="onNodeClick"
         @edge-click="onEdgeClick"
@@ -68,7 +78,7 @@
         <svg>
           <defs>
             <marker
-              id="dfa-arrow"
+              :id="`${mode}-arrow`"
               viewBox="0 0 10 10"
               refX="9"
               refY="5"
@@ -77,7 +87,10 @@
               orient="auto"
               markerUnits="strokeWidth"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+              <path
+                d="M 0 0 L 10 5 L 0 10 z"
+                :fill="mode === 'nfa' ? '#059669' : '#3b82f6'"
+              />
             </marker>
           </defs>
         </svg>
@@ -87,20 +100,39 @@
     <!-- 提示信息 -->
     <div class="help-text">
       <p class="text-sm text-gray-600">
-        💡 提示：双击画布空白处创建状态节点，DFA 只能有一个初态且每个状态的每个输入只能有一个转换
+        💡 提示：双击画布空白处创建状态节点，拖拽节点连接线创建转换
+        <span v-if="mode === 'dfa'">（DFA 只能有一个初态且每个状态的每个输入只能有一个转换）</span>
       </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, onMounted } from 'vue'
-import { VueFlow, useVueFlow, type Node, type Edge, type Connection } from '@vue-flow/core'
+import { ref, computed, onMounted, markRaw, nextTick } from 'vue'
+import { VueFlow, type Node, type Edge, type Connection, useVueFlow } from '@vue-flow/core'
 import { Controls } from '@vue-flow/controls'
 import { Background } from '@vue-flow/background'
 import CircleNode from '../nodes/CircleNode.vue'
 import CustomEdge from '../edges/CustomEdge.vue'
 import { useNodeCreation } from '@/composables/flow/useNodeCreation'
+import { gsap } from 'gsap'
+
+// 定义 props
+interface Props {
+  mode?: 'nfa' | 'dfa'
+  title?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  mode: 'nfa',
+  title: ''
+})
+
+// 计算标题
+const displayTitle = computed(() => {
+  if (props.title) return props.title
+  return props.mode === 'nfa' ? 'NFA' : 'DFA'
+})
 
 // 定义节点和边类型
 const nodeTypes = {
@@ -115,7 +147,7 @@ const edgeTypes = {
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
-const { getSelectedNodes, getSelectedEdges, onEdgesChange, updateEdge } = useVueFlow()
+const { getSelectedNodes, getSelectedEdges, onEdgesChange, onNodesChange, updateEdge, removeNodes, removeEdges } = useVueFlow()
 
 // 使用节点创建功能
 const {
@@ -134,6 +166,8 @@ const selectedEdges = computed(() => getSelectedEdges.value)
 
 // 检查 DFA 规则：每个状态的每个输入只能有一个转换
 const validateDFAConnection = (newConnection: Connection): boolean => {
+  if (props.mode !== 'dfa') return true
+
   const existingEdges = edges.value.filter(edge =>
     edge.source === newConnection.source &&
     edge.sourceHandle === newConnection.sourceHandle
@@ -145,8 +179,8 @@ const validateDFAConnection = (newConnection: Connection): boolean => {
 
 // 事件处理
 const onConnect = (connection: Connection) => {
-  // 验证 DFA 规则
-  if (!validateDFAConnection(connection)) {
+  // 验证 DFA 规则（仅在 DFA 模式下）
+  if (props.mode === 'dfa' && !validateDFAConnection(connection)) {
     console.warn('DFA 约束：每个状态的每个输入只能有一个转换')
     return
   }
@@ -162,22 +196,22 @@ const onConnect = (connection: Connection) => {
       label: '',
       isEditing: true
     },
-    markerEnd: 'url(#dfa-arrow)'
+    markerEnd: `url(#${props.mode}-arrow)`
   }
 
   edges.value.push(newEdge)
 }
 
 const onNodeClick = (event: any) => {
-  console.log('DFA Node clicked:', event.node)
+  console.log(`${props.mode.toUpperCase()} Node clicked:`, event.node)
 }
 
 const onEdgeClick = (event: any) => {
-  console.log('DFA Edge clicked:', event.edge)
+  console.log(`${props.mode.toUpperCase()} Edge clicked:`, event.edge)
 }
 
 const onPaneClick = (event: MouseEvent) => {
-  console.log('DFA Pane clicked')
+  console.log(`${props.mode.toUpperCase()} Pane clicked`)
 }
 
 const onPaneContextMenu = (event: MouseEvent) => {
@@ -194,7 +228,7 @@ const clearCanvas = () => {
 
 const setSelectedAsInitial = () => {
   if (selectedNodes.value.length === 1) {
-    // DFA 只能有一个初态
+    // NFA 和 DFA 都只能有一个初态
     nodes.value.forEach(node => {
       if (node.data) {
         node.data.isInitial = false
@@ -216,11 +250,51 @@ const resetSelectedState = () => {
   })
 }
 
+const deleteSelected = () => {
+  const selectedNodeIds = selectedNodes.value.map(node => node.id)
+  const selectedEdgeIds = selectedEdges.value.map(edge => edge.id)
+
+  // 先执行删除动画，然后删除数据
+  if (selectedNodeIds.length > 0) {
+    animateNodeDeletion(selectedNodeIds, () => {
+      // 动画完成后使用VueFlow的删除方法
+      removeNodes(selectedNodeIds)
+      console.log(`Deleted ${selectedNodeIds.length} nodes and related edges`)
+    })
+  }
+
+  // 使用VueFlow的方法删除选中的边
+  if (selectedEdgeIds.length > 0) {
+    removeEdges(selectedEdgeIds)
+    console.log(`Deleted ${selectedEdgeIds.length} edges`)
+  }
+}
+
+// 删除动画函数
+const animateNodeDeletion = (nodeIds: string[], onComplete: () => void) => {
+  const elements = nodeIds.map(nodeId => document.querySelector(`[data-id="${nodeId}"]`)).filter(Boolean)
+
+  if (elements.length === 0) {
+    onComplete()
+    return
+  }
+
+  gsap.to(elements, {
+    scale: 0,
+    opacity: 0,
+    duration: 0.3,
+    ease: 'back.in(1.7)',
+    stagger: 0.05,
+    onComplete
+  })
+}
+
 // 生命周期 - 现在双击事件通过 useNodeCreation 中的 watch 自动绑定
 const onPaneReady = (vueFlowInstance: any) => {
-  console.log('DFA Pane ready')
+  console.log(`${props.mode.toUpperCase()} Pane ready`)
   // watch 会自动处理双击事件绑定，这里不需要手动绑定
 }
+
 onMounted(() => {
   // 额外的防护：禁用整个文档的双击选择文本行为
   document.addEventListener('selectstart', (e) => {
@@ -234,8 +308,20 @@ onMounted(() => {
 onEdgesChange((changes) => {
   changes.forEach((change) => {
     if (change.type === 'remove') {
-      console.log(`Removed DFA edge: ${change.id}`)
+      console.log(`Removed ${props.mode.toUpperCase()} edge: ${change.id}`)
+      // VueFlow会自动处理边的移除，不需要手动操作数组
     }
+  })
+})
+
+// 节点变化处理
+onNodesChange((changes) => {
+  changes.forEach((change) => {
+    if (change.type === 'remove') {
+      console.log(`Removed ${props.mode.toUpperCase()} node: ${change.id}`)
+      // VueFlow会自动处理节点的移除，不需要手动操作数组
+    }
+    // 移除位置更新逻辑，让VueFlow自己处理位置同步
   })
 })
 
@@ -244,13 +330,14 @@ defineExpose({
   getNodes: () => nodes.value,
   getEdges: () => edges.value,
   clearCanvas,
+  deleteSelected,
   addNode: (node: Node) => nodes.value.push(node),
   addEdge: (edge: Edge) => edges.value.push(edge)
 })
 </script>
 
 <style scoped>
-.dfa-canvas {
+.fa-canvas {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -286,6 +373,15 @@ defineExpose({
 .vue-flow {
   width: 100%;
   height: 100%;
+}
+
+/* NFA 模式样式 */
+.vue-flow.nfa {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* DFA 模式样式 */
+.vue-flow.dfa {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
 }
 
@@ -308,20 +404,35 @@ defineExpose({
   z-index: 5;
 }
 
-:deep(.vue-flow__handle-connecting) {
+/* NFA 模式样式 */
+:deep(.vue-flow.nfa .vue-flow__handle-connecting) {
+  background: #059669;
+}
+
+:deep(.vue-flow.nfa .vue-flow__handle-valid) {
+  background: #10b981;
+}
+
+:deep(.vue-flow.nfa .vue-flow__edge.selected) {
+  stroke: #059669 !important;
+  stroke-width: 3 !important;
+}
+
+/* DFA 模式样式 */
+:deep(.vue-flow.dfa .vue-flow__handle-connecting) {
   background: #3b82f6;
 }
 
-:deep(.vue-flow__handle-valid) {
+:deep(.vue-flow.dfa .vue-flow__handle-valid) {
   background: #60a5fa;
+}
+
+:deep(.vue-flow.dfa .vue-flow__edge.selected) {
+  stroke: #3b82f6 !important;
+  stroke-width: 3 !important;
 }
 
 :deep(.vue-flow__node.selected) {
   outline: none !important;
-}
-
-:deep(.vue-flow__edge.selected) {
-  stroke: #3b82f6 !important;
-  stroke-width: 3 !important;
 }
 </style>
