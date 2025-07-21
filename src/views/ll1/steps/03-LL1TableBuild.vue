@@ -13,7 +13,44 @@
     </div>
 
     <div class="step-content">
-      <div class="max-w-7xl mx-auto">
+      <div v-if="!grammarData" class="max-w-4xl mx-auto text-center py-12">
+        <div class="text-gray-500">
+          <Icon icon="lucide:alert-circle" class="w-12 h-12 mx-auto mb-4" />
+          <p class="text-lg">请先完成前面步骤的文法分析</p>
+        </div>
+      </div>
+      <div v-else class="max-w-7xl mx-auto">
+        <!-- 说明指引 -->
+        <div class="bg-green-50 rounded-lg p-6 mb-6">
+          <div class="flex items-center mb-4">
+            <Icon icon="lucide:info" class="w-5 h-5 text-green-600 mr-2" />
+            <h3 class="text-lg font-semibold text-gray-900">构建说明</h3>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-gray-200 rounded"></div>
+              <span class="text-sm text-gray-700">已知信息</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-yellow-200 rounded"></div>
+              <span class="text-sm text-gray-700">待填写</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-green-200 rounded"></div>
+              <span class="text-sm text-gray-700">校验正确</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-red-200 rounded"></div>
+              <span class="text-sm text-gray-700">校验错误</span>
+            </div>
+          </div>
+          <div class="text-sm text-gray-600">
+            <p>根据 First 集合和 Follow 集合，填写产生式，构造 LL1 分析表</p>
+            <p class="mt-1">• 对于产生式 A → α，将 A → α 填入 M[A, a]，其中 a ∈ First(α)</p>
+            <p>• 如果 ε ∈ First(α)，将 A → α 填入 M[A, b]，其中 b ∈ Follow(A)</p>
+          </div>
+        </div>
+
         <!-- First/Follow集摘要 -->
         <div class="bg-gray-50 rounded-lg p-6 mb-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">First/Follow集摘要</h3>
@@ -39,122 +76,184 @@
           </div>
         </div>
 
-        <!-- 构建分析表 -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">LL1分析表构建</h3>
-            <button
-              @click="buildParsingTable"
-              :disabled="building"
-              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              <Icon v-if="building" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
-              {{ building ? '构建中...' : '构建分析表' }}
-            </button>
+        <!-- 调试面板 -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <h4 class="text-sm font-medium text-yellow-800 mb-2">调试信息</h4>
+          <div class="text-xs text-yellow-700 space-y-1">
+            <div><strong>Table 数据类型:</strong> {{ typeof grammarData?.table }}</div>
+            <div><strong>Table 内容:</strong> {{ JSON.stringify(grammarData?.table) }}</div>
+            <div><strong>所需填写项数量:</strong> {{ getRequiredTableEntries().length }}</div>
+            <div><strong>所需填写项:</strong> {{ getRequiredTableEntries().join(', ') || '无' }}</div>
+            <div><strong>全部完成状态:</strong> {{ allCompleted }}</div>
           </div>
+        </div>
 
-          <!-- 构建步骤 -->
-          <div v-if="buildingSteps.length > 0" class="mb-6">
-            <h4 class="font-medium text-gray-900 mb-3">构建过程</h4>
-            <div class="space-y-2 max-h-40 overflow-y-auto">
-              <div
-                v-for="(step, index) in buildingSteps"
-                :key="index"
-                class="bg-gray-50 rounded-md p-3 text-sm"
-              >
-                <div class="font-mono text-gray-700">{{ step }}</div>
+        <!-- 主要内容区域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+          <!-- 左侧：产生式列表 -->
+          <div class="lg:col-span-4">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Icon icon="lucide:list" class="w-5 h-5 mr-2 text-blue-600" />
+                产生式
+              </h3>
+              <div class="space-y-2">
+                <div
+                  v-for="(productions, nonTerminal) in grammarData.formulas_dict"
+                  :key="nonTerminal"
+                  class="border border-gray-200 rounded-lg p-3"
+                >
+                  <div class="font-mono text-sm text-blue-600 font-medium mb-2">{{ nonTerminal }}</div>
+                  <div class="space-y-1">
+                    <div
+                      v-for="(production, index) in productions"
+                      :key="index"
+                      class="text-sm text-gray-700 pl-4 border-l-2 border-gray-300"
+                    >
+                      <span class="font-mono">{{ nonTerminal }} → {{ production }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- LL1分析表 -->
-          <div v-if="parsingTable" class="overflow-x-auto">
-            <h4 class="font-medium text-gray-900 mb-3">LL1预测分析表</h4>
-            <table class="min-w-full border border-gray-300">
-              <thead class="bg-green-50">
-                <tr>
-                  <th class="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase">
-                    非终结符
-                  </th>
-                  <th
-                    v-for="terminal in terminals"
-                    :key="terminal"
-                    class="border border-gray-300 px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase"
-                  >
-                    {{ terminal }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-white">
-                <tr v-for="nonTerminal in nonTerminals" :key="nonTerminal">
-                  <td class="border border-gray-300 px-3 py-2 font-mono font-semibold text-green-700">
-                    {{ nonTerminal }}
-                  </td>
-                  <td
-                    v-for="terminal in terminals"
-                    :key="`${nonTerminal}-${terminal}`"
-                    class="border border-gray-300 px-3 py-2 text-center text-sm"
-                  >
-                    <span
-                      v-if="parsingTable[nonTerminal] && parsingTable[nonTerminal][terminal]"
-                      class="font-mono text-gray-700"
-                    >
-                      {{ parsingTable[nonTerminal][terminal] }}
-                    </span>
-                    <span v-else class="text-gray-400">-</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <!-- 右侧：LL1分析表 -->
+          <div class="lg:col-span-8">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                  <Icon icon="lucide:table" class="w-5 h-5 mr-2 text-green-600" />
+                  LL1 分析表
+                </h3>
+                <button
+                  @click="checkTable"
+                  :disabled="checking"
+                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+                >
+                  <Icon v-if="checking" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
+                  校验分析表
+                </button>
+              </div>
 
-          <!-- 成功提示 -->
-          <div v-if="parsingTable && conflicts.length === 0" class="mt-6">
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div class="flex items-center">
-                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-400 mr-2" />
-                <p class="text-sm text-green-700 font-medium">
-                  LL1分析表构建成功，无冲突！该文法是LL1文法。
+              <!-- LL1分析表 -->
+              <div class="overflow-x-auto">
+                <table class="min-w-full border border-gray-300">
+                  <thead class="bg-green-50">
+                    <tr>
+                      <th class="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase">
+                        非终结符
+                      </th>
+                      <th
+                        v-for="terminal in terminals"
+                        :key="terminal"
+                        class="border border-gray-300 px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase"
+                      >
+                        {{ terminal }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white">
+                    <tr v-for="nonTerminal in nonTerminals" :key="nonTerminal">
+                      <td class="border border-gray-300 px-3 py-2 font-mono font-semibold text-green-700">
+                        {{ nonTerminal }}
+                      </td>
+                      <td
+                        v-for="terminal in terminals"
+                        :key="`${nonTerminal}-${terminal}`"
+                        class="border border-gray-300 px-1 py-1"
+                      >
+                        <input
+                          v-model="userTable[`${nonTerminal}|${terminal}`]"
+                          type="text"
+                          placeholder=""
+                          :class="[
+                            'w-full px-2 py-1 text-xs text-center border-0 focus:ring-2 focus:ring-green-500 transition-colors',
+                            getTableCellClass(nonTerminal, terminal)
+                          ]"
+                          @focus="clearTableValidation(nonTerminal, terminal)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- 校验结果提示 -->
+              <div v-if="tableValidated && !hasTableErrors" class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div class="flex items-center">
+                  <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-500 mr-2" />
+                  <p class="text-sm text-green-700 font-medium">
+                    LL1 分析表校验成功！该文法是 LL1 文法。
+                  </p>
+                </div>
+              </div>
+
+              <div v-if="tableValidated && hasTableErrors" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-center mb-2">
+                  <Icon icon="lucide:alert-triangle" class="w-5 h-5 text-red-500 mr-2" />
+                  <p class="text-sm text-red-700 font-medium">
+                    分析表校验失败，请检查错误项目
+                  </p>
+                </div>
+                <p class="text-xs text-red-600">
+                  剩余 {{ remainingAttempts }} 次尝试，超过限制将显示正确答案
                 </p>
               </div>
-            </div>
-          </div>
 
-          <!-- 冲突检查 -->
-          <div v-if="conflicts.length > 0" class="mt-6">
-            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h4 class="font-medium text-red-800 mb-2 flex items-center">
-                <Icon icon="lucide:alert-triangle" class="w-5 h-5 mr-2" />
-                发现冲突
-              </h4>
-              <ul class="text-sm text-red-700 space-y-1">
-                <li v-for="conflict in conflicts" :key="conflict">{{ conflict }}</li>
-              </ul>
+              <!-- 显示答案 -->
+              <div v-if="showAnswer" class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 class="text-sm font-medium text-blue-800 mb-3">正确答案：</h4>
+                <div class="overflow-x-auto">
+                  <table class="min-w-full border border-blue-300 text-xs">
+                    <thead class="bg-blue-100">
+                      <tr>
+                        <th class="border border-blue-300 px-2 py-1 text-left font-medium text-blue-700">
+                          非终结符
+                        </th>
+                        <th
+                          v-for="terminal in terminals"
+                          :key="terminal"
+                          class="border border-blue-300 px-2 py-1 text-center font-medium text-blue-700"
+                        >
+                          {{ terminal }}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="nonTerminal in nonTerminals" :key="nonTerminal">
+                        <td class="border border-blue-300 px-2 py-1 font-mono font-semibold text-blue-700">
+                          {{ nonTerminal }}
+                        </td>
+                        <td
+                          v-for="terminal in terminals"
+                          :key="`${nonTerminal}-${terminal}`"
+                          class="border border-blue-300 px-2 py-1 text-center text-blue-600"
+                        >
+                          {{ getCorrectTableEntry(nonTerminal, terminal) || '-' }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 分析表统计 -->
-        <div v-if="parsingTable" class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">分析表统计</h3>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div class="text-center">
-              <div class="text-2xl font-bold text-green-600">{{ tableStats.totalEntries }}</div>
-              <div class="text-gray-600">总条目数</div>
+        <!-- 构建规则提示 -->
+        <div class="bg-yellow-50 rounded-lg p-6 mb-6">
+          <h4 class="text-md font-semibold text-gray-900 mb-3">构建规则</h4>
+          <div class="text-sm text-gray-600 space-y-2">
+            <div>
+              <strong>步骤 1：</strong>对于每个产生式 A → α，执行以下步骤：
             </div>
-            <div class="text-center">
-              <div class="text-2xl font-bold text-emerald-600">{{ tableStats.filledEntries }}</div>
-              <div class="text-gray-600">已填充</div>
+            <div class="ml-4">
+              <div>• 对于 First(α) 中的每个终结符 a，将 A → α 加入到 M[A, a]</div>
+              <div>• 如果 ε ∈ First(α)，对于 Follow(A) 中的每个终结符 b，将 A → α 加入到 M[A, b]</div>
             </div>
-            <div class="text-center">
-              <div class="text-2xl font-bold text-gray-500">{{ tableStats.emptyEntries }}</div>
-              <div class="text-gray-600">空条目</div>
-            </div>
-            <div class="text-center">
-              <div class="text-2xl font-bold" :class="tableStats.fillRate >= 50 ? 'text-green-600' : 'text-yellow-600'">
-                {{ tableStats.fillRate }}%
-              </div>
-              <div class="text-gray-600">填充率</div>
+            <div>
+              <strong>步骤 2：</strong>将所有无定义的条目标记为错误
             </div>
           </div>
         </div>
@@ -163,14 +262,26 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
         <div class="text-sm text-gray-500">步骤 3 / 4</div>
-        <button @click="$emit('next-step')" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+        <button
+          @click="$emit('next-step')"
+          :disabled="!allCompleted"
+          :class="[
+            'px-6 py-2 rounded-lg transition-colors flex items-center gap-2',
+            allCompleted
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          ]"
+        >
           下一步
-          <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
+          <Icon icon="lucide:chevron-right" class="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -180,136 +291,194 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import type { LL1AnalysisResult } from '@/types'
 
-defineEmits<{ 'next-step': [], 'prev-step': [], 'complete': [data: any] }>()
+// Props
+const props = defineProps<{
+  data?: LL1AnalysisResult | null
+}>()
 
-const building = ref(false)
-const parsingTable = ref<Record<string, Record<string, string>> | null>(null)
-const buildingSteps = ref<string[]>([])
-const conflicts = ref<string[]>([])
+defineEmits<{
+  'next-step': []
+  'prev-step': []
+  'complete': [data: any]
+}>()
 
-// 模拟数据（实际应该从前面步骤获取）
-const firstSets = ref({
-  'E': ['(', 'id'],
-  'E1': ['+', 'ε'],
-  'T': ['(', 'id'],
-  'T1': ['*', 'ε'],
-  'F': ['(', 'id']
-})
+// 数据引用
+const grammarData = computed(() => props.data)
+const firstSets = computed(() => grammarData.value?.first || {})
+const followSets = computed(() => grammarData.value?.follow || {})
 
-const followSets = ref({
-  'E': ['$', ')'],
-  'E1': ['$', ')'],
-  'T': ['+', '$', ')'],
-  'T1': ['+', '$', ')'],
-  'F': ['*', '+', '$', ')']
-})
-
-const nonTerminals = computed(() => Object.keys(firstSets.value))
+// 计算非终结符和终结符
+const nonTerminals = computed(() => grammarData.value?.Vn || [])
 const terminals = computed(() => {
-  const terminalSet = new Set<string>()
-  Object.values(firstSets.value).forEach(set => {
-    set.forEach(symbol => {
-      if (symbol !== 'ε') terminalSet.add(symbol)
-    })
-  })
-  Object.values(followSets.value).forEach(set => {
-    set.forEach(symbol => terminalSet.add(symbol))
-  })
+  if (!grammarData.value?.Vt) return []
+  // 添加 $ 符号
+  const terminalSet = new Set([...grammarData.value.Vt, '$'])
   return Array.from(terminalSet).sort()
 })
 
-const tableStats = computed(() => {
-  if (!parsingTable.value) return { totalEntries: 0, filledEntries: 0, emptyEntries: 0, fillRate: 0 }
+// 用户输入的分析表
+const userTable = ref<Record<string, string>>({})
 
-  let total = 0
-  let filled = 0
+// 校验状态
+const tableValidation = ref<Record<string, 'correct' | 'incorrect' | ''>>({})
+const checking = ref(false)
+const tableValidated = ref(false)
+const showAnswer = ref(false)
+const attempts = ref(0)
+const maxAttempts = 3
 
-  nonTerminals.value.forEach(nt => {
-    terminals.value.forEach(t => {
-      total++
-      if (parsingTable.value![nt] && parsingTable.value![nt][t]) {
-        filled++
-      }
-    })
-  })
-
-  return {
-    totalEntries: total,
-    filledEntries: filled,
-    emptyEntries: total - filled,
-    fillRate: total > 0 ? Math.round((filled / total) * 100) : 0
-  }
+// 计算属性
+const hasTableErrors = computed(() => {
+  return Object.values(tableValidation.value).some(status => status === 'incorrect')
 })
 
-const buildParsingTable = async () => {
-  building.value = true
-  buildingSteps.value = []
-  conflicts.value = []
+const remainingAttempts = computed(() => Math.max(0, maxAttempts - attempts.value))
 
-  try {
-    // 模拟构建过程
-    buildingSteps.value.push('开始构建LL1分析表...')
-    await new Promise(resolve => setTimeout(resolve, 500))
+const allCompleted = computed(() => {
+  if (!grammarData.value) return false
 
-    const table: Record<string, Record<string, string>> = {}
+  // 检查所有需要填写的表格项是否都正确
+  const requiredEntries = getRequiredTableEntries()
 
-    // 初始化表格
-    nonTerminals.value.forEach(nt => {
-      table[nt] = {}
-    })
+  // 如果没有需要填写的项，需要至少完成一次校验且没有错误
+  if (requiredEntries.length === 0) {
+    return tableValidated.value && !hasTableErrors.value
+  }
 
-    buildingSteps.value.push('为每个产生式分析First集...')
-    await new Promise(resolve => setTimeout(resolve, 500))
+  // 检查是否所有需要填写的项都已正确校验
+  return requiredEntries.every(key => tableValidation.value[key] === 'correct')
+})
 
-    // 模拟填入产生式
-    const productions = [
-      { left: 'E', right: 'TE1', first: ['(', 'id'] },
-      { left: 'E1', right: '+TE1', first: ['+'] },
-      { left: 'E1', right: 'ε', first: ['ε'] },
-      { left: 'T', right: 'FT1', first: ['(', 'id'] },
-      { left: 'T1', right: '*FT1', first: ['*'] },
-      { left: 'T1', right: 'ε', first: ['ε'] },
-      { left: 'F', right: '(E)', first: ['('] },
-      { left: 'F', right: 'id', first: ['id'] }
-    ]
+// 工具函数
+const getRequiredTableEntries = (): string[] => {
+  if (!grammarData.value?.table) return []
 
-    productions.forEach(prod => {
-      prod.first.forEach(symbol => {
-        if (symbol === 'ε') {
-          // 对于ε产生式，添加到Follow集对应的终结符位置
-          const followSet = followSets.value[prod.left as keyof typeof followSets.value]
-          if (followSet) {
-            followSet.forEach((followSymbol: string) => {
-              if (followSymbol !== 'ε') {
-                table[prod.left][followSymbol] = `${prod.left} → ${prod.right}`
-                buildingSteps.value.push(`填入 M[${prod.left}, ${followSymbol}] = ${prod.left} → ${prod.right}`)
-              }
-            })
-          }
-        } else {
-          table[prod.left][symbol] = `${prod.left} → ${prod.right}`
-          buildingSteps.value.push(`填入 M[${prod.left}, ${symbol}] = ${prod.left} → ${prod.right}`)
-        }
-      })
-    })
+  // table 是 Record<string, string> 格式，键为 "Vn|Vt" 形式（后端用|分隔）
+  return Object.keys(grammarData.value.table)
+}
 
-    buildingSteps.value.push('检查冲突...')
-    await new Promise(resolve => setTimeout(resolve, 500))
+const getCorrectTableEntry = (nonTerminal: string, terminal: string): string => {
+  if (!grammarData.value?.table) return ''
 
-    buildingSteps.value.push('构建完成，无冲突！')
-    parsingTable.value = table
+  // 后端使用 | 作为分隔符
+  const key = `${nonTerminal}|${terminal}`
+  return grammarData.value.table[key] || ''
+}
 
-  } catch (error) {
-    buildingSteps.value.push('构建失败: ' + error)
-  } finally {
-    building.value = false
+const getTableCellClass = (nonTerminal: string, terminal: string): string => {
+  // 使用 | 分隔符匹配后端格式
+  const key = `${nonTerminal}|${terminal}`
+  const validation = tableValidation.value[key]
+
+  if (validation === 'correct') {
+    return 'bg-green-50 border-green-300'
+  } else if (validation === 'incorrect') {
+    return 'bg-red-50 border-red-300'
+  }
+
+  // 检查是否为需要填写的项
+  const correctEntry = getCorrectTableEntry(nonTerminal, terminal)
+  if (correctEntry) {
+    return 'bg-yellow-50 border-yellow-300' // 待填写
+  }
+
+  return 'bg-gray-100' // 不需要填写
+}
+
+const clearTableValidation = (nonTerminal: string, terminal: string) => {
+  // 使用 | 分隔符匹配后端格式
+  const key = `${nonTerminal}|${terminal}`
+  if (tableValidation.value[key] !== 'correct') {
+    tableValidation.value[key] = ''
   }
 }
 
+// 校验函数
+const checkTable = async () => {
+  if (!grammarData.value?.table) return
+
+  checking.value = true
+  attempts.value++
+
+  try {
+    const requiredEntries = getRequiredTableEntries()
+
+    // 如果没有需要填写的项，直接通过校验
+    if (requiredEntries.length === 0) {
+      tableValidated.value = true
+      showAnswer.value = false
+      console.log('No table entries required, validation passed automatically')
+      return
+    }
+
+    let isAllCorrect = true
+
+    // 校验所有需要填写的项
+    for (const key of requiredEntries) {
+      const [nonTerminal, terminal] = key.split('|')
+      const userInput = (userTable.value[key] || '').trim()
+      const correctEntry = getCorrectTableEntry(nonTerminal, terminal)
+
+      // 检查用户输入是否为空
+      if (userInput === '') {
+        tableValidation.value[key] = 'incorrect'
+        isAllCorrect = false
+        continue
+      }
+
+      if (userInput === correctEntry) {
+        tableValidation.value[key] = 'correct'
+      } else {
+        tableValidation.value[key] = 'incorrect'
+        isAllCorrect = false
+      }
+    }
+
+    tableValidated.value = true
+
+    if (isAllCorrect) {
+      showAnswer.value = false
+      // 发出完成事件
+      setTimeout(() => {
+        // 可以进入下一步
+      }, 1000)
+    } else {
+      if (attempts.value >= maxAttempts) {
+        // 显示正确答案
+        for (const key of requiredEntries) {
+          const [nonTerminal, terminal] = key.split('|')
+          const correctEntry = getCorrectTableEntry(nonTerminal, terminal)
+          userTable.value[key] = correctEntry
+          tableValidation.value[key] = 'correct'
+        }
+        showAnswer.value = true
+      }
+    }
+  } finally {
+    checking.value = false
+  }
+}
+
+// 初始化
 onMounted(() => {
-  // 自动构建分析表
-  setTimeout(buildParsingTable, 1000)
+  if (grammarData.value) {
+    console.log('Grammar data received:', grammarData.value)
+    console.log('Table data:', grammarData.value.table)
+    console.log('Required entries:', getRequiredTableEntries())
+
+    // 初始化用户输入表格
+    nonTerminals.value.forEach(nt => {
+      terminals.value.forEach(t => {
+        const key = `${nt} ${t}`
+        userTable.value[key] = ''
+        tableValidation.value[key] = ''
+      })
+    })
+  } else {
+    console.log('No grammar data received')
+  }
 })
 </script>
 
