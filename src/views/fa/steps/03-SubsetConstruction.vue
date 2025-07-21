@@ -15,156 +15,353 @@
 
     <!-- 主要内容 -->
     <div class="step-content">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- 左侧：转换表 -->
+      <div class="space-y-6">
+        <!-- 转换表区域 -->
         <div class="conversion-table-section">
-          <div class="bg-white border border-gray-200 rounded-lg">
-            <div class="border-b border-gray-200 p-4">
-              <div class="flex items-center justify-between">
-                <h3 class="font-semibold text-gray-900">NFA → DFA 转换表</h3>
-                <button
-                  @click="generateTable"
-                  :disabled="isGenerating"
-                  :class="[
-                    'px-3 py-1 rounded-lg text-sm transition-colors',
-                    isGenerating
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  ]"
-                >
-                  <Icon
-                    :icon="isGenerating ? 'lucide:loader-2' : 'lucide:play'"
-                    :class="['w-4 h-4 inline mr-1', isGenerating ? 'animate-spin' : '']"
-                  />
-                  {{ isGenerating ? '生成中...' : '生成转换表' }}
-                </button>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左侧：用户填写转换表 -->
+            <div class="user-table-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">NFA → DFA 转换表（用户填写）</h3>
+                    <div class="flex items-center gap-2">
+                      <button
+                        @click="addTableRow"
+                        class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                      >
+                        <Icon icon="lucide:plus" class="w-4 h-4 inline mr-1" />
+                        添加行
+                      </button>
+                      <button
+                        @click="clearUserTable"
+                        class="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                      >
+                        <Icon icon="lucide:eraser" class="w-4 h-4 inline mr-1" />
+                        清空
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-4">
+                  <div v-if="!userConversionTable.length" class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:edit" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>点击"添加行"开始填写转换表</p>
+                  </div>
+
+                  <div v-else class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr class="bg-gray-50">
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <th
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
+                          >
+                            {{ symbol }}
+                          </th>
+                          <th class="border border-gray-300 px-3 py-2 text-center font-semibold">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, index) in userConversionTable"
+                          :key="index"
+                          :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+                        >
+                          <td class="border border-gray-300 px-3 py-2">
+                            <input
+                              v-model="row.state"
+                              type="text"
+                              placeholder="状态名"
+                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2"
+                          >
+                            <input
+                              v-model="row.transitions[symbol]"
+                              type="text"
+                              placeholder="-"
+                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td class="border border-gray-300 px-3 py-2 text-center">
+                            <button
+                              @click="removeTableRow(index)"
+                              class="text-red-600 hover:text-red-800 transition-colors"
+                            >
+                              <Icon icon="lucide:trash-2" class="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="p-4">
-              <div v-if="!conversionTable.length && !isGenerating" class="text-center py-8 text-gray-500">
-                <Icon icon="lucide:table" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>点击"生成转换表"开始子集构造</p>
-              </div>
-
-              <div v-else-if="conversionTable.length" class="overflow-x-auto">
-                <table class="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr class="bg-gray-50">
-                      <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
-                      <th
-                        v-for="symbol in alphabetSymbols"
-                        :key="symbol"
-                        class="border border-gray-300 px-3 py-2 text-center font-semibold"
-                      >
-                        {{ symbol }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(row, index) in conversionTable"
-                      :key="index"
-                      :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+            <!-- 右侧：答案区域 -->
+            <div class="answer-table-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">标准答案</h3>
+                    <button
+                      @click="toggleTableAnswer"
+                      :class="[
+                        'px-4 py-2 rounded-lg transition-colors',
+                        showTableAnswer
+                          ? 'bg-gray-600 text-white hover:bg-gray-700'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      ]"
                     >
-                      <td class="border border-gray-300 px-3 py-2 font-medium">
-                        {{ row.state }}
-                      </td>
-                      <td
-                        v-for="symbol in alphabetSymbols"
-                        :key="symbol"
-                        class="border border-gray-300 px-3 py-2 text-center"
-                      >
-                        {{ row.transitions[symbol] || '-' }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      <Icon
+                        :icon="showTableAnswer ? 'lucide:eye-off' : 'lucide:eye'"
+                        class="w-4 h-4 inline mr-2"
+                      />
+                      {{ showTableAnswer ? '隐藏答案' : '查看答案' }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-4">
+                  <div v-if="!showTableAnswer" class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p class="text-lg font-medium">答案已隐藏</p>
+                    <p class="text-sm mt-1">完成填写后点击"查看答案"按钮</p>
+                  </div>
+
+                  <div v-else-if="answerConversionTable.length" class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr class="bg-green-50">
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <th
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
+                          >
+                            {{ symbol }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, index) in answerConversionTable"
+                          :key="index"
+                          :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                        >
+                          <td class="border border-gray-300 px-3 py-2 font-medium">
+                            {{ row.state }}
+                          </td>
+                          <td
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center"
+                          >
+                            {{ row.transitions[symbol] || '-' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div v-else class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
+                    <p>暂无答案数据</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 右侧：状态转换矩阵 -->
+        <!-- 状态转换矩阵区域 -->
         <div class="transition-matrix-section">
-          <div class="bg-white border border-gray-200 rounded-lg">
-            <div class="border-b border-gray-200 p-4">
-              <div class="flex items-center justify-between">
-                <h3 class="font-semibold text-gray-900">状态转换矩阵</h3>
-                <button
-                  @click="generateMatrix"
-                  :disabled="!conversionTable.length || isGeneratingMatrix"
-                  :class="[
-                    'px-3 py-1 rounded-lg text-sm transition-colors',
-                    (!conversionTable.length || isGeneratingMatrix)
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  ]"
-                >
-                  <Icon
-                    :icon="isGeneratingMatrix ? 'lucide:loader-2' : 'lucide:grid-3x3'"
-                    :class="['w-4 h-4 inline mr-1', isGeneratingMatrix ? 'animate-spin' : '']"
-                  />
-                  {{ isGeneratingMatrix ? '生成中...' : '生成矩阵' }}
-                </button>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左侧：用户填写状态转换矩阵 -->
+            <div class="user-matrix-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">状态转换矩阵（用户填写）</h3>
+                    <div class="flex items-center gap-2">
+                      <button
+                        @click="addMatrixRow"
+                        class="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                      >
+                        <Icon icon="lucide:plus" class="w-4 h-4 inline mr-1" />
+                        添加行
+                      </button>
+                      <button
+                        @click="clearUserMatrix"
+                        class="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                      >
+                        <Icon icon="lucide:eraser" class="w-4 h-4 inline mr-1" />
+                        清空
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-4">
+                  <div v-if="!userTransitionMatrix.length" class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:grid-3x3" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>点击"添加行"开始填写状态转换矩阵</p>
+                  </div>
+
+                  <div v-else class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr class="bg-purple-50">
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <th
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
+                          >
+                            {{ symbol }}
+                          </th>
+                          <th class="border border-gray-300 px-3 py-2 text-center font-semibold">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, index) in userTransitionMatrix"
+                          :key="index"
+                          :class="index % 2 === 0 ? 'bg-white' : 'bg-purple-50'"
+                        >
+                          <td class="border border-gray-300 px-3 py-2">
+                            <input
+                              v-model="row.state"
+                              type="text"
+                              placeholder="状态编号"
+                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            />
+                          </td>
+                          <td
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2"
+                          >
+                            <input
+                              v-model="row.transitions[symbol]"
+                              type="text"
+                              placeholder="-"
+                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            />
+                          </td>
+                          <td class="border border-gray-300 px-3 py-2 text-center">
+                            <button
+                              @click="removeMatrixRow(index)"
+                              class="text-red-600 hover:text-red-800 transition-colors"
+                            >
+                              <Icon icon="lucide:trash-2" class="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="p-4">
-              <div v-if="!transitionMatrix.length && !isGeneratingMatrix" class="text-center py-8 text-gray-500">
-                <Icon icon="lucide:grid-3x3" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>先生成转换表后再生成转换矩阵</p>
-              </div>
-
-              <div v-else-if="transitionMatrix.length" class="overflow-x-auto">
-                <table class="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr class="bg-blue-50">
-                      <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
-                      <th
-                        v-for="symbol in alphabetSymbols"
-                        :key="symbol"
-                        class="border border-gray-300 px-3 py-2 text-center font-semibold"
-                      >
-                        {{ symbol }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(row, index) in transitionMatrix"
-                      :key="index"
-                      :class="index % 2 === 0 ? 'bg-white' : 'bg-blue-50'"
+            <!-- 右侧：答案区域 -->
+            <div class="answer-matrix-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">标准答案</h3>
+                    <button
+                      @click="toggleMatrixAnswer"
+                      :class="[
+                        'px-4 py-2 rounded-lg transition-colors',
+                        showMatrixAnswer
+                          ? 'bg-gray-600 text-white hover:bg-gray-700'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      ]"
                     >
-                      <td class="border border-gray-300 px-3 py-2 font-medium">
-                        {{ row.state }}
-                      </td>
-                      <td
-                        v-for="symbol in alphabetSymbols"
-                        :key="symbol"
-                        class="border border-gray-300 px-3 py-2 text-center"
-                      >
-                        {{ row.transitions[symbol] || '-' }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                      <Icon
+                        :icon="showMatrixAnswer ? 'lucide:eye-off' : 'lucide:eye'"
+                        class="w-4 h-4 inline mr-2"
+                      />
+                      {{ showMatrixAnswer ? '隐藏答案' : '查看答案' }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="p-4">
+                  <div v-if="!showMatrixAnswer" class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p class="text-lg font-medium">答案已隐藏</p>
+                    <p class="text-sm mt-1">完成填写后点击"查看答案"按钮</p>
+                  </div>
+
+                  <div v-else-if="answerTransitionMatrix.length" class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr class="bg-green-50">
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <th
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
+                          >
+                            {{ symbol }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, index) in answerTransitionMatrix"
+                          :key="index"
+                          :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                        >
+                          <td class="border border-gray-300 px-3 py-2 font-medium">
+                            {{ row.state }}
+                          </td>
+                          <td
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center"
+                          >
+                            {{ row.transitions[symbol] || '-' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div v-else class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
+                    <p>暂无答案数据</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 构造信息面板 -->
-      <div v-if="constructionComplete" class="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-        <div class="flex items-start gap-3">
-          <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 class="font-medium text-green-800">子集构造完成</h4>
-            <div class="text-sm text-green-700 mt-2 space-y-1">
-              <p>• DFA 状态数量: {{ dfaStates.length }}</p>
-              <p>• 字母表符号: {{ alphabetSymbols.join(', ') }}</p>
-              <p>• 转换数量: {{ totalTransitions }}</p>
+        <!-- 填写提示 -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <Icon icon="lucide:lightbulb" class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 class="font-medium text-blue-800">填写提示</h4>
+              <ul class="text-sm text-blue-700 mt-2 space-y-1">
+                <li>• 转换表：记录从NFA状态集合到新DFA状态的映射关系</li>
+                <li>• 状态转换矩阵：用数字编号表示状态间的转换关系</li>
+                <li>• 无转换的格子可以填写"-"或留空</li>
+                <li>• 完成填写后可以查看标准答案进行对比</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -219,7 +416,33 @@ defineEmits<{
 const faData = ref<FAResult | null>(null)
 const regexPattern = ref('')
 
-// 状态管理
+// 用户填写的表格
+const userConversionTable = ref<Array<{
+  state: string
+  transitions: Record<string, string>
+}>>([])
+
+const userTransitionMatrix = ref<Array<{
+  state: string
+  transitions: Record<string, string>
+}>>([])
+
+// 答案数据
+const answerConversionTable = ref<Array<{
+  state: string
+  transitions: Record<string, string>
+}>>([])
+
+const answerTransitionMatrix = ref<Array<{
+  state: string
+  transitions: Record<string, string>
+}>>([])
+
+// 答案显示控制
+const showTableAnswer = ref(false)
+const showMatrixAnswer = ref(false)
+
+// 状态管理（保留原有的）
 const isGenerating = ref(false)
 const isGeneratingMatrix = ref(false)
 const conversionTable = ref<Array<{
@@ -237,7 +460,7 @@ const dfaStates = ref<string[]>([])
 
 // 计算属性
 const constructionComplete = computed(() => {
-  return conversionTable.value.length > 0 && transitionMatrix.value.length > 0
+  return userConversionTable.value.length > 0 && userTransitionMatrix.value.length > 0
 })
 
 const totalTransitions = computed(() => {
@@ -258,6 +481,8 @@ onMounted(() => {
       if (stepData.faResult) {
         // 从后端数据中提取字母表符号
         extractAlphabetFromFAData(stepData.faResult)
+        // 生成答案数据
+        generateAnswerData(stepData.faResult)
       }
     }
   } catch (error) {
@@ -279,6 +504,110 @@ const extractAlphabetFromFAData = (data: FAResult) => {
   }
 
   alphabetSymbols.value = Array.from(symbols).sort()
+}
+
+// 生成答案数据
+const generateAnswerData = (data: FAResult) => {
+  // 生成转换表答案
+  if (data.table) {
+    const table = data.table
+    const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
+
+    Object.keys(table).forEach(symbol => {
+      const transitions = table[symbol]
+      transitions.forEach((transitionSet: string[], index: number) => {
+        const stateName = `S${index}`
+
+        let row = newTable.find(r => r.state === stateName)
+        if (!row) {
+          row = { state: stateName, transitions: {} }
+          newTable.push(row)
+        }
+
+        row.transitions[symbol] = transitionSet.join(',') || '-'
+      })
+    })
+
+    answerConversionTable.value = newTable
+  }
+
+  // 生成状态转换矩阵答案
+  if (data.table_to_num) {
+    const tableToNum = data.table_to_num
+    const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
+
+    Object.keys(tableToNum).forEach(symbol => {
+      const transitions = tableToNum[symbol]
+      transitions.forEach((targetState: string, index: number) => {
+        const stateName = `S${index}`
+
+        let row = matrix.find(r => r.state === stateName)
+        if (!row) {
+          row = { state: stateName, transitions: {} }
+          matrix.push(row)
+        }
+
+        row.transitions[symbol] = targetState || '-'
+      })
+    })
+
+    answerTransitionMatrix.value = matrix
+  }
+}
+
+// 用户表格操作方法
+const addTableRow = () => {
+  const newRow: { state: string; transitions: Record<string, string> } = {
+    state: '',
+    transitions: {}
+  }
+
+  // 为每个字母表符号初始化空的转换
+  alphabetSymbols.value.forEach(symbol => {
+    newRow.transitions[symbol] = ''
+  })
+
+  userConversionTable.value.push(newRow)
+}
+
+const removeTableRow = (index: number) => {
+  userConversionTable.value.splice(index, 1)
+}
+
+const clearUserTable = () => {
+  userConversionTable.value = []
+}
+
+// 用户矩阵操作方法
+const addMatrixRow = () => {
+  const newRow: { state: string; transitions: Record<string, string> } = {
+    state: '',
+    transitions: {}
+  }
+
+  // 为每个字母表符号初始化空的转换
+  alphabetSymbols.value.forEach(symbol => {
+    newRow.transitions[symbol] = ''
+  })
+
+  userTransitionMatrix.value.push(newRow)
+}
+
+const removeMatrixRow = (index: number) => {
+  userTransitionMatrix.value.splice(index, 1)
+}
+
+const clearUserMatrix = () => {
+  userTransitionMatrix.value = []
+}
+
+// 答案显示控制
+const toggleTableAnswer = () => {
+  showTableAnswer.value = !showTableAnswer.value
+}
+
+const toggleMatrixAnswer = () => {
+  showMatrixAnswer.value = !showMatrixAnswer.value
 }
 
 // 生成转换表
