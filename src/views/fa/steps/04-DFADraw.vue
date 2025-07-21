@@ -12,83 +12,15 @@
       </div>
     </div>
 
+    <!-- 主要内容 -->
     <div class="step-content">
-      <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <!-- 左侧：控制面板 -->
-        <div class="control-panel">
-          <div class="bg-gray-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">DFA 构造</h3>
-
-            <div class="space-y-4">
-              <div class="text-sm text-gray-600">
-                <p><strong>正则表达式:</strong></p>
-                <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ regexPattern }}</code>
-              </div>
-
-              <div class="text-sm text-gray-600">
-                <p><strong>DFA 状态数:</strong> {{ dfaStates.length }}</p>
-                <p><strong>转换数:</strong> {{ totalTransitions }}</p>
-                <p><strong>字母表:</strong> {{ alphabetSymbols.join(', ') }}</p>
-              </div>
-            </div>
-
-            <div class="mt-6 space-y-3">
-              <button
-                @click="generateDFA"
-                :disabled="isGenerating || !hasTransitionData"
-                :class="[
-                  'w-full px-4 py-2 rounded-lg transition-colors',
-                  (isGenerating || !hasTransitionData)
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-orange-600 text-white hover:bg-orange-700'
-                ]"
-              >
-                <Icon
-                  :icon="isGenerating ? 'lucide:loader-2' : 'lucide:play'"
-                  :class="['w-4 h-4 inline mr-2', isGenerating ? 'animate-spin' : '']"
-                />
-                {{ isGenerating ? '生成中...' : '生成 DFA' }}
-              </button>
-
-              <button
-                @click="showDFADot"
-                :disabled="!dfaDotString"
-                class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                <Icon icon="lucide:eye" class="w-4 h-4 inline mr-2" />
-                显示 DOT 图
-              </button>
-
-              <button
-                @click="resetDFA"
-                class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Icon icon="lucide:rotate-ccw" class="w-4 h-4 inline mr-2" />
-                重置
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 中间：DFA 画布 -->
-        <div class="dfa-canvas-area xl:col-span-3">
-          <div class="bg-white border border-gray-200 rounded-lg h-96">
-            <div class="h-full relative">
-              <!-- 画布头部 -->
-              <div class="border-b border-gray-200 p-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-gray-900">DFA 状态图</h3>
-                  <div class="flex items-center gap-2 text-sm text-gray-500">
-                    <Icon icon="lucide:info" class="w-4 h-4" />
-                    <span>子集构造结果</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 画布主体 -->
-              <div class="h-full p-4">
-                <DFACanvas ref="dfaCanvasRef" />
-              </div>
+      <div class="space-y-6">
+        <!-- 上方：用户画图区域 -->
+        <div class="user-draw-area">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <!-- 用户画布 -->
+            <div class="h-[700px] p-4">
+              <DFACanvas ref="dfaCanvasRef" />
             </div>
           </div>
 
@@ -108,19 +40,148 @@
             </div>
           </div>
 
-          <!-- DOT 字符串显示 -->
-          <div v-if="showDotString && dfaDotString" class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-medium text-gray-800">DFA DOT 字符串</h4>
-              <button
-                @click="copyDotString"
-                class="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-              >
-                <Icon icon="lucide:copy" class="w-3 h-3 inline mr-1" />
-                复制
-              </button>
+          <!-- 绘制提示 -->
+          <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <Icon icon="lucide:lightbulb" class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 class="font-medium text-blue-800">绘制提示</h4>
+                <div class="text-sm text-blue-700 mt-2 space-y-1">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p class="font-medium">正则表达式:</p>
+                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ regexPattern }}</code>
+                    </div>
+                    <div>
+                      <p class="font-medium">DFA 状态数: {{ dfaStates.length }}</p>
+                      <p>转换数: {{ totalTransitions }}</p>
+                    </div>
+                    <div>
+                      <p class="font-medium">字母表: {{ alphabetSymbols.join(', ') }}</p>
+                    </div>
+                  </div>
+                  <ul class="mt-3 space-y-1">
+                    <li>• 根据第三步的转换表构造 DFA</li>
+                    <li>• 确保每个状态都有明确的转换</li>
+                    <li>• 标记初始状态和接受状态</li>
+                    <li>• 验证 DFA 的确定性</li>
+                  </ul>
+                </div>
+              </div>
             </div>
-            <pre class="text-xs bg-white p-3 rounded border overflow-auto max-h-40 font-mono">{{ dfaDotString }}</pre>
+          </div>
+        </div>
+
+        <!-- 下方：答案区域 -->
+        <div class="answer-area">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <!-- 答案区域头部 -->
+            <div class="border-b border-gray-200 p-4">
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">标准答案</h3>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="generateDFA"
+                    :disabled="isGenerating || !hasTransitionData"
+                    :class="[
+                      'px-4 py-2 rounded-lg transition-colors',
+                      (isGenerating || !hasTransitionData)
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-orange-600 text-white hover:bg-orange-700'
+                    ]"
+                  >
+                    <Icon
+                      :icon="isGenerating ? 'lucide:loader-2' : 'lucide:play'"
+                      :class="['w-4 h-4 inline mr-2', isGenerating ? 'animate-spin' : '']"
+                    />
+                    {{ isGenerating ? '生成中...' : '生成 DFA' }}
+                  </button>
+                  <button
+                    @click="toggleAnswer"
+                    :class="[
+                      'px-4 py-2 rounded-lg transition-colors',
+                      showAnswer
+                        ? 'bg-gray-600 text-white hover:bg-gray-700'
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    ]"
+                  >
+                    <Icon
+                      :icon="showAnswer ? 'lucide:eye-off' : 'lucide:eye'"
+                      class="w-4 h-4 inline mr-2"
+                    />
+                    {{ showAnswer ? '隐藏答案' : '查看答案' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 答案内容 -->
+            <div class="h-80 p-4">
+              <div v-if="!showAnswer" class="h-full flex items-center justify-center">
+                <div class="text-center text-gray-500">
+                  <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p class="text-lg font-medium">答案已隐藏</p>
+                  <p class="text-sm mt-1">完成你的绘制后点击"查看答案"按钮</p>
+                </div>
+              </div>
+
+              <div v-else class="h-full">
+                <!-- SVG 渲染的答案 -->
+                <div v-if="dfaDotString" class="h-full">
+                  <div
+                    ref="answerSvgContainer"
+                    class="h-full w-full flex items-center justify-center bg-gray-50 rounded"
+                  >
+                    <!-- SVG 内容将通过 JavaScript 渲染到这里 -->
+                  </div>
+                </div>
+                <div v-else class="h-full flex items-center justify-center text-gray-500">
+                  <div class="text-center">
+                    <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
+                    <p>暂无答案数据</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DOT 字符串显示 -->
+            <div v-if="showAnswer && dfaDotString" class="border-t border-gray-200 bg-green-50 p-4">
+              <div class="flex items-start gap-3">
+                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div class="flex-1">
+                  <div class="flex items-center justify-between">
+                    <h4 class="font-medium text-green-800">DFA 构造分析</h4>
+                    <div class="flex items-center gap-2">
+                      <button
+                        @click="showDotString = !showDotString"
+                        class="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                      >
+                        <Icon icon="lucide:code" class="w-3 h-3 inline mr-1" />
+                        {{ showDotString ? '隐藏' : '显示' }} DOT
+                      </button>
+                      <button
+                        v-if="showDotString"
+                        @click="copyDotString"
+                        class="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        <Icon icon="lucide:copy" class="w-3 h-3 inline mr-1" />
+                        复制
+                      </button>
+                    </div>
+                  </div>
+                  <div class="text-sm text-green-700 mt-2 space-y-1">
+                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ regexPattern }}</code></p>
+                    <p>• DFA 构造完成</p>
+                    <p>• 使用子集构造法生成</p>
+                    <p>• 可进行下一步 DFA 最小化</p>
+                  </div>
+                  <!-- DOT 字符串显示 -->
+                  <div v-if="showDotString" class="mt-3 bg-white border border-green-200 rounded p-3">
+                    <pre class="text-xs font-mono overflow-auto max-h-32">{{ dfaDotString }}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -152,10 +213,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import DFACanvas from '@/components/flow/canvas/DFACanvas.vue'
 import type { FAResult } from '@/types'
+import { instance } from '@viz-js/viz'
 
 defineEmits<{
   'next-step': []
@@ -177,6 +239,7 @@ const conversionTable = ref<any[]>([])
 // 状态管理
 const isGenerating = ref(false)
 const showDotString = ref(false)
+const showAnswer = ref(false)
 const dfaResult = ref<{
   stateCount: number
   transitionCount: number
@@ -186,6 +249,7 @@ const dfaResult = ref<{
 
 // DFA 画布引用
 const dfaCanvasRef = ref<InstanceType<typeof DFACanvas>>()
+const answerSvgContainer = ref<HTMLElement>()
 
 // 计算属性
 const hasTransitionData = computed(() => {
@@ -206,6 +270,9 @@ onMounted(() => {
       regexPattern.value = data.regex || ''
       faData.value = data.faResult || null
       dfaDotString.value = data.faResult?.DFA_dot_str || ''
+
+      console.log('Step 4 loaded data:', data)
+      console.log('DFA DOT string:', dfaDotString.value)
     }
 
     // 获取第三步数据
@@ -221,6 +288,94 @@ onMounted(() => {
     console.error('读取上一步数据失败：', error)
   }
 })
+
+// 答案控制
+const toggleAnswer = async () => {
+  console.log('toggleAnswer called, current showAnswer:', showAnswer.value)
+  showAnswer.value = !showAnswer.value
+  console.log('New showAnswer value:', showAnswer.value)
+
+  if (showAnswer.value && dfaDotString.value) {
+    // 等待DOM更新
+    await nextTick()
+    console.log('After nextTick, container exists:', !!answerSvgContainer.value)
+
+    if (answerSvgContainer.value) {
+      console.log('开始渲染，条件检查：', {
+        showAnswer: showAnswer.value,
+        hasDotString: !!dfaDotString.value,
+        hasContainer: !!answerSvgContainer.value
+      })
+      // 使用 viz.js 渲染 DOT 图
+      await renderDotToSvg()
+    } else {
+      console.error('answerSvgContainer ref is null after nextTick')
+    }
+  } else {
+    console.log('跳过渲染，条件不满足：', {
+      showAnswer: showAnswer.value,
+      hasDotString: !!dfaDotString.value
+    })
+  }
+}
+
+// 渲染DOT字符串为SVG
+const renderDotToSvg = async () => {
+  if (!answerSvgContainer.value || !dfaDotString.value) {
+    console.warn('renderDotToSvg: 缺少必要条件', {
+      hasContainer: !!answerSvgContainer.value,
+      hasDotString: !!dfaDotString.value
+    })
+    return
+  }
+
+  try {
+    console.log('开始渲染DFA DOT...')
+    console.log('Container:', answerSvgContainer.value)
+    console.log('DOT String:', dfaDotString.value)
+
+    // 清除之前的内容
+    answerSvgContainer.value.innerHTML = ''
+
+    // 显示加载状态
+    answerSvgContainer.value.innerHTML = '<div class="text-center text-blue-600">正在渲染图形...</div>'
+
+    // 使用 viz.js 渲染 DOT 字符串
+    console.log('正在初始化 viz.js...')
+    const viz = await instance()
+    console.log('viz.js 初始化成功:', viz)
+
+    console.log('正在渲染 SVG...')
+    const svg = viz.renderSVGElement(dfaDotString.value)
+    console.log('SVG 渲染成功:', svg)
+
+    // 清除加载状态
+    answerSvgContainer.value.innerHTML = ''
+
+    // 添加样式使 SVG 适应容器
+    svg.style.maxWidth = '100%'
+    svg.style.maxHeight = '100%'
+    svg.style.height = 'auto'
+    svg.style.width = 'auto'
+
+    // 将 SVG 添加到容器
+    answerSvgContainer.value.appendChild(svg)
+
+    console.log('DFA DOT rendered successfully, SVG added to container')
+    console.log('Container children count:', answerSvgContainer.value.children.length)
+  } catch (error) {
+    console.error('渲染DOT图失败：', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    answerSvgContainer.value.innerHTML = `
+      <div class="text-center text-red-500">
+        <p>渲染失败: ${errorMessage}</p>
+        <div class="mt-4 text-xs bg-gray-100 p-2 rounded text-left">
+          <pre class="whitespace-pre-wrap">${dfaDotString.value}</pre>
+        </div>
+      </div>
+    `
+  }
+}
 
 // 生成DFA
 const generateDFA = async () => {
@@ -292,16 +447,12 @@ const generateDFA = async () => {
   }
 }
 
-// 显示DFA DOT字符串
-const showDFADot = () => {
-  showDotString.value = !showDotString.value
-}
-
 // 复制DOT字符串
 const copyDotString = async () => {
   try {
     await navigator.clipboard.writeText(dfaDotString.value)
     // 这里可以添加一个提示
+    console.log('DOT字符串已复制')
   } catch (error) {
     console.error('复制失败：', error)
   }
@@ -311,6 +462,7 @@ const copyDotString = async () => {
 const resetDFA = () => {
   dfaResult.value = null
   showDotString.value = false
+  showAnswer.value = false
 
   if (dfaCanvasRef.value) {
     dfaCanvasRef.value.clearCanvas()
