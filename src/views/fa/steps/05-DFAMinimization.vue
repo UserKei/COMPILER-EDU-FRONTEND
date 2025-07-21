@@ -7,178 +7,175 @@
         </div>
         <div>
           <h2 class="text-2xl font-bold text-gray-900">DFA 最小化</h2>
-          <p class="text-gray-600 mt-1">第五步：使用 Hopcroft 算法最小化 DFA</p>
+          <p class="text-gray-600 mt-1">第五步：最小化 DFA</p>
         </div>
       </div>
     </div>
 
     <div class="step-content">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- 左侧：最小化过程 -->
+      <div class="instruction">
+        <div class="info space-y-2 text-sm text-gray-600">
+          <p>根据上述绘制的DFA，将其状态子集最小化，并重新命名状态子集序号，填写状态转换矩阵，可使用"空格"作为输入的间隔符（也可以不输入间隔符）</p>
+          <p>化简DFA状态子集---参考输入：123、3 1（可乱序，可接受空格分隔符）</p>
+          <p>状态转换矩阵---参考输入：1、2、3</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+        <!-- 左侧：化简DFA状态子集 -->
         <div class="minimization-process">
-          <div class="bg-gray-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">最小化过程</h3>
+          <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">化简DFA状态子集</h3>
 
-            <div class="space-y-4">
-              <!-- 等价类划分 -->
-              <div class="equivalence-classes">
-                <h4 class="font-medium text-gray-800 mb-3">等价类划分</h4>
-                <div class="space-y-2">
-                  <div
-                    v-for="(partition, index) in partitions"
-                    :key="index"
-                    :class="[
-                      'p-3 rounded border transition-all',
-                      index <= currentPartitionStep
-                        ? 'bg-blue-50 border-blue-200'
-                        : 'bg-white border-gray-200'
-                    ]"
-                  >
-                    <div class="flex items-center gap-2">
-                      <span class="font-medium text-sm">P{{ index }}:</span>
-                      <div class="flex flex-wrap gap-1">
-                        <span
-                          v-for="state in partition.states"
-                          :key="state"
-                          class="px-2 py-1 text-xs bg-gray-100 rounded"
-                        >
-                          {{ state }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
+              请将状态集 {{ Array.from({length: originalStateCount}, (_, i) => i).join(', ') }} 最小化
+            </p>
+            <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
 
-              <!-- 最小化转换矩阵 -->
-              <div v-if="minimizedMatrix.length" class="minimized-matrix">
-                <h4 class="font-medium text-gray-800 mb-3">最小化转换矩阵</h4>
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse border border-gray-300 text-sm">
-                    <thead>
-                      <tr class="bg-red-50">
-                        <th class="border border-gray-300 px-2 py-1 font-semibold">状态</th>
-                        <th
-                          v-for="symbol in alphabetSymbols"
-                          :key="symbol"
-                          class="border border-gray-300 px-2 py-1 font-semibold"
-                        >
-                          {{ symbol }}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="(row, index) in minimizedMatrix"
-                        :key="index"
-                        :class="index % 2 === 0 ? 'bg-white' : 'bg-red-50'"
-                      >
-                        <td class="border border-gray-300 px-2 py-1 font-medium">
-                          {{ row.state }}
-                        </td>
-                        <td
-                          v-for="symbol in alphabetSymbols"
-                          :key="symbol"
-                          class="border border-gray-300 px-2 py-1 text-center"
-                        >
-                          {{ row.transitions[symbol] || '-' }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+            <!-- P集合输入 -->
+            <div class="space-y-3 mt-4">
+              <div
+                v-for="(pItem, index) in localPSets"
+                :key="pItem.id"
+                class="flex items-center gap-2"
+              >
+                <input
+                  v-model="pItem.text"
+                  :class="[
+                    'flex-1 px-3 py-2 border rounded text-sm',
+                    pItem.check === 'isCorrect' ? 'bg-green-50 border-green-300' :
+                    pItem.check === 'isError' ? 'bg-red-50 border-red-300' :
+                    'bg-white border-gray-300'
+                  ]"
+                  :disabled="pItem.category === 'onlyRead' || step6Open"
+                  @focus="handlePSetFocus(pItem)"
+                  placeholder="输入状态子集，如：123"
+                />
+                <button
+                  v-if="!step6Open && localPSets.length > 1"
+                  @click="removePSet(index)"
+                  class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
+                >
+                  <Icon icon="lucide:x" class="w-4 h-4" />
+                </button>
+                <button
+                  v-if="!step6Open"
+                  @click="addPSet(index)"
+                  class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
+                >
+                  <Icon icon="lucide:plus" class="w-4 h-4" />
+                </button>
+                <div v-if="step6Open" class="text-sm text-gray-500">
+                  => {{ index }}
                 </div>
               </div>
             </div>
 
-            <div class="mt-6 flex gap-2">
+            <div class="mt-6">
               <button
-                @click="startMinimization"
-                :disabled="isMinimizing || !hasDFAData"
+                @click="validatePSets"
+                :disabled="step6Open"
                 :class="[
-                  'flex-1 px-4 py-2 rounded-lg transition-colors',
-                  (isMinimizing || !hasDFAData)
+                  'px-4 py-2 rounded-lg transition-colors',
+                  step6Open
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
                 ]"
               >
-                <Icon
-                  :icon="isMinimizing ? 'lucide:loader-2' : 'lucide:play'"
-                  :class="['w-4 h-4 inline mr-2', isMinimizing ? 'animate-spin' : '']"
-                />
-                {{ isMinimizing ? '最小化中...' : '开始最小化' }}
-              </button>
-
-              <button
-                @click="resetMinimization"
-                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Icon icon="lucide:rotate-ccw" class="w-4 h-4 inline mr-2" />
-                重置
+                校验
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 右侧：最小化信息 -->
+        <!-- 右侧：状态转换矩阵 -->
         <div class="minimization-info">
-          <div class="bg-white border border-gray-200 rounded-lg">
-            <div class="border-b border-gray-200 p-4">
-              <h3 class="font-semibold text-gray-900">最小化信息</h3>
+          <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">状态转换矩阵</h3>
+
+            <div v-if="step6Open && minimizedMatrix.length">
+              <!-- 转换矩阵表格 -->
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse border border-gray-300 text-sm">
+                  <thead>
+                    <tr class="bg-red-50">
+                      <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
+                      <th
+                        v-for="symbol in alphabetSymbols"
+                        :key="symbol"
+                        class="border border-gray-300 px-3 py-2 font-semibold"
+                      >
+                        {{ symbol }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in Math.max(...Object.values(faData?.table_to_num_min || {}).map((arr: any) => Array.isArray(arr) ? arr.length : 0))"
+                      :key="row - 1"
+                      :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
+                    >
+                      <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
+                        {{ row - 1 }}
+                      </td>
+                      <td
+                        v-for="(symbol, colIndex) in alphabetSymbols"
+                        :key="symbol"
+                        :class="[
+                          'border border-gray-300 px-3 py-2 text-center',
+                          getMatrixCell(row - 1, colIndex)?.check === 'isCorrect' ? 'bg-green-50' :
+                          getMatrixCell(row - 1, colIndex)?.check === 'isError' ? 'bg-red-50' : ''
+                        ]"
+                      >
+                        <input
+                          v-if="getMatrixCell(row - 1, colIndex)?.category !== 'onlyRead'"
+                          v-model="getMatrixCell(row - 1, colIndex)!.value"
+                          :class="[
+                            'w-full text-center border-none bg-transparent text-sm',
+                            'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded'
+                          ]"
+                          :disabled="step7Open"
+                          @focus="handleMatrixCellFocus(getMatrixCell(row - 1, colIndex)!)"
+                          placeholder="-"
+                        />
+                        <span v-else class="text-gray-600">{{ getMatrixCell(row - 1, colIndex)?.value }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-4">
+                <button
+                  @click="validateMatrix"
+                  :disabled="step7Open"
+                  :class="[
+                    'px-4 py-2 rounded-lg transition-colors',
+                    step7Open
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ]"
+                >
+                  校验
+                </button>
+              </div>
             </div>
 
-            <div class="p-4 space-y-4">
-              <!-- DFA信息对比 -->
-              <div class="comparison-info">
-                <h4 class="font-medium text-gray-800 mb-3">优化对比</h4>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                  <div class="text-center p-3 bg-gray-50 rounded">
-                    <p class="text-gray-600">原始DFA</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ originalStateCount }}</p>
-                    <p class="text-xs text-gray-500">状态数</p>
-                  </div>
-                  <div class="text-center p-3 bg-red-50 rounded">
-                    <p class="text-gray-600">最小化DFA</p>
-                    <p class="text-2xl font-bold text-red-600">{{ minimizedStateCount }}</p>
-                    <p class="text-xs text-gray-500">状态数</p>
-                  </div>
-                </div>
-
-                <div v-if="optimizationRatio > 0" class="mt-3 text-center">
-                  <p class="text-sm text-green-600">
-                    <Icon icon="lucide:trending-down" class="w-4 h-4 inline mr-1" />
-                    减少了 {{ optimizationRatio.toFixed(1) }}% 的状态
-                  </p>
-                </div>
-              </div>
-
-              <!-- P集合显示 -->
-              <div v-if="pSets.length" class="p-sets-display">
-                <h4 class="font-medium text-gray-800 mb-3">P 集合</h4>
-                <div class="space-y-2">
-                  <div
-                    v-for="(pSet, index) in pSets"
-                    :key="index"
-                    class="p-2 bg-gray-50 rounded text-sm"
-                  >
-                    <span class="font-medium">P{{ index }}:</span>
-                    <span class="ml-2">{{ pSet.join(', ') }}</span>
-                  </div>
-                </div>
-              </div>
+            <div v-else class="text-center text-gray-500 py-8">
+              <p>请先完成左侧化简DFA状态子集的填写</p>
             </div>
           </div>
 
           <!-- 最小化完成信息 -->
-          <div v-if="minimizationResult" class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div v-if="isComplete" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 class="font-medium text-red-800">DFA 最小化完成</h4>
-                <div class="text-sm text-red-700 mt-2 space-y-1">
-                  <p>• 最小化状态数: {{ minimizationResult.stateCount }}</p>
-                  <p>• 转换数量: {{ minimizationResult.transitionCount }}</p>
-                  <p>• 初始状态: {{ minimizationResult.initialState }}</p>
-                  <p>• 接受状态: {{ minimizationResult.finalStates.join(', ') }}</p>
+                <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
+                <div class="text-sm text-green-700 mt-2 space-y-1">
+                  <p>• 原始状态数: {{ originalStateCount }}</p>
+                  <p>• 最小化状态数: {{ localPSets.length }}</p>
+                  <p>• 减少了 {{ reductionPercentage }}% 的状态</p>
                 </div>
               </div>
             </div>
@@ -223,43 +220,60 @@ defineEmits<{
   'complete': [data: any]
 }>()
 
+// 数据类型定义
+interface PSetItem {
+  id: string
+  category: string
+  state: string
+  check: string
+  text: string
+}
+
+interface MatrixCell {
+  id: string
+  category: string
+  check: string
+  value: string
+  rowIndex: number
+  colIndex: number
+  isRowHeader?: boolean
+}
+
 // 从上一步获取数据
 const faData = ref<FAResult | null>(null)
-const dfaStates = ref<string[]>([])
 const alphabetSymbols = ref<string[]>([])
 const originalStateCount = ref(0)
 
-// 最小化状态管理
-const isMinimizing = ref(false)
-const currentPartitionStep = ref(-1)
-const minimizedStateCount = ref(0)
-const minimizationResult = ref<{
-  stateCount: number
-  transitionCount: number
-  initialState: string
-  finalStates: string[]
-} | null>(null)
+// 状态管理
+const step6Open = ref(false) // P集合校验完成
+const step7Open = ref(false) // 矩阵校验完成
 
-// 最小化数据
-const partitions = ref<Array<{ states: string[] }>>([])
-const minimizedMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-const pSets = ref<string[][]>([])
+// P集合相关
+const localPSets = ref<PSetItem[]>([{
+  id: "localp_list0",
+  category: "blank",
+  state: "normal",
+  check: "normal",
+  text: ""
+}])
+let localPSetsCnt = 1
+
+// 矩阵相关
+const minimizedMatrix = ref<MatrixCell[]>([])
+const tableView = {
+  cellWidth: 80,
+  cellHeight: 40,
+  gap: 10
+}
 
 // 计算属性
-const hasDFAData = computed(() => {
-  return dfaStates.value.length > 0 && alphabetSymbols.value.length > 0
-})
-
-const optimizationRatio = computed(() => {
-  if (originalStateCount.value === 0) return 0
-  return ((originalStateCount.value - minimizedStateCount.value) / originalStateCount.value) * 100
-})
-
 const isComplete = computed(() => {
-  return minimizationResult.value !== null
+  return step6Open.value && step7Open.value
+})
+
+const reductionPercentage = computed(() => {
+  if (originalStateCount.value === 0) return 0
+  return ((originalStateCount.value - localPSets.value.length) / originalStateCount.value * 100).toFixed(1)
 })
 
 // 从localStorage获取数据
@@ -270,18 +284,12 @@ onMounted(() => {
     if (step1Data) {
       const data = JSON.parse(step1Data)
       faData.value = data.faResult || null
-
-      // 从后端数据中提取P集合
-      if (data.faResult?.P) {
-        pSets.value = data.faResult.P
-      }
     }
 
     // 获取第四步数据
     const step4Data = localStorage.getItem('fa-step4-data')
     if (step4Data) {
       const data = JSON.parse(step4Data)
-      dfaStates.value = data.dfaStates || []
       originalStateCount.value = data.dfaStates?.length || 0
     }
 
@@ -296,97 +304,182 @@ onMounted(() => {
   }
 })
 
-// 开始最小化
-const startMinimization = async () => {
-  if (!hasDFAData.value || isMinimizing.value) return
+// P集合相关方法
+const handlePSetFocus = (pItem: PSetItem) => {
+  if (pItem.check === 'isCorrect') return
+  pItem.check = 'normal'
+}
 
-  isMinimizing.value = true
-  currentPartitionStep.value = -1
-  minimizationResult.value = null
+const removePSet = (index: number) => {
+  if (step6Open.value || localPSets.value.length <= 1) return
+  localPSets.value.splice(index, 1)
+}
 
-  try {
-    // 使用后端返回的table_to_num_min数据
-    if (faData.value?.table_to_num_min) {
-      const tableToNumMin = faData.value.table_to_num_min
+const addPSet = (index: number) => {
+  if (step6Open.value) return
+  localPSets.value.splice(index + 1, 0, {
+    id: "localp_list" + (++localPSetsCnt),
+    category: "blank",
+    state: "normal",
+    check: "normal",
+    text: ""
+  })
+}
 
-      // 模拟分割过程
-      await simulatePartitioning()
+// 字符集比较函数
+const areCharacterSetsEqual = (str1: string, str2: string): boolean => {
+  const set1 = new Set(str1)
+  const set2 = new Set(str2)
 
-      // 生成最小化矩阵
-      const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
-      Object.keys(tableToNumMin).forEach(symbol => {
-        const transitions = tableToNumMin[symbol]
-        transitions.forEach((targetState: string, index: number) => {
-          const stateName = `M${index}`
+  if (set1.size !== set2.size) {
+    return false
+  }
 
-          let row = matrix.find(r => r.state === stateName)
-          if (!row) {
-            row = { state: stateName, transitions: {} }
-            matrix.push(row)
-          }
-
-          row.transitions[symbol] = targetState || '-'
-        })
-      })
-
-      minimizedMatrix.value = matrix
-      minimizedStateCount.value = matrix.length
-
-      // 设置最小化结果
-      minimizationResult.value = {
-        stateCount: minimizedStateCount.value,
-        transitionCount: Object.values(matrix).reduce((total, row) => {
-          return total + Object.values(row.transitions).filter(t => t && t !== '-').length
-        }, 0),
-        initialState: 'M0',
-        finalStates: matrix.filter(row => row.state.includes('F')).map(row => row.state) || ['M' + (matrix.length - 1)]
-      }
+  for (const char of set1) {
+    if (!set2.has(char)) {
+      return false
     }
+  }
+  return true
+}
 
-  } catch (error) {
-    console.error('最小化失败：', error)
-  } finally {
-    isMinimizing.value = false
+// P集合匹配验证
+const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
+  const answerSet = new Set(answerList)
+
+  for (const item of inputList) {
+    const itemText = item.text.replace(/\s+/g, '')
+    const answerItem = answerList.find(answer => areCharacterSetsEqual(answer, itemText))
+
+    if (answerItem) {
+      item.check = 'isCorrect'
+      answerSet.delete(answerItem)
+    } else {
+      item.check = 'isError'
+    }
+  }
+
+  return answerSet.size === 0 && inputList.every(item => item.check === 'isCorrect')
+}
+
+// 校验P集合
+const validatePSets = () => {
+  if (step6Open.value || !faData.value?.P) return
+
+  const answerList = faData.value.P.map((pSet: string[]) => pSet.join(''))
+
+  if (matchPSetsValue(answerList, localPSets.value)) {
+    step6Open.value = true
+    initMinimizedMatrix()
+    // success message
+  } else {
+    // 显示错误或自动展示答案的逻辑
+    // 这里可以添加重试次数限制
+    localPSets.value = []
+    answerList.forEach((answer: string, index: number) => {
+      localPSets.value.push({
+        id: "localp_list" + (++localPSetsCnt),
+        category: "blank",
+        state: "normal",
+        check: "isCorrect",
+        text: answer
+      })
+    })
+    step6Open.value = true
+    initMinimizedMatrix()
   }
 }
 
-// 模拟分割过程
-const simulatePartitioning = async () => {
-  // 初始分割：接受状态和非接受状态
-  const initialPartitions = [
-    { states: dfaStates.value.filter(state => !state.includes('F')) },
-    { states: dfaStates.value.filter(state => state.includes('F')) }
-  ]
+// 初始化最小化矩阵
+const initMinimizedMatrix = () => {
+  if (!faData.value?.table_to_num_min) return
 
-  partitions.value = initialPartitions.filter(p => p.states.length > 0)
-  currentPartitionStep.value = 0
+  const tableToNumMin = faData.value.table_to_num_min
+  const symbols = alphabetSymbols.value
+  const rowCount = Math.max(...Object.values(tableToNumMin).map((arr: any) => Array.isArray(arr) ? arr.length : 0))
 
-  // 模拟进一步细分过程
-  for (let i = 1; i < 3; i++) {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 这里可以添加更复杂的分割逻辑
-    currentPartitionStep.value = i
-  }
-}
-
-// 重置最小化
-const resetMinimization = () => {
-  currentPartitionStep.value = -1
-  minimizationResult.value = null
-  partitions.value = []
   minimizedMatrix.value = []
-  minimizedStateCount.value = 0
+
+  // 创建矩阵单元格
+  for (let row = 0; row < rowCount; row++) {
+    for (let col = 0; col < symbols.length; col++) {
+      const symbol = symbols[col]
+      const cellId = `${row} ${symbol}`
+
+      // 获取第一列（S列）的正确答案
+      const sColumnAnswer = tableToNumMin['S']?.[row] || ''
+
+      minimizedMatrix.value.push({
+        id: cellId,
+        category: col === 0 ? "onlyRead" : "blank",
+        check: col === 0 ? "isCorrect" : "normal",
+        value: col === 0 ? sColumnAnswer : "",
+        rowIndex: row,
+        colIndex: col,
+        isRowHeader: false
+      })
+    }
+  }
+}
+
+// 矩阵单元格焦点处理
+const handleMatrixCellFocus = (cell: MatrixCell) => {
+  if (cell.check === 'isCorrect') return
+  cell.check = 'normal'
+}
+
+// 获取矩阵单元格
+const getMatrixCell = (row: number, col: number): MatrixCell | undefined => {
+  return minimizedMatrix.value.find(cell => cell.rowIndex === row && cell.colIndex === col)
+}
+
+// 校验矩阵
+const validateMatrix = () => {
+  if (step7Open.value || !faData.value?.table_to_num_min) return
+
+  let isAllCorrect = true
+  const tableToNumMin = faData.value.table_to_num_min
+
+  for (const cell of minimizedMatrix.value) {
+    if (cell.category === 'onlyRead' || cell.check === 'isCorrect') continue
+
+    const symbol = alphabetSymbols.value[cell.colIndex]
+    const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
+
+    if (cell.value.replace(/\s+/g, '') === correctAnswer) {
+      cell.check = 'isCorrect'
+    } else {
+      cell.check = 'isError'
+      isAllCorrect = false
+    }
+  }
+
+  if (isAllCorrect) {
+    step7Open.value = true
+    // success message
+  } else {
+    // 显示错误或自动展示答案
+    for (const cell of minimizedMatrix.value) {
+      if (cell.category === "onlyRead" || cell.check === 'isCorrect') continue
+
+      const symbol = alphabetSymbols.value[cell.colIndex]
+      const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
+
+      cell.value = correctAnswer
+      cell.check = 'isCorrect'
+    }
+    step7Open.value = true
+  }
 }
 
 // 进入下一步
 const proceedToNext = () => {
   if (isComplete.value) {
     const stepData = {
-      minimizationResult: minimizationResult.value,
+      localPSets: localPSets.value,
       minimizedMatrix: minimizedMatrix.value,
-      pSets: pSets.value,
-      optimizationRatio: optimizationRatio.value,
+      step6Open: step6Open.value,
+      step7Open: step7Open.value,
       timestamp: new Date().toISOString()
     }
 
