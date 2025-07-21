@@ -22,22 +22,6 @@
               <FACanvas ref="minimizedDFACanvasRef" mode="dfa" title="最小化 DFA" />
             </div>
           </div>
-
-          <!-- 绘制完成信息 -->
-          <div v-if="minimizedResult" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 class="font-medium text-green-800">最小化 DFA 构造完成</h4>
-                <div class="text-sm text-green-700 mt-2 space-y-1">
-                  <p>• 最终状态数量: {{ minimizedResult.stateCount }}</p>
-                  <p>• 转换数量: {{ minimizedResult.transitionCount }}</p>
-                  <p>• 初始状态: {{ minimizedResult.initialState }}</p>
-                  <p>• 接受状态: {{ minimizedResult.finalStates.join(', ') }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <!-- 下方：标准答案 -->
@@ -101,13 +85,7 @@
         <div class="text-sm text-gray-500">步骤 6 / 6</div>
         <button
           @click="complete"
-          :disabled="!isComplete"
-          :class="[
-            'px-6 py-2 rounded-lg transition-colors',
-            isComplete
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          ]"
+          class="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
         >
           完成
           <Icon icon="lucide:check" class="w-4 h-4 inline ml-2" />
@@ -118,10 +96,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
-import type { FAResult } from '@/types'
 
 const emit = defineEmits<{
   'next-step': []
@@ -131,45 +108,16 @@ const emit = defineEmits<{
 
 // 从各步骤获取数据
 const regexPattern = ref('')
-const nfaStateCount = ref(8)
 const dfaStateCount = ref(0)
 const minimizedStateCount = ref(0)
 const minimizedDotString = ref('')
 
 // 状态管理
 const showAnswer = ref(false)
-const showDotString = ref(false)
-const minimizedResult = ref<{
-  stateCount: number
-  transitionCount: number
-  initialState: string
-  finalStates: string[]
-} | null>(null)
 
 // 最小化DFA画布引用
 const minimizedDFACanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
-
-// 计算属性
-const optimizationInfo = computed(() => {
-  const originalCount = dfaStateCount.value
-  const minimizedCount = minimizedStateCount.value
-
-  if (originalCount === 0) return { ratio: 0, saved: 0 }
-
-  const saved = originalCount - minimizedCount
-  const ratio = (saved / originalCount) * 100
-
-  return { ratio, saved }
-})
-
-const hasMinimizationData = computed(() => {
-  return minimizedStateCount.value > 0
-})
-
-const isComplete = computed(() => {
-  return true // 直接返回true，因为不需要生成功能
-})
 
 // 从localStorage获取数据
 onMounted(() => {
@@ -242,32 +190,14 @@ const renderSvgAnswer = async () => {
   }
 }
 
-// 显示最小化DFA DOT字符串
-const showMinimizedDot = () => {
-  showDotString.value = !showDotString.value
-}
-
-// 复制DOT字符串
-const copyDotString = async () => {
-  try {
-    await navigator.clipboard.writeText(minimizedDotString.value)
-    // 这里可以添加一个提示
-  } catch (error) {
-    console.error('复制失败：', error)
-  }
-}
-
 // 完成整个流程
 const complete = () => {
   const stepData = {
     completed: true,
     regexPattern: regexPattern.value,
     finalResults: {
-      nfaStateCount: nfaStateCount.value,
       dfaStateCount: dfaStateCount.value,
-      minimizedStateCount: minimizedStateCount.value,
-      optimizationRatio: optimizationInfo.value.ratio,
-      minimizedResult: minimizedResult.value
+      minimizedStateCount: minimizedStateCount.value
     },
     timestamp: new Date().toISOString()
   }
