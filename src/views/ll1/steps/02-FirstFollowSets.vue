@@ -303,25 +303,25 @@ onMounted(() => {
 
 <style scoped>
 .step-header {
+  padding: 2rem 2rem 1rem;
   border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 1.5rem;
-  margin-bottom: 2rem;
 }
 
 .step-content {
-  margin-bottom: 2rem;
+  padding: 2rem;
 }
 
 .step-actions {
+  padding: 1rem 2rem 2rem;
   border-top: 1px solid #e5e7eb;
-  padding-top: 1.5rem;
+  background: #f9fafb;
 }
 
 .step-icon {
   width: 3rem;
   height: 3rem;
   background-color: #dbeafe;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
