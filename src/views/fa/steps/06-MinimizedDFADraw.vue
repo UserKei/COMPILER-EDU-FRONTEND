@@ -13,115 +13,23 @@
     </div>
 
     <div class="step-content">
-      <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        <!-- 左侧：总结信息 -->
-        <div class="summary-panel">
-          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              <Icon icon="lucide:info" class="w-5 h-5 inline mr-2" />
-              转换总结
-            </h3>
-
-            <div class="space-y-4">
-              <div class="text-sm">
-                <p><strong>正则表达式:</strong></p>
-                <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ regexPattern }}</code>
-              </div>
-
-              <div class="grid grid-cols-1 gap-3 text-sm">
-                <div class="flex justify-between p-2 bg-white rounded">
-                  <span class="text-gray-600">NFA 状态数:</span>
-                  <span class="font-medium">{{ nfaStateCount }}</span>
-                </div>
-                <div class="flex justify-between p-2 bg-white rounded">
-                  <span class="text-gray-600">DFA 状态数:</span>
-                  <span class="font-medium">{{ dfaStateCount }}</span>
-                </div>
-                <div class="flex justify-between p-2 bg-indigo-100 rounded">
-                  <span class="text-indigo-700">最小DFA状态数:</span>
-                  <span class="font-bold text-indigo-900">{{ minimizedStateCount }}</span>
-                </div>
-              </div>
-
-              <div v-if="optimizationInfo.ratio > 0" class="p-3 bg-green-100 rounded">
-                <div class="flex items-center gap-2 text-green-800">
-                  <Icon icon="lucide:trending-down" class="w-4 h-4" />
-                  <span class="font-medium">优化效果</span>
-                </div>
-                <p class="text-sm text-green-700 mt-1">
-                  状态数减少了 {{ optimizationInfo.ratio.toFixed(1) }}%
-                </p>
-              </div>
-            </div>
-
-            <div class="mt-6 space-y-3">
-              <button
-                @click="generateMinimizedDFA"
-                :disabled="isGenerating || !hasMinimizationData"
-                :class="[
-                  'w-full px-4 py-2 rounded-lg transition-colors',
-                  (isGenerating || !hasMinimizationData)
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                ]"
-              >
-                <Icon
-                  :icon="isGenerating ? 'lucide:loader-2' : 'lucide:play'"
-                  :class="['w-4 h-4 inline mr-2', isGenerating ? 'animate-spin' : '']"
-                />
-                {{ isGenerating ? '生成中...' : '生成最小DFA' }}
-              </button>
-
-              <button
-                @click="showMinimizedDot"
-                :disabled="!minimizedDotString"
-                class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                <Icon icon="lucide:eye" class="w-4 h-4 inline mr-2" />
-                显示 DOT 图
-              </button>
-
-              <button
-                @click="downloadResults"
-                :disabled="!isComplete"
-                class="w-full px-4 py-2 border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                <Icon icon="lucide:download" class="w-4 h-4 inline mr-2" />
-                导出结果
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 右侧：最小化DFA画布 -->
-        <div class="minimized-dfa-canvas-area xl:col-span-3">
-          <div class="bg-white border border-gray-200 rounded-lg h-96">
-            <div class="h-full relative">
-              <!-- 画布头部 -->
-              <div class="border-b border-gray-200 p-4">
-                <div class="flex items-center justify-between">
-                  <h3 class="font-semibold text-gray-900">最小化 DFA 状态图</h3>
-                  <div class="flex items-center gap-2 text-sm text-gray-500">
-                    <Icon icon="lucide:info" class="w-4 h-4" />
-                    <span>最终优化结果</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 画布主体 -->
-              <div class="h-full p-4">
-                <FACanvas ref="minimizedDFACanvasRef" mode="dfa" title="最小化 DFA" />
-              </div>
+      <div class="space-y-6">
+        <!-- 上方：最小化DFA画布区域 -->
+        <div class="minimized-dfa-draw-area">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <!-- 画布主体 -->
+            <div class="h-[700px] p-4">
+              <FACanvas ref="minimizedDFACanvasRef" mode="dfa" title="最小化 DFA" />
             </div>
           </div>
 
-          <!-- 最小化DFA信息面板 -->
-          <div v-if="minimizedResult" class="mt-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+          <!-- 绘制完成信息 -->
+          <div v-if="minimizedResult" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+              <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 class="font-medium text-indigo-800">最小化 DFA 构造完成</h4>
-                <div class="text-sm text-indigo-700 mt-2 space-y-1">
+                <h4 class="font-medium text-green-800">最小化 DFA 构造完成</h4>
+                <div class="text-sm text-green-700 mt-2 space-y-1">
                   <p>• 最终状态数量: {{ minimizedResult.stateCount }}</p>
                   <p>• 转换数量: {{ minimizedResult.transitionCount }}</p>
                   <p>• 初始状态: {{ minimizedResult.initialState }}</p>
@@ -130,20 +38,55 @@
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- DOT 字符串显示 -->
-          <div v-if="showDotString && minimizedDotString" class="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-medium text-gray-800">最小化 DFA DOT 字符串</h4>
-              <button
-                @click="copyDotString"
-                class="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-              >
-                <Icon icon="lucide:copy" class="w-3 h-3 inline mr-1" />
-                复制
-              </button>
+        <!-- 下方：标准答案 -->
+        <div class="answer-area">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <!-- 答案区域头部 -->
+            <div class="border-b border-gray-200 p-4">
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">标准答案</h3>
+                <button
+                  @click="toggleAnswer"
+                  :class="[
+                    'px-4 py-2 rounded-lg transition-colors',
+                    showAnswer
+                      ? 'bg-gray-600 text-white hover:bg-gray-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  ]"
+                >
+                  <Icon
+                    :icon="showAnswer ? 'lucide:eye-off' : 'lucide:eye'"
+                    class="w-4 h-4 inline mr-2"
+                  />
+                  {{ showAnswer ? '隐藏答案' : '查看答案' }}
+                </button>
+              </div>
             </div>
-            <pre class="text-xs bg-white p-3 rounded border overflow-auto max-h-40 font-mono">{{ minimizedDotString }}</pre>
+
+            <!-- 答案内容 -->
+            <div class="h-80 p-4">
+              <div v-if="showAnswer" class="w-full h-full flex items-center justify-center">
+                <div
+                  v-if="minimizedDotString"
+                  ref="answerSvgContainer"
+                  class="w-full h-full overflow-auto bg-gray-50 rounded border"
+                >
+                  <!-- SVG 将在这里渲染 -->
+                </div>
+                <div v-else class="text-gray-500 text-center">
+                  <Icon icon="lucide:image-off" class="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                  <p>暂无答案图像</p>
+                </div>
+              </div>
+              <div v-else class="w-full h-full flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                  <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                  <p>点击"查看答案"显示最小化 DFA</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -175,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import type { FAResult } from '@/types'
@@ -194,7 +137,7 @@ const minimizedStateCount = ref(0)
 const minimizedDotString = ref('')
 
 // 状态管理
-const isGenerating = ref(false)
+const showAnswer = ref(false)
 const showDotString = ref(false)
 const minimizedResult = ref<{
   stateCount: number
@@ -205,6 +148,7 @@ const minimizedResult = ref<{
 
 // 最小化DFA画布引用
 const minimizedDFACanvasRef = ref<InstanceType<typeof FACanvas>>()
+const answerSvgContainer = ref<HTMLElement>()
 
 // 计算属性
 const optimizationInfo = computed(() => {
@@ -224,7 +168,7 @@ const hasMinimizationData = computed(() => {
 })
 
 const isComplete = computed(() => {
-  return minimizedResult.value !== null
+  return true // 直接返回true，因为不需要生成功能
 })
 
 // 从localStorage获取数据
@@ -256,68 +200,45 @@ onMounted(() => {
   }
 })
 
-// 生成最小化DFA
-const generateMinimizedDFA = async () => {
-  if (!hasMinimizationData.value || isGenerating.value) return
+// 切换答案显示
+const toggleAnswer = async () => {
+  showAnswer.value = !showAnswer.value
 
-  isGenerating.value = true
+  if (showAnswer.value && minimizedDotString.value) {
+    await nextTick()
+    renderSvgAnswer()
+  }
+}
+
+// 渲染SVG答案
+const renderSvgAnswer = async () => {
+  if (!answerSvgContainer.value || !minimizedDotString.value) return
 
   try {
-    // 清空画布
-    if (minimizedDFACanvasRef.value) {
-      minimizedDFACanvasRef.value.clearCanvas()
+    // 动态导入 @viz-js/viz
+    const { instance } = await import('@viz-js/viz')
+    const viz = await instance()
+
+    // 渲染DOT为SVG
+    const svg = viz.renderSVGElement(minimizedDotString.value)
+
+    // 清空容器并添加SVG
+    answerSvgContainer.value.innerHTML = ''
+    if (svg) {
+      answerSvgContainer.value.appendChild(svg)
     }
-
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 使用最小化数据在画布上生成最小DFA
-    if (minimizedDFACanvasRef.value) {
-      const canvas = minimizedDFACanvasRef.value
-
-      // 添加最小化状态节点
-      for (let i = 0; i < minimizedStateCount.value; i++) {
-        const x = 150 + (i % 3) * 200
-        const y = 150 + Math.floor(i / 3) * 150
-
-        canvas.addNode({
-          id: `M${i}`,
-          type: 'circle',
-          position: { x, y },
-          data: {
-            label: `M${i}`,
-            isInitial: i === 0,
-            isFinal: i === minimizedStateCount.value - 1
-          }
-        })
-      }
-
-      // 添加简单的转换边（示例）
-      let edgeCount = 0
-      for (let i = 0; i < minimizedStateCount.value - 1; i++) {
-        canvas.addEdge({
-          id: `edge-${edgeCount++}`,
-          type: 'custom',
-          source: `M${i}`,
-          target: `M${i + 1}`,
-          data: { label: 'a' },
-          markerEnd: 'url(#dfa-arrow)'
-        })
-      }
-
-      // 设置结果
-      minimizedResult.value = {
-        stateCount: minimizedStateCount.value,
-        transitionCount: edgeCount,
-        initialState: 'M0',
-        finalStates: [`M${minimizedStateCount.value - 1}`]
-      }
-    }
-
   } catch (error) {
-    console.error('生成最小化DFA失败：', error)
-  } finally {
-    isGenerating.value = false
+    console.error('渲染SVG失败：', error)
+    if (answerSvgContainer.value) {
+      answerSvgContainer.value.innerHTML = `
+        <div class="flex items-center justify-center h-full text-gray-500">
+          <div class="text-center">
+            <p>SVG 渲染失败</p>
+            <p class="text-sm mt-1">请检查DOT字符串格式</p>
+          </div>
+        </div>
+      `
+    }
   }
 }
 
@@ -334,34 +255,6 @@ const copyDotString = async () => {
   } catch (error) {
     console.error('复制失败：', error)
   }
-}
-
-// 下载结果
-const downloadResults = () => {
-  if (!isComplete.value) return
-
-  const results = {
-    regex: regexPattern.value,
-    nfaStateCount: nfaStateCount.value,
-    dfaStateCount: dfaStateCount.value,
-    minimizedStateCount: minimizedStateCount.value,
-    optimizationRatio: optimizationInfo.value.ratio,
-    minimizedResult: minimizedResult.value,
-    timestamp: new Date().toISOString()
-  }
-
-  // 创建下载链接
-  const blob = new Blob([JSON.stringify(results, null, 2)], {
-    type: 'application/json'
-  })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `fa-analysis-results-${Date.now()}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }
 
 // 完成整个流程
