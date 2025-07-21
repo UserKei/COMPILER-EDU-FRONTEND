@@ -15,6 +15,105 @@
     <!-- 主要内容 -->
     <div class="step-content">
       <div class="space-y-6">
+        <!-- 转换表参考区域 -->
+        <div class="transition-tables-reference">
+          <div class="bg-white border border-gray-200 rounded-lg">
+            <div class="border-b border-gray-200 p-4">
+              <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+                <Icon icon="lucide:table" class="w-5 h-5 text-green-600" />
+                转换表参考（来自第三步）
+              </h3>
+              <p class="text-sm text-gray-600 mt-1">根据这些表格绘制 DFA 图</p>
+            </div>
+            <div class="p-6">
+              <div v-if="conversionTable.length || transitionMatrix.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 转换表 -->
+                <div v-if="conversionTable.length" class="conversion-table">
+                  <h4 class="font-medium text-gray-800 mb-3">NFA → DFA 转换表</h4>
+                  <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300 text-sm">
+                      <thead>
+                        <tr class="bg-green-50">
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <th
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
+                          >
+                            {{ symbol }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, index) in conversionTable"
+                          :key="index"
+                          :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                        >
+                          <td class="border border-gray-300 px-3 py-2 font-medium">
+                            {{ row.state }}
+                          </td>
+                          <td
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center"
+                          >
+                            {{ row.transitions?.[symbol] || '-' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 状态转换矩阵 -->
+                <div v-if="transitionMatrix.length" class="transition-matrix">
+                  <h4 class="font-medium text-gray-800 mb-3">状态转换矩阵</h4>
+                  <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-300 text-sm">
+                      <thead>
+                        <tr class="bg-purple-50">
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <th
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
+                          >
+                            {{ symbol }}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(row, index) in transitionMatrix"
+                          :key="index"
+                          :class="index % 2 === 0 ? 'bg-white' : 'bg-purple-50'"
+                        >
+                          <td class="border border-gray-300 px-3 py-2 font-medium">
+                            {{ row.state }}
+                          </td>
+                          <td
+                            v-for="symbol in alphabetSymbols"
+                            :key="symbol"
+                            class="border border-gray-300 px-3 py-2 text-center"
+                          >
+                            {{ row.transitions?.[symbol] || '-' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-center py-8 text-gray-500">
+                <Icon icon="lucide:table-2" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p>暂无转换表数据</p>
+                <p class="text-sm mt-1">请先完成第三步的子集构造</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 上方：用户画图区域 -->
         <div class="user-draw-area">
           <div class="bg-white border border-gray-200 rounded-lg">
@@ -235,6 +334,7 @@ const dfaStates = ref<string[]>([])
 const alphabetSymbols = ref<string[]>([])
 const totalTransitions = ref(0)
 const conversionTable = ref<any[]>([])
+const transitionMatrix = ref<any[]>([])
 
 // 状态管理
 const isGenerating = ref(false)
@@ -283,6 +383,7 @@ onMounted(() => {
       alphabetSymbols.value = data.alphabetSymbols || []
       totalTransitions.value = data.totalTransitions || 0
       conversionTable.value = data.conversionTable || []
+      transitionMatrix.value = data.transitionMatrix || []
     }
   } catch (error) {
     console.error('读取上一步数据失败：', error)

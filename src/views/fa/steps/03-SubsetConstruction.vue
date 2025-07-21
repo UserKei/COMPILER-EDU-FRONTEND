@@ -550,48 +550,72 @@ const extractAlphabetFromFAData = (data: FAResult) => {
 
 // 生成答案数据
 const generateAnswerData = (data: FAResult) => {
-  // 生成转换表答案
+  // 直接使用后端返回的数据结构来显示答案
+
+  // 生成转换表答案 - 直接使用后端的table数据
   if (data.table) {
     const table = data.table
     const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
 
-    Object.keys(table).forEach(symbol => {
-      const transitions = table[symbol]
-      transitions.forEach((transitionSet: string[], index: number) => {
-        const stateName = `S${index}`
+    // 获取所有符号
+    const symbols = Object.keys(table).sort()
 
-        let row = newTable.find(r => r.state === stateName)
-        if (!row) {
-          row = { state: stateName, transitions: {} }
-          newTable.push(row)
+    // 获取状态数量（假设所有符号的转换数组长度相同）
+    const stateCount = table[symbols[0]]?.length || 0
+
+    // 为每个状态创建行
+    for (let i = 0; i < stateCount; i++) {
+      const row = {
+        state: `S${i}`,
+        transitions: {} as Record<string, string>
+      }
+
+      // 为每个符号填入转换信息
+      symbols.forEach(symbol => {
+        if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
+          const transition = table[symbol][i]
+          if (Array.isArray(transition)) {
+            // 如果是数组，用空字符串连接（按旧前端的方式）
+            row.transitions[symbol] = transition.join('') || '-'
+          } else {
+            row.transitions[symbol] = transition || '-'
+          }
         }
-
-        row.transitions[symbol] = transitionSet.join(',') || '-'
       })
-    })
+
+      newTable.push(row)
+    }
 
     answerConversionTable.value = newTable
   }
 
-  // 生成状态转换矩阵答案
+  // 生成状态转换矩阵答案 - 直接使用后端的table_to_num数据
   if (data.table_to_num) {
     const tableToNum = data.table_to_num
     const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
 
-    Object.keys(tableToNum).forEach(symbol => {
-      const transitions = tableToNum[symbol]
-      transitions.forEach((targetState: string, index: number) => {
-        const stateName = `S${index}`
+    // 获取所有符号
+    const symbols = Object.keys(tableToNum).sort()
 
-        let row = matrix.find(r => r.state === stateName)
-        if (!row) {
-          row = { state: stateName, transitions: {} }
-          matrix.push(row)
+    // 获取状态数量
+    const stateCount = tableToNum[symbols[0]]?.length || 0
+
+    // 为每个状态创建行
+    for (let i = 0; i < stateCount; i++) {
+      const row = {
+        state: `S${i}`,
+        transitions: {} as Record<string, string>
+      }
+
+      // 为每个符号填入转换信息
+      symbols.forEach(symbol => {
+        if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
+          row.transitions[symbol] = tableToNum[symbol][i] || '-'
         }
-
-        row.transitions[symbol] = targetState || '-'
       })
-    })
+
+      matrix.push(row)
+    }
 
     answerTransitionMatrix.value = matrix
   }
@@ -741,11 +765,15 @@ const generateMatrix = async () => {
 const proceedToNext = () => {
   if (constructionComplete.value) {
     const stepData = {
-      conversionTable: conversionTable.value,
-      transitionMatrix: transitionMatrix.value,
+      // 保存答案数据供下一步参考
+      conversionTable: answerConversionTable.value,
+      transitionMatrix: answerTransitionMatrix.value,
       dfaStates: dfaStates.value,
       alphabetSymbols: alphabetSymbols.value,
       totalTransitions: totalTransitions.value,
+      // 同时保存用户填写的数据
+      userConversionTable: userConversionTable.value,
+      userTransitionMatrix: userTransitionMatrix.value,
       timestamp: new Date().toISOString()
     }
 
