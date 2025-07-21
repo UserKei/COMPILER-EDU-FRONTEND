@@ -21,12 +21,8 @@ instance.interceptors.request.use(
 // 响应拦截器
 instance.interceptors.response.use(
   (res) => {
-    if (res.data.code === 0) {
-      return res
-    }
-    // 处理业务失败
-    console.error(res.data.message || '服务异常')
-    return Promise.reject(res.data)
+    // 直接返回响应，让调用方处理业务逻辑
+    return res
   },
   (err) => {
     // 处理网络错误
