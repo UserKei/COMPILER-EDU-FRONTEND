@@ -172,8 +172,8 @@
                   <span class="text-gray-700">以 abb 结尾的字符串</span>
                 </div>
                 <div class="flex items-start gap-3">
-                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">a*b+</code>
-                  <span class="text-gray-700">零个或多个 a 后跟一个或多个 b</span>
+                  <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">ab*c</code>
+                  <span class="text-gray-700">a 后跟零个或多个 b 再跟 c</span>
                 </div>
                 <div class="flex items-start gap-3">
                   <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">(0|1)*101</code>
@@ -262,10 +262,10 @@ const validationResult = ref<{
 // 示例正则表达式
 const examples = [
   { pattern: '(a|b)*abb', description: '以 abb 结尾的字符串' },
-  { pattern: 'a*b+', description: '零个或多个 a 后跟一个或多个 b' },
   { pattern: '(a|b)*a(a|b)', description: '倒数第二个字符是 a' },
   { pattern: '(0|1)*101', description: '二进制数以 101 结尾' },
-  { pattern: 'ab*c', description: 'a 后跟零个或多个 b 再跟 c' }
+  { pattern: 'ab*c', description: 'a 后跟零个或多个 b 再跟 c' },
+  { pattern: 'a(a|b)*', description: 'a 开头后跟任意 a 或 b' }
 ]
 
 // 解析信息
@@ -273,7 +273,7 @@ const parsedInfo = computed(() => {
   if (!regexInput.value) return null
 
   const charCount = regexInput.value.length
-  const operatorCount = (regexInput.value.match(/[|*+()]/g) || []).length
+  const operatorCount = (regexInput.value.match(/[|*()]/g) || []).length
 
   // 计算嵌套深度
   let depth = 0
@@ -349,12 +349,12 @@ const validateRegex = async () => {
     }
 
     // 检查空操作符
-    if (pattern.includes('||') || pattern.includes('**') || pattern.includes('++')) {
+    if (pattern.includes('||') || pattern.includes('**')) {
       throw new Error('不允许连续的操作符')
     }
 
     // 检查开头结尾的操作符
-    if (/^[|*+]/.test(pattern)) {
+    if (/^[|*]/.test(pattern)) {
       throw new Error('正则表达式不能以操作符开头')
     }
     if (/[|]$/.test(pattern)) {
