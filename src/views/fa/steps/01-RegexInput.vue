@@ -298,7 +298,6 @@ const isValidAndReady = computed(() => {
 })
 
 // 验证正则表达式
-// 验证正则表达式
 const validateRegex = async () => {
   if (!faStore.inputRegex.trim()) {
     validationResult.value = {
@@ -310,7 +309,10 @@ const validateRegex = async () => {
 
   // 基本语法检查
   try {
-    const pattern = faStore.inputRegex.trim()
+    // 关键修改：像旧代码一样处理空格，只消除空格但不消除换行
+    const pattern = faStore.inputRegex.replace(/ +/g, "")
+
+    console.log("经过处理后的输入Regex：", pattern) // 调试用
 
     // 检查是否包含中文
     if (/[\u4e00-\u9fa5]/.test(pattern)) {
@@ -359,6 +361,9 @@ const validateRegex = async () => {
       throw new Error('正则表达式不能以 | 结尾')
     }
 
+    // 重要：更新store中的正则表达式为处理后的版本（去空格）
+    faStore.setInputRegex(pattern)
+
     // 调用store的分析方法
     const success = await faStore.performFAAnalysis()
 
@@ -390,30 +395,22 @@ const clearInput = () => {
 
 // 进入下一步
 const proceedToNext = () => {
-  if (isValidAndReady.value && faStore.originalData) {
-    // 发送完成事件，传递正则表达式数据和FA结果
-    const stepData = {
-      regex: faStore.inputRegex,
-      parsedInfo: parsedInfo.value,
-      faResult: faStore.originalData,
-      validationData: faStore.validationData,
-      timestamp: new Date().toISOString()
-    }
+  if (!isValidAndReady.value || !faStore.originalData) return
 
-    // 触发完成事件
-    setTimeout(() => {
-      console.log('Step 1 completed with data:', stepData)
-
-      // 进入下一步
-      if (confirm('确认使用此正则表达式进行后续步骤？')) {
-        // 数据已经保存在 Pinia store 中，无需localStorage
-
-        // 进入下一步
-        emit('complete', stepData)
-        emit('next-step')
-      }
-    }, 100)
+  // 发送完成事件，传递正则表达式数据和FA结果
+  const stepData = {
+    regex: faStore.inputRegex,
+    parsedInfo: parsedInfo.value,
+    faResult: faStore.originalData,
+    validationData: faStore.validationData,
+    timestamp: new Date().toISOString()
   }
+
+  console.log('Step 1 completed with data:', stepData)
+
+  // 直接进入下一步，数据已经保存在 Pinia store 中
+  emit('complete', stepData)
+  emit('next-step')
 }
 
 // 监听输入变化，自动验证

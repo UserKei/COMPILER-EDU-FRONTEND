@@ -140,7 +140,7 @@ export const useFAStore = defineStore('fa', () => {
 
       const response = await getDFAM(inputRegex.value.trim())
 
-      if (response.data.code === 200 && response.data.data) {
+      if (response.data.code === 0 && response.data.data) {
         const rawData = response.data.data
         originalData.value = rawData
 
@@ -149,7 +149,7 @@ export const useFAStore = defineStore('fa', () => {
 
         return true
       } else {
-        commonStore.setError(response.data.message || response.data.msg || '正则表达式分析失败')
+        commonStore.setError(response.data.msg || '正则表达式分析失败')
         return false
       }
     } catch (err) {
