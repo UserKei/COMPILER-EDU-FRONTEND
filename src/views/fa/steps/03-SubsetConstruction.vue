@@ -62,6 +62,13 @@
                         <Icon icon="lucide:eraser" class="w-4 h-4 inline mr-1" />
                         清空
                       </button>
+                      <button
+                        @click="handleValidateTable"
+                        class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-1" />
+                        检验答案
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -98,7 +105,8 @@
                               v-model="row.state"
                               type="text"
                               placeholder="状态名"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              :class="getFieldClass(index, 'state', 'table')"
+                              @blur="() => validateField(row.state, index, 'state', 'table')"
                             />
                           </td>
                           <td
@@ -110,7 +118,8 @@
                               v-model="row.transitions[symbol]"
                               type="text"
                               placeholder="-"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              :class="getFieldClass(index, symbol, 'table') + ' text-center'"
+                              @blur="() => validateField(row.transitions[symbol], index, symbol, 'table')"
                             />
                           </td>
                           <td class="border border-gray-300 px-3 py-2 text-center">
@@ -124,6 +133,24 @@
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  <!-- 转换表错误信息显示 -->
+                  <div v-if="showTableErrors && Object.keys(tableValidationErrors).length > 0" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start gap-2">
+                      <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 class="font-medium text-red-800 mb-2">转换表填写错误</h4>
+                        <ul class="text-sm text-red-700 space-y-1">
+                          <li v-for="(errors, fieldKey) in tableValidationErrors" :key="fieldKey">
+                            <strong>{{ formatFieldKey(fieldKey, 'table') }}：</strong>
+                            <span v-for="(error, index) in errors" :key="index">
+                              {{ error }}{{ index < errors.length - 1 ? '，' : '' }}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -229,6 +256,13 @@
                         <Icon icon="lucide:eraser" class="w-4 h-4 inline mr-1" />
                         清空
                       </button>
+                      <button
+                        @click="handleValidateMatrix"
+                        class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-1" />
+                        检验答案
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -265,7 +299,8 @@
                               v-model="row.state"
                               type="text"
                               placeholder="状态编号"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              :class="getFieldClass(index, 'state', 'matrix')"
+                              @blur="() => validateField(row.state, index, 'state', 'matrix')"
                             />
                           </td>
                           <td
@@ -277,7 +312,8 @@
                               v-model="row.transitions[symbol]"
                               type="text"
                               placeholder="-"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              :class="getFieldClass(index, symbol, 'matrix') + ' text-center'"
+                              @blur="() => validateField(row.transitions[symbol], index, symbol, 'matrix')"
                             />
                           </td>
                           <td class="border border-gray-300 px-3 py-2 text-center">
@@ -291,6 +327,24 @@
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  <!-- 矩阵错误信息显示 -->
+                  <div v-if="showMatrixErrors && Object.keys(matrixValidationErrors).length > 0" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start gap-2">
+                      <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 class="font-medium text-red-800 mb-2">状态转换矩阵填写错误</h4>
+                        <ul class="text-sm text-red-700 space-y-1">
+                          <li v-for="(errors, fieldKey) in matrixValidationErrors" :key="fieldKey">
+                            <strong>{{ formatFieldKey(fieldKey, 'matrix') }}：</strong>
+                            <span v-for="(error, index) in errors" :key="index">
+                              {{ error }}{{ index < errors.length - 1 ? '，' : '' }}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -465,9 +519,20 @@ const showMatrixAnswer = ref(false)
 const alphabetSymbols = ref<string[]>([])
 const dfaStates = ref<string[]>([])
 
+// 验证状态管理
+const tableValidationErrors = ref<Record<string, string[]>>({}) // 每个字段的错误信息
+const matrixValidationErrors = ref<Record<string, string[]>>({})
+const tableFieldValidation = ref<Record<string, 'valid' | 'invalid' | 'normal'>>({}) // 字段验证状态
+const matrixFieldValidation = ref<Record<string, 'valid' | 'invalid' | 'normal'>>({})
+const showTableErrors = ref(false) // 是否显示转换表错误
+const showMatrixErrors = ref(false) // 是否显示矩阵错误
+
 // 计算属性
 const constructionComplete = computed(() => {
-  return userConversionTable.value.length > 0 && userTransitionMatrix.value.length > 0
+  const hasContent = userConversionTable.value.length > 0 && userTransitionMatrix.value.length > 0
+  const hasNoErrors = Object.keys(tableValidationErrors.value).length === 0 &&
+                     Object.keys(matrixValidationErrors.value).length === 0
+  return hasContent && hasNoErrors
 })
 
 const totalTransitions = computed(() => {
@@ -505,14 +570,197 @@ const createTableOperations = (tableRef: Ref<TableRow[]>) => ({
 const tableOps = createTableOperations(userConversionTable)
 const matrixOps = createTableOperations(userTransitionMatrix)
 
-// 表格操作方法
+// 表格操作方法（重写以包含验证状态清理）
 const addTableRow = tableOps.addRow
 const removeTableRow = tableOps.removeRow
-const clearUserTable = tableOps.clear
+const clearUserTable = () => {
+  tableOps.clear()
+  tableValidationErrors.value = {}
+  tableFieldValidation.value = {}
+  showTableErrors.value = false
+}
 
 const addMatrixRow = matrixOps.addRow
 const removeMatrixRow = matrixOps.removeRow
-const clearUserMatrix = matrixOps.clear
+const clearUserMatrix = () => {
+  matrixOps.clear()
+  matrixValidationErrors.value = {}
+  matrixFieldValidation.value = {}
+  showMatrixErrors.value = false
+}
+
+// 验证功能
+const validateField = (value: string | undefined, rowIndex: number, field: string, tableType: 'table' | 'matrix') => {
+  const fieldKey = `${tableType}-${rowIndex}-${field}`
+  const errors: string[] = []
+
+  // 确保value是字符串
+  const fieldValue = value || ''
+
+  console.log('Validating field:', { fieldKey, fieldValue, rowIndex, field, tableType })
+
+  // 1. 检查是否为空
+  if (!fieldValue || fieldValue.trim() === '') {
+    if (field === 'state') {
+      errors.push('状态名称不能为空')
+    } else {
+      errors.push('转换关系不能为空')
+    }
+  }
+
+  // 2. 如果是状态字段，检查状态来源合法性
+  if (field === 'state' && fieldValue && fieldValue.trim() !== '') {
+    const isValidState = validateStateSource(fieldValue.trim(), rowIndex, tableType)
+    if (!isValidState) {
+      errors.push('新状态必须来源于之前行的转换结果')
+    }
+  }
+
+  // 3. 如果是转换字段，检查转换正确性
+  if (field !== 'state' && fieldValue && fieldValue.trim() !== '') {
+    const isValidTransition = validateTransition(rowIndex, field, fieldValue.trim(), tableType)
+    if (!isValidTransition) {
+      errors.push('转换结果与标准答案不符')
+    }
+  }
+
+  // 更新验证状态
+  const validationRef = tableType === 'table' ? tableValidationErrors : matrixValidationErrors
+  const fieldValidationRef = tableType === 'table' ? tableFieldValidation : matrixFieldValidation
+
+  if (errors.length > 0) {
+    console.log('Setting errors for field:', fieldKey, errors)
+    validationRef.value[fieldKey] = errors
+    fieldValidationRef.value[fieldKey] = 'invalid'
+    // 失焦验证时也要显示错误信息
+    if (tableType === 'table') {
+      showTableErrors.value = true
+      console.log('Table errors after setting:', tableValidationErrors.value)
+      console.log('showTableErrors:', showTableErrors.value)
+    } else {
+      showMatrixErrors.value = true
+      console.log('Matrix errors after setting:', matrixValidationErrors.value)
+      console.log('showMatrixErrors:', showMatrixErrors.value)
+    }
+  } else {
+    console.log('Clearing errors for field:', fieldKey)
+    delete validationRef.value[fieldKey]
+    fieldValidationRef.value[fieldKey] = 'valid'
+    // 检查是否还有其他错误，如果没有则隐藏错误面板
+    if (Object.keys(validationRef.value).length === 0) {
+      if (tableType === 'table') {
+        showTableErrors.value = false
+      } else {
+        showMatrixErrors.value = false
+      }
+    }
+  }
+
+  console.log('Validation complete for field:', fieldKey, 'Errors count:', errors.length)
+}
+
+// 验证状态来源合法性
+const validateStateSource = (stateName: string, currentRowIndex: number, tableType: 'table' | 'matrix'): boolean => {
+  // 第一行的状态（通常是初始状态）总是合法的
+  if (currentRowIndex === 0) return true
+
+  const tableData = tableType === 'table' ? userConversionTable.value : userTransitionMatrix.value
+
+  // 检查该状态是否在之前的行中作为转换结果出现过
+  for (let i = 0; i < currentRowIndex; i++) {
+    const row = tableData[i]
+    for (const symbol of alphabetSymbols.value) {
+      const transition = row.transitions[symbol]?.trim()
+      if (transition && transition !== '-' && transition.includes(stateName)) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+// 验证转换正确性
+const validateTransition = (rowIndex: number, symbol: string, userValue: string, tableType: 'table' | 'matrix'): boolean => {
+  const answerData = tableType === 'table' ? answerConversionTable.value : answerTransitionMatrix.value
+  const userData = tableType === 'table' ? userConversionTable.value : userTransitionMatrix.value
+
+  // 根据用户输入的状态名找到对应的答案行
+  const userState = userData[rowIndex]?.state?.trim()
+  if (!userState) return false
+
+  const answerRow = answerData.find(row => row.state === userState)
+  if (!answerRow) return false
+
+  const correctValue = answerRow.transitions[symbol] || '-'
+  return userValue === correctValue
+}
+
+// 验证整个表格
+const validateTable = (tableType: 'table' | 'matrix') => {
+  const tableData = tableType === 'table' ? userConversionTable.value : userTransitionMatrix.value
+
+  tableData.forEach((row, rowIndex) => {
+    // 验证状态字段
+    validateField(row.state, rowIndex, 'state', tableType)
+
+    // 验证每个转换字段
+    alphabetSymbols.value.forEach(symbol => {
+      const value = row.transitions[symbol] || ''
+      validateField(value, rowIndex, symbol, tableType)
+    })
+  })
+
+  // 显示错误信息
+  if (tableType === 'table') {
+    showTableErrors.value = Object.keys(tableValidationErrors.value).length > 0
+  } else {
+    showMatrixErrors.value = Object.keys(matrixValidationErrors.value).length > 0
+  }
+}
+
+// 获取字段的CSS类
+const getFieldClass = (rowIndex: number, field: string, tableType: 'table' | 'matrix') => {
+  const fieldKey = `${tableType}-${rowIndex}-${field}`
+  const fieldValidationRef = tableType === 'table' ? tableFieldValidation : matrixFieldValidation
+  const validationStatus = fieldValidationRef.value[fieldKey]
+
+  const baseClass = 'w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1'
+
+  if (validationStatus === 'valid') {
+    return `${baseClass} border-green-500 bg-green-50 focus:ring-green-500`
+  } else if (validationStatus === 'invalid') {
+    return `${baseClass} border-red-500 bg-red-50 focus:ring-red-500`
+  } else {
+    const ringColor = tableType === 'table' ? 'focus:ring-blue-500' : 'focus:ring-purple-500'
+    return `${baseClass} border-gray-300 ${ringColor}`
+  }
+}
+
+// 手动验证按钮处理
+const handleValidateTable = () => {
+  validateTable('table')
+}
+
+const handleValidateMatrix = () => {
+  validateTable('matrix')
+}
+
+// 格式化错误信息的辅助函数
+const formatFieldKey = (fieldKey: string, tableType: 'table' | 'matrix') => {
+  const parts = fieldKey.split('-')
+  if (parts.length >= 3) {
+    const rowIndex = parseInt(parts[1]) + 1 // 转换为1-based索引
+    const fieldName = parts[2]
+
+    if (fieldName === 'state') {
+      return `第${rowIndex}行状态字段`
+    } else {
+      return `第${rowIndex}行符号"${fieldName}"`
+    }
+  }
+  return fieldKey
+}
 
 // 渲染 NFA SVG
 const renderNFASvg = async () => {
