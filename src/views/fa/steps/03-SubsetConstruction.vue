@@ -557,8 +557,14 @@ const generateAnswerData = (data: FAResult) => {
     const table = data.table
     const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
 
-    // 获取所有符号
-    const symbols = Object.keys(table).sort()
+    // 后端数据结构：table 是一个对象
+    // 键是输入符号（如 'a', 'b' 等）
+    // 值是数组，包含每个状态对应的转换结果
+
+    // 获取所有符号（过滤掉特殊符号）
+    const symbols = Object.keys(table).filter(symbol =>
+      symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
+    ).sort()
 
     // 获取状态数量（假设所有符号的转换数组长度相同）
     const stateCount = table[symbols[0]]?.length || 0
@@ -572,14 +578,12 @@ const generateAnswerData = (data: FAResult) => {
 
       // 为每个符号填入转换信息
       symbols.forEach(symbol => {
-        if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
-          const transition = table[symbol][i]
-          if (Array.isArray(transition)) {
-            // 如果是数组，用空字符串连接（按旧前端的方式）
-            row.transitions[symbol] = transition.join('') || '-'
-          } else {
-            row.transitions[symbol] = transition || '-'
-          }
+        const transition = table[symbol][i]
+        if (Array.isArray(transition)) {
+          // 如果是数组，用空字符串连接（按旧前端的方式）
+          row.transitions[symbol] = transition.join('') || '-'
+        } else {
+          row.transitions[symbol] = transition || '-'
         }
       })
 
@@ -594,28 +598,33 @@ const generateAnswerData = (data: FAResult) => {
     const tableToNum = data.table_to_num
     const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
 
-    // 获取所有符号
-    const symbols = Object.keys(tableToNum).sort()
+    // 后端数据结构：table_to_num 是一个对象
+    // 键是状态名（如 'S', 'S0', 'S1' 等）
+    // 值是数组，包含每个输入符号对应的转换结果
 
-    // 获取状态数量
-    const stateCount = tableToNum[symbols[0]]?.length || 0
+    // 获取所有状态名，按照旧前端的逻辑排序：先取'S'状态，然后其他状态排序
+    const allStates = Object.keys(tableToNum)
+    const sKeys = allStates.filter(x => x === 'S')
+    const nonSKeys = allStates.filter(x => x !== 'S').sort()
+    const stateKeys = [...sKeys, ...nonSKeys]
 
-    // 为每个状态创建行
-    for (let i = 0; i < stateCount; i++) {
+    // 对每个状态（行），构建其对应的转换
+    stateKeys.forEach((state) => {
       const row = {
-        state: `S${i}`,
+        state: state,
         transitions: {} as Record<string, string>
       }
 
-      // 为每个符号填入转换信息
-      symbols.forEach(symbol => {
-        if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
-          row.transitions[symbol] = tableToNum[symbol][i] || '-'
-        }
+      // 获取该状态的转换数组
+      const stateTransitions = tableToNum[state] || []
+
+      // 对每个字母表符号，获取对应的转换
+      alphabetSymbols.value.forEach((symbol, symbolIndex) => {
+        row.transitions[symbol] = stateTransitions[symbolIndex] || '-'
       })
 
       matrix.push(row)
-    }
+    })
 
     answerTransitionMatrix.value = matrix
   }

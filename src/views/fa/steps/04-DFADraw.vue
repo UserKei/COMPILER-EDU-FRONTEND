@@ -197,18 +197,13 @@
                   </button>
                   <button
                     @click="toggleAnswer"
-                    :class="[
-                      'px-4 py-2 rounded-lg transition-colors',
-                      showAnswer
-                        ? 'bg-gray-600 text-white hover:bg-gray-700'
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    ]"
+                    class="px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
                   >
                     <Icon
-                      :icon="showAnswer ? 'lucide:eye-off' : 'lucide:eye'"
+                      icon="lucide:refresh-cw"
                       class="w-4 h-4 inline mr-2"
                     />
-                    {{ showAnswer ? '隐藏答案' : '查看答案' }}
+                    刷新答案
                   </button>
                 </div>
               </div>
@@ -224,17 +219,21 @@
                 </div>
               </div>
 
-              <div v-else class="h-full">
-                <!-- SVG 渲染的答案 -->
-                <div v-if="dfaDotString" class="h-full">
-                  <div
-                    ref="answerSvgContainer"
-                    class="h-full w-full flex items-center justify-center bg-gray-50 rounded"
-                  >
-                    <!-- SVG 内容将通过 JavaScript 渲染到这里 -->
+              <div v-else class="h-full overflow-auto">
+                <div class="space-y-6">
+                  <!-- SVG 渲染的答案 -->
+                  <div v-if="dfaDotString" class="answer-svg">
+                    <h4 class="font-medium text-gray-800 mb-3">DFA 图形（标准答案）</h4>
+                    <div
+                      ref="answerSvgContainer"
+                      class="h-64 w-full flex items-center justify-center bg-gray-50 rounded border"
+                    >
+                      <!-- SVG 内容将通过 JavaScript 渲染到这里 -->
+                    </div>
                   </div>
                 </div>
-                <div v-else class="h-full flex items-center justify-center text-gray-500">
+
+                <div v-if="!dfaDotString" class="h-full flex items-center justify-center text-gray-500">
                   <div class="text-center">
                     <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
                     <p>暂无答案数据</p>
@@ -335,11 +334,12 @@ const alphabetSymbols = ref<string[]>([])
 const totalTransitions = ref(0)
 const conversionTable = ref<any[]>([])
 const transitionMatrix = ref<any[]>([])
+const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩阵
 
 // 状态管理
 const isGenerating = ref(false)
 const showDotString = ref(false)
-const showAnswer = ref(false)
+const showAnswer = ref(true) // 默认显示答案
 const dfaResult = ref<{
   stateCount: number
   transitionCount: number
@@ -373,50 +373,179 @@ onMounted(() => {
 
       console.log('Step 4 loaded data:', data)
       console.log('DFA DOT string:', dfaDotString.value)
+
+      // 直接从后端数据构建所有需要的数据
+      if (data.faResult) {
+        // 从后端数据中提取字母表符号
+        extractAlphabetFromFAData(data.faResult)
+
+        // 构建转换表（从 table 数据）
+        buildConversionTable()
+
+        // 构建状态转换矩阵（从 table_to_num 数据）
+        buildAnswerTransitionMatrix()
+
+        // 设置DFA状态
+        if (data.faResult.table_to_num) {
+          const allStates = Object.keys(data.faResult.table_to_num)
+          const sKeys = allStates.filter(x => x === 'S')
+          const nonSKeys = allStates.filter(x => x !== 'S').sort()
+          dfaStates.value = [...sKeys, ...nonSKeys]
+        }
+
+        // 计算转换数量
+        totalTransitions.value = conversionTable.value.reduce((total, row) => {
+          return total + Object.values(row.transitions).filter(t => t && t !== '-').length
+        }, 0)
+      }
     }
 
-    // 获取第三步数据
+    // 获取第三步数据（作为备用，如果后端数据不完整）
     const step3Data = localStorage.getItem('fa-step3-data')
-    if (step3Data) {
+    if (step3Data && (!conversionTable.value.length || !answerTransitionMatrix.value.length)) {
       const data = JSON.parse(step3Data)
-      dfaStates.value = data.dfaStates || []
-      alphabetSymbols.value = data.alphabetSymbols || []
-      totalTransitions.value = data.totalTransitions || 0
-      conversionTable.value = data.conversionTable || []
-      transitionMatrix.value = data.transitionMatrix || []
+      if (!dfaStates.value.length) dfaStates.value = data.dfaStates || []
+      if (!alphabetSymbols.value.length) alphabetSymbols.value = data.alphabetSymbols || []
+      if (!totalTransitions.value) totalTransitions.value = data.totalTransitions || 0
+      if (!conversionTable.value.length) conversionTable.value = data.conversionTable || []
+      if (!answerTransitionMatrix.value.length) answerTransitionMatrix.value = data.transitionMatrix || []
+    }
+
+    // 自动渲染答案SVG
+    if (dfaDotString.value && showAnswer.value) {
+      nextTick(() => {
+        renderDotToSvg()
+      })
     }
   } catch (error) {
     console.error('读取上一步数据失败：', error)
   }
 })
 
-// 答案控制
-const toggleAnswer = async () => {
-  console.log('toggleAnswer called, current showAnswer:', showAnswer.value)
-  showAnswer.value = !showAnswer.value
-  console.log('New showAnswer value:', showAnswer.value)
+// 从FA数据中提取字母表符号
+const extractAlphabetFromFAData = (data: any) => {
+  const symbols = new Set<string>()
 
-  if (showAnswer.value && dfaDotString.value) {
+  // 从转换表中提取符号
+  if (data.table) {
+    Object.keys(data.table).forEach(symbol => {
+      if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
+        symbols.add(symbol)
+      }
+    })
+  }
+
+  alphabetSymbols.value = Array.from(symbols).sort()
+}
+
+// 从后端数据构建标准答案的状态转换矩阵
+const buildAnswerTransitionMatrix = () => {
+  if (!faData.value?.table_to_num) return
+
+  console.log('Building answer transition matrix from backend data:', faData.value.table_to_num)
+
+  const tableToNum = faData.value.table_to_num
+
+  // 后端数据结构：table_to_num 是一个对象
+  // 键是状态名（如 'S', 'S0', 'S1' 等）
+  // 值是数组，包含每个输入符号对应的转换结果
+
+  // 获取所有状态名，按照旧前端的逻辑排序：先取'S'状态，然后其他状态排序
+  const allStates = Object.keys(tableToNum)
+  const sKeys = allStates.filter(x => x === 'S')
+  const nonSKeys = allStates.filter(x => x !== 'S').sort()
+  const stateKeys = [...sKeys, ...nonSKeys]
+
+  console.log('State keys:', stateKeys)
+  console.log('Alphabet symbols:', alphabetSymbols.value)
+
+  // 构建矩阵
+  const matrix: any[] = []
+
+  // 对每个状态（行），构建其对应的转换
+  stateKeys.forEach((state) => {
+    const row: any = {
+      state: state,
+      transitions: {}
+    }
+
+    // 获取该状态的转换数组
+    const stateTransitions = tableToNum[state] || []
+
+    // 对每个字母表符号，获取对应的转换
+    alphabetSymbols.value.forEach((symbol, symbolIndex) => {
+      row.transitions[symbol] = stateTransitions[symbolIndex] || '-'
+    })
+
+    matrix.push(row)
+  })
+
+  console.log('Built matrix:', matrix)
+  answerTransitionMatrix.value = matrix
+}
+
+// 从后端数据构建转换表
+const buildConversionTable = () => {
+  if (!faData.value?.table) return
+
+  console.log('Building conversion table from backend data:', faData.value.table)
+
+  const table = faData.value.table
+  const newTable: any[] = []
+
+  // 获取所有符号（过滤掉特殊符号）
+  const symbols = Object.keys(table).filter(symbol =>
+    symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
+  ).sort()
+
+  // 获取状态数量（假设所有符号的转换数组长度相同）
+  const stateCount = table[symbols[0]]?.length || 0
+
+  // 为每个状态创建行
+  for (let i = 0; i < stateCount; i++) {
+    const row = {
+      state: `S${i}`,
+      transitions: {} as Record<string, string>
+    }
+
+    // 为每个符号填入转换信息
+    symbols.forEach(symbol => {
+      const transition = table[symbol][i]
+      if (Array.isArray(transition)) {
+        // 如果是数组，用空字符串连接（按旧前端的方式）
+        row.transitions[symbol] = transition.join('') || '-'
+      } else {
+        row.transitions[symbol] = transition || '-'
+      }
+    })
+
+    newTable.push(row)
+  }
+
+  console.log('Built conversion table:', newTable)
+  conversionTable.value = newTable
+}// 刷新答案显示
+const toggleAnswer = async () => {
+  console.log('Refreshing answer display')
+
+  // 重新从后端数据构建转换表和矩阵
+  if (faData.value) {
+    buildConversionTable()
+    buildAnswerTransitionMatrix()
+  }
+
+  // 重新渲染SVG
+  if (dfaDotString.value) {
     // 等待DOM更新
     await nextTick()
-    console.log('After nextTick, container exists:', !!answerSvgContainer.value)
+    console.log('Re-rendering SVG on refresh')
 
     if (answerSvgContainer.value) {
-      console.log('开始渲染，条件检查：', {
-        showAnswer: showAnswer.value,
-        hasDotString: !!dfaDotString.value,
-        hasContainer: !!answerSvgContainer.value
-      })
       // 使用 viz.js 渲染 DOT 图
       await renderDotToSvg()
     } else {
       console.error('answerSvgContainer ref is null after nextTick')
     }
-  } else {
-    console.log('跳过渲染，条件不满足：', {
-      showAnswer: showAnswer.value,
-      hasDotString: !!dfaDotString.value
-    })
   }
 }
 
