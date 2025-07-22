@@ -283,14 +283,17 @@ const renderDotToSvg = async () => {
   }
 }
 
-// 是否构造完成（用户是否已绘制）
+// 是否构造完成（用户查看答案后就可以进行下一步）
 const isConstructionComplete = computed(() => {
-  // 可以检查用户是否已经绘制了一些内容
-  return userCanvasRef.value?.getNodes && userCanvasRef.value.getNodes().length > 0
+  // 用户查看答案后就认为构造完成，可以进行下一步
+  return showAnswer.value || (userCanvasRef.value?.getNodes && userCanvasRef.value.getNodes().length > 0)
 })
 
 // 进入下一步
 const proceedToNext = () => {
+  console.log('proceedToNext called')
+  console.log('isConstructionComplete:', isConstructionComplete.value)
+
   if (isConstructionComplete.value) {
     const stepData = {
       nfa: {
@@ -302,11 +305,13 @@ const proceedToNext = () => {
       }
     }
 
-    // 保存数据
-    localStorage.setItem('fa-step2-data', JSON.stringify(stepData))
+    console.log('Step 2 completed with data:', stepData)
 
-    // 进入下一步
-    document.dispatchEvent(new CustomEvent('next-step'))
+    // 正确使用 Vue emit
+    emit('complete', stepData)
+    emit('next-step')
+  } else {
+    console.warn('Construction not complete, cannot proceed')
   }
 }
 </script>
