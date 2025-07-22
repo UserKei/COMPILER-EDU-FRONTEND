@@ -49,11 +49,12 @@
             <p class="mt-1">• 多个符号用空格分隔（如：a b c）</p>
             <p>• 空符号用 ε 表示</p>
             <p>• 注意字符的大小写</p>
+            <p class="mt-1 text-blue-600 font-medium">• 可通过拖拽输入和双击符号卡片复制内容</p>
           </div>
         </div>
 
         <!-- 已知信息区域 -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <!-- 非终结符 -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 class="text-md font-semibold text-gray-900 mb-4 flex items-center">
@@ -61,10 +62,14 @@
               非终结符 Vn
             </h3>
             <div class="flex flex-wrap gap-2">
+              <!-- 拖拽：非终结符卡片 -->
               <span
                 v-for="symbol in grammarData.Vn"
-                :key="symbol"
-                class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-mono"
+                :key="'vn-' + symbol"
+                class="flex items-center justify-center rounded-full bg-purple-100 text-purple-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-purple-200 transition-all select-none"
+                draggable="true"
+                @dragstart="onDragStart(symbol, $event)"
+                @dblclick="onSymbolDblClick(symbol)"
               >
                 {{ symbol }}
               </span>
@@ -78,12 +83,44 @@
               终结符 Vt
             </h3>
             <div class="flex flex-wrap gap-2">
+              <!-- 拖拽：终结符卡片 -->
               <span
                 v-for="symbol in grammarData.Vt"
-                :key="symbol"
-                class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-mono"
+                :key="'vt-' + symbol"
+                class="flex items-center justify-center rounded-full bg-green-100 text-green-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-green-200 transition-all select-none"
+                draggable="true"
+                @dragstart="onDragStart(symbol, $event)"
+                @dblclick="onSymbolDblClick(symbol)"
               >
                 {{ symbol }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 其他符号 -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-md font-semibold text-gray-900 mb-4 flex items-center">
+              <Icon icon="lucide:circle" class="w-4 h-4 mr-2 text-pink-600" />
+              其他符号
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              <!-- 拖拽：空串ε -->
+              <span
+                class="flex items-center justify-center rounded-full bg-pink-100 text-pink-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-pink-200 transition-all select-none"
+                draggable="true"
+                @dragstart="onDragStart('ε', $event)"
+                @dblclick="onSymbolDblClick('ε')"
+              >
+                ε
+              </span>
+              <!-- 拖拽：输入结束符# -->
+              <span
+                class="flex items-center justify-center rounded-full bg-blue-100 text-blue-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-blue-200 transition-all select-none"
+                draggable="true"
+                @dragstart="onDragStart('#', $event)"
+                @dblclick="onSymbolDblClick('#')"
+              >
+                #
               </span>
             </div>
           </div>
@@ -97,7 +134,7 @@
             <div class="space-y-1">
               <div
                 v-for="(productions, nonTerminal) in grammarData.formulas_dict"
-                :key="nonTerminal"
+                :key="'prod-' + nonTerminal"
                 class="text-sm"
               >
                 <span class="font-mono text-blue-600">{{ nonTerminal }}</span>
@@ -313,6 +350,13 @@
         </button>
       </div>
     </div>
+
+    <transition name="fade">
+      <div v-if="copyTip" class="fixed top-8 right-8 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 bg-green-600 text-white">
+        <Icon icon="lucide:copy" class="w-5 h-5" />
+        <span>{{ copyTip }}</span>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -369,6 +413,10 @@ const allCompleted = computed(() => {
   const followCompleted = grammarData.value?.Vn.every(symbol => followValidation.value[symbol] === 'correct') || false
   return firstCompleted && followCompleted
 })
+
+// 复制提示
+const copyTip = ref('')
+let copyTipTimer: number | null = null
 
 // 工具函数
 const areCharacterSetsEqual = (str1: string, str2: string): boolean => {
@@ -491,6 +539,38 @@ const checkFollowSets = async () => {
   }
 }
 
+// 拖拽事件处理函数，供所有卡片使用
+function onDragStart(symbol: string, event: DragEvent) {
+  // 将符号内容写入拖拽数据
+  event.dataTransfer?.setData('text/plain', symbol)
+}
+
+// 双击符号卡片复制到剪贴板并弹出提示
+function onSymbolDblClick(symbol: string) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(symbol).then(() => {
+      showCopyTip(`已复制：${symbol}`)
+    })
+  } else {
+    // 兼容性处理
+    const textarea = document.createElement('textarea')
+    textarea.value = symbol
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+    showCopyTip(`已复制：${symbol}`)
+  }
+}
+
+function showCopyTip(msg: string) {
+  copyTip.value = msg
+  if (copyTipTimer) clearTimeout(copyTipTimer)
+  copyTipTimer = window.setTimeout(() => {
+    copyTip.value = ''
+  }, 1200)
+}
+
 // 初始化
 onMounted(() => {
   if (grammarData.value?.Vn) {
@@ -528,5 +608,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
