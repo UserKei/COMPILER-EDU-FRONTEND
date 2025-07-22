@@ -467,7 +467,7 @@ interface TransitionMatrixData {
 
 type TableType = 'table' | 'matrix'
 
-defineEmits<{
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
   'complete': [data: any]
@@ -938,7 +938,7 @@ const proceedToNext = () => {
     }
 
     localStorage.setItem('fa-step3-data', JSON.stringify(stepData))
-    document.dispatchEvent(new CustomEvent('next-step'))
+    emit('next-step')
   }
 }
 
