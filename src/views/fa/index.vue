@@ -57,8 +57,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useFAStore } from '@/stores'
 import StepFlowChart from '@/components/shared/StepFlowChart.vue'
 
 // 导入步骤组件
@@ -71,6 +72,9 @@ import MinimizedDFADraw from './steps/06-MinimizedDFADraw.vue'
 
 const router = useRouter()
 const route = useRoute()
+
+// 使用FA Store
+const faStore = useFAStore()
 
 // FA流程步骤定义
 const faSteps = [
@@ -166,12 +170,13 @@ const prevStep = () => {
 // 步骤完成回调
 const onStepComplete = (data: any) => {
   console.log('Step completed:', currentStep.value, data)
-  // 这里可以保存步骤数据到状态管理
+  // 数据已经通过store管理，这里可以做其他处理
 }
 
 // 重置进度
 const resetProgress = () => {
   if (confirm('确定要重置所有进度吗？')) {
+    faStore.resetAll() // 使用store的重置方法
     navigateToStep(1)
   }
 }
@@ -182,6 +187,11 @@ onMounted(() => {
   if (step >= 1 && step <= faSteps.length) {
     currentStep.value = step
   }
+})
+
+// 组件卸载时可以选择性保留数据
+onUnmounted(() => {
+  // FA数据会保留在store中，可以在其他地方访问
 })
 </script>
 

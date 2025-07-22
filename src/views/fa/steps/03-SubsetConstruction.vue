@@ -27,7 +27,7 @@
               <p class="text-sm text-gray-600 mt-1">根据此 NFA 图填写下方的转换表和状态转换矩阵</p>
             </div>
             <div class="p-6">
-              <div v-if="faData?.NFA_dot_str" class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
+              <div v-if="faStore.nfaDotString" class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
                 <div v-html="nfaSvg" class="flex justify-center"></div>
               </div>
               <div v-else class="text-center py-8 text-gray-500">
@@ -426,7 +426,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import type { FAResult } from '@/types'
+import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
 defineEmits<{
@@ -435,19 +435,18 @@ defineEmits<{
   'complete': [data: any]
 }>()
 
-// 从上一步获取数据
-const faData = ref<FAResult | null>(null)
-const regexPattern = ref('')
+// 使用 FA Store
+const faStore = useFAStore()
 
 // NFA SVG 渲染
 const nfaSvg = ref('')
 
 // 渲染 NFA SVG
 const renderNFASvg = async () => {
-  if (faData.value?.NFA_dot_str) {
+  if (faStore.nfaDotString) {
     try {
       const viz = await instance()
-      const svg = viz.renderSVGElement(faData.value.NFA_dot_str)
+      const svg = viz.renderSVGElement(faStore.nfaDotString)
       nfaSvg.value = svg.outerHTML
     } catch (error) {
       console.error('渲染 NFA SVG 失败：', error)
@@ -511,29 +510,29 @@ const totalTransitions = computed(() => {
 
 // 从localStorage获取上一步的数据
 onMounted(() => {
-  try {
-    const savedData = localStorage.getItem('fa-step1-data')
-    if (savedData) {
-      const stepData = JSON.parse(savedData)
-      regexPattern.value = stepData.regex || ''
-      faData.value = stepData.faResult || null
+  if (!faStore.hasResult()) {
+    console.warn('No FA data found, please complete step 1 first')
+    return
+  }
 
-      if (stepData.faResult) {
-        // 从后端数据中提取字母表符号
-        extractAlphabetFromFAData(stepData.faResult)
-        // 生成答案数据
-        generateAnswerData(stepData.faResult)
-        // 渲染 NFA SVG
-        renderNFASvg()
-      }
+  try {
+    // 直接使用 store 中的数据
+    const faResult = faStore.originalData
+    if (faResult) {
+      // 从后端数据中提取字母表符号
+      extractAlphabetFromFAData(faResult)
+      // 生成答案数据
+      generateAnswerData(faResult)
+      // 渲染 NFA SVG
+      renderNFASvg()
     }
   } catch (error) {
-    console.error('读取上一步数据失败：', error)
+    console.error('处理FA数据失败：', error)
   }
 })
 
 // 从FA数据中提取字母表符号
-const extractAlphabetFromFAData = (data: FAResult) => {
+const extractAlphabetFromFAData = (data: any) => {
   const symbols = new Set<string>()
 
   // 从转换表中提取符号
@@ -549,7 +548,7 @@ const extractAlphabetFromFAData = (data: FAResult) => {
 }
 
 // 生成答案数据
-const generateAnswerData = (data: FAResult) => {
+const generateAnswerData = (data: any) => {
   // 直接使用后端返回的数据结构来显示答案
 
   // 生成转换表答案 - 直接使用后端的table数据
@@ -687,7 +686,7 @@ const toggleMatrixAnswer = () => {
 
 // 生成转换表
 const generateTable = async () => {
-  if (!faData.value || isGenerating.value) return
+  if (!faStore.hasResult() || isGenerating.value) return
 
   isGenerating.value = true
 
@@ -696,7 +695,7 @@ const generateTable = async () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
 
     // 使用后端返回的table数据
-    const table = faData.value.table
+    const table = faStore.originalData?.table
     if (table) {
       const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
 
@@ -730,7 +729,7 @@ const generateTable = async () => {
 
 // 生成状态转换矩阵
 const generateMatrix = async () => {
-  if (!faData.value || isGeneratingMatrix.value) return
+  if (!faStore.hasResult() || isGeneratingMatrix.value) return
 
   isGeneratingMatrix.value = true
 
@@ -739,7 +738,7 @@ const generateMatrix = async () => {
     await new Promise(resolve => setTimeout(resolve, 800))
 
     // 使用后端返回的table_to_num数据
-    const tableToNum = faData.value.table_to_num
+    const tableToNum = faStore.originalData?.table_to_num
     if (tableToNum) {
       const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
 

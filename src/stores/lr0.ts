@@ -4,25 +4,41 @@ import { getLR0AnalyseAPI, LR0AnalyseInpStrAPI } from '@/api'
 import type { LRAnalysisResult, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
 
+// LR0校验数据项接口
+interface LR0ValidationItem {
+  id: string
+  category: 'action' | 'goto' | 'dfa' | 'item'
+  state: string
+  check: boolean
+  coords?: { x: number; y: number }
+  data: any
+}
+
 export const useLR0Store = defineStore('lr0', () => {
   const commonStore = useCommonStore()
 
-  // 状态
+  // 基本状态
   const productions = ref<string[]>([])
   const analysisResult = ref<LRAnalysisResult | null>(null)
   const inputString = ref('')
   const inputAnalysisResult = ref<AnalysisStepInfo | null>(null)
 
-  // 分析过程中的数据
+  // 校验数据 - 用于前端显示和交互
+  const validationData = ref<LR0ValidationItem[]>([])
   const actionTable = ref<Record<string, string>>({})
   const gotoTable = ref<Record<string, string>>({})
   const dfaStates = ref<any[]>([])
   const dotItems = ref<string[]>([])
   const isLR0Grammar = ref<boolean | null>(null)
 
+  // DOT字符串用于图形显示
+  const dotString = ref('')
+
   // Actions
   const setProductions = (newProductions: string[]) => {
     productions.value = [...newProductions]
+    // 清除之前的分析结果
+    clearAnalysisResults()
   }
 
   const addProduction = (production: string) => {
@@ -39,13 +55,77 @@ export const useLR0Store = defineStore('lr0', () => {
 
   const clearProductions = () => {
     productions.value = []
-    analysisResult.value = null
-    inputAnalysisResult.value = null
+    clearAnalysisResults()
   }
 
   const setInputString = (str: string) => {
     inputString.value = str
     inputAnalysisResult.value = null
+  }
+
+  const clearAnalysisResults = () => {
+    analysisResult.value = null
+    inputAnalysisResult.value = null
+    validationData.value = []
+    actionTable.value = {}
+    gotoTable.value = {}
+    dfaStates.value = []
+    dotItems.value = []
+    isLR0Grammar.value = null
+    dotString.value = ''
+  }
+
+  // 将后端数据转换为校验数据
+  const transformToValidationData = (result: LRAnalysisResult): LR0ValidationItem[] => {
+    const items: LR0ValidationItem[] = []
+    let itemId = 0
+
+    // 转换Action表项
+    Object.entries(result.actions || {}).forEach(([key, value]) => {
+      items.push({
+        id: `action_${itemId++}`,
+        category: 'action',
+        state: key,
+        check: !value.includes('conflict') && !value.includes('error'),
+        data: { key, value, type: 'action' }
+      })
+    })
+
+    // 转换Goto表项
+    Object.entries(result.gotos || {}).forEach(([key, value]) => {
+      items.push({
+        id: `goto_${itemId++}`,
+        category: 'goto',
+        state: key,
+        check: !!value,
+        data: { key, value, type: 'goto' }
+      })
+    })
+
+    // 转换DFA状态
+    result.all_dfa?.forEach((dfa, index) => {
+      items.push({
+        id: `dfa_${index}`,
+        category: 'dfa',
+        state: `I${index}`,
+        check: true,
+        coords: { x: index * 100, y: index * 80 },
+        data: dfa
+      })
+    })
+
+    // 转换项目集
+    result.dot_items?.forEach((item, index) => {
+      items.push({
+        id: `item_${index}`,
+        category: 'item',
+        state: item,
+        check: true,
+        data: { item, index }
+      })
+    })
+
+    return items
   }
 
   // 执行LR0语法分析
@@ -71,6 +151,10 @@ export const useLR0Store = defineStore('lr0', () => {
         dfaStates.value = result.all_dfa || []
         dotItems.value = result.dot_items || []
         isLR0Grammar.value = result.isLR0 ?? null
+        dotString.value = result.LR0_dot_str || ''
+
+        // 转换为校验数据
+        validationData.value = transformToValidationData(result)
 
         return true
       } else {
@@ -118,17 +202,24 @@ export const useLR0Store = defineStore('lr0', () => {
     }
   }
 
+  // 更新校验项状态
+  const updateValidationItem = (id: string, check: boolean) => {
+    const item = validationData.value.find(item => item.id === id)
+    if (item) {
+      item.check = check
+    }
+  }
+
+  // 获取指定类别的校验数据
+  const getValidationDataByCategory = (category: LR0ValidationItem['category']) => {
+    return validationData.value.filter(item => item.category === category)
+  }
+
   // 重置所有状态
   const resetAll = () => {
     productions.value = []
-    analysisResult.value = null
     inputString.value = ''
-    inputAnalysisResult.value = null
-    actionTable.value = {}
-    gotoTable.value = {}
-    dfaStates.value = []
-    dotItems.value = []
-    isLR0Grammar.value = null
+    clearAnalysisResults()
     commonStore.clearError()
   }
 
@@ -138,11 +229,13 @@ export const useLR0Store = defineStore('lr0', () => {
     analysisResult,
     inputString,
     inputAnalysisResult,
+    validationData,
     actionTable,
     gotoTable,
     dfaStates,
     dotItems,
     isLR0Grammar,
+    dotString,
 
     // Actions
     setProductions,
@@ -152,6 +245,8 @@ export const useLR0Store = defineStore('lr0', () => {
     setInputString,
     performLR0Analysis,
     analyzeInputString,
+    updateValidationItem,
+    getValidationDataByCategory,
     resetAll
   }
 })

@@ -1,23 +1,133 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { getLL1AnalyseAPI, LL1AnalyseInpStrAPI } from '@/api'
 import type { LL1AnalysisResult, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
+
+// 校验数据项的通用接口
+interface ValidationItem {
+  id: string
+  category: 'blank' | 'onlyRead' | 'writed'
+  state: 'normal' | 'waitWriteIn' | 'isCorrect' | 'isError'
+  check: 'normal' | 'isCorrect' | 'isError'
+  text: string
+  coords?: string[]
+  symbol?: string
+}
+
+// LL1校验数据结构（前端处理后的格式）
+interface DataLL1Type {
+  S: string
+  Vn: ValidationItem[]
+  Vt: ValidationItem[]
+  first: ValidationItem[]
+  follow: ValidationItem[]
+  formulas_dict: ValidationItem[]
+  table: ValidationItem[]
+}
 
 export const useLL1Store = defineStore('ll1', () => {
   const commonStore = useCommonStore()
 
   // 状态
   const productions = ref<string[]>([])
-  const analysisResult = ref<LL1AnalysisResult | null>(null)
+  const originalData = ref<LL1AnalysisResult | null>(null) // 后端原始数据
+  const validationData = ref<DataLL1Type | null>(null) // 前端校验数据
   const inputString = ref('')
   const inputAnalysisResult = ref<AnalysisStepInfo | null>(null)
 
-  // 分析过程中的数据
-  const parseTable = ref<Record<string, string>>({})
-  const firstSets = ref<Record<string, string[]>>({})
-  const followSets = ref<Record<string, string[]>>({})
-  const isLL1Grammar = ref<boolean | null>(null)
+  // 计算属性 - 从原始数据提取
+  const parseTable = computed(() => originalData.value?.table || {})
+  const firstSets = computed(() => originalData.value?.first || {})
+  const followSets = computed(() => originalData.value?.follow || {})
+  const isLL1Grammar = computed(() => originalData.value?.isLL1 ?? null)
+
+  // 数据转换方法 - 将后端原始数据转换为校验数据
+  const transformToValidationData = (rawData: LL1AnalysisResult): DataLL1Type => {
+    const data: DataLL1Type = {
+      S: rawData.S,
+      Vn: [],
+      Vt: [],
+      first: [],
+      follow: [],
+      formulas_dict: [],
+      table: []
+    }
+
+    // 转换Vn数据
+    data.Vn = rawData.Vn.map((item: string, index: number) => ({
+      id: 'Vn' + index,
+      category: 'onlyRead' as const,
+      state: 'normal' as const,
+      check: 'normal' as const,
+      text: item
+    }))
+
+    // 转换Vt数据
+    data.Vt = rawData.Vt.map((item: string, index: number) => ({
+      id: 'Vt' + index,
+      category: 'onlyRead' as const,
+      state: 'normal' as const,
+      check: 'normal' as const,
+      text: item
+    }))
+
+    // 转换First集合数据
+    for (const [symbol, firstSet] of Object.entries(rawData.first)) {
+      firstSet.forEach((item: string, index: number) => {
+        data.first.push({
+          id: 'first' + index + symbol,
+          category: 'onlyRead' as const,
+          state: 'normal' as const,
+          check: 'normal' as const,
+          symbol: symbol,
+          text: item
+        })
+      })
+    }
+
+    // 转换Follow集合数据
+    for (const [symbol, followSet] of Object.entries(rawData.follow)) {
+      followSet.forEach((item: string, index: number) => {
+        data.follow.push({
+          id: 'follow' + index + symbol,
+          category: 'onlyRead' as const,
+          state: 'normal' as const,
+          check: 'normal' as const,
+          symbol: symbol,
+          text: item
+        })
+      })
+    }
+
+    // 转换产生式数据
+    for (const [left, rights] of Object.entries(rawData.formulas_dict)) {
+      rights.forEach((right: string, index: number) => {
+        data.formulas_dict.push({
+          id: 'formula' + index + left,
+          category: 'onlyRead' as const,
+          state: 'normal' as const,
+          check: 'normal' as const,
+          symbol: left,
+          text: `${left} -> ${right}`
+        })
+      })
+    }
+
+    // 转换LL1分析表数据
+    for (const [key, value] of Object.entries(rawData.table)) {
+      data.table.push({
+        id: 'table' + key,
+        category: 'onlyRead' as const,
+        state: 'normal' as const,
+        check: 'normal' as const,
+        coords: key.split('|'), // "A|a" -> ["A", "a"]
+        text: value
+      })
+    }
+
+    return data
+  }
 
   // Actions
   const setProductions = (newProductions: string[]) => {
@@ -38,7 +148,8 @@ export const useLL1Store = defineStore('ll1', () => {
 
   const clearProductions = () => {
     productions.value = []
-    analysisResult.value = null
+    originalData.value = null
+    validationData.value = null
     inputAnalysisResult.value = null
   }
 
@@ -61,14 +172,11 @@ export const useLL1Store = defineStore('ll1', () => {
       const response = await getLL1AnalyseAPI(productions.value)
 
       if (response.data.code === 200 && response.data.data) {
-        const result = response.data.data
-        analysisResult.value = result
+        const rawData = response.data.data
+        originalData.value = rawData
 
-        // 更新相关状态
-        parseTable.value = result.table || {}
-        firstSets.value = result.first || {}
-        followSets.value = result.follow || {}
-        isLL1Grammar.value = result.isLL1
+        // 转换为校验数据
+        validationData.value = transformToValidationData(rawData)
 
         return true
       } else {
@@ -119,22 +227,22 @@ export const useLL1Store = defineStore('ll1', () => {
   // 重置所有状态
   const resetAll = () => {
     productions.value = []
-    analysisResult.value = null
+    originalData.value = null
+    validationData.value = null
     inputString.value = ''
     inputAnalysisResult.value = null
-    parseTable.value = {}
-    firstSets.value = {}
-    followSets.value = {}
-    isLL1Grammar.value = null
     commonStore.clearError()
   }
 
   return {
     // 状态
     productions,
-    analysisResult,
+    originalData,
+    validationData,
     inputString,
     inputAnalysisResult,
+
+    // 计算属性
     parseTable,
     firstSets,
     followSets,
@@ -148,6 +256,9 @@ export const useLL1Store = defineStore('ll1', () => {
     setInputString,
     performLL1Analysis,
     analyzeInputString,
-    resetAll
+    resetAll,
+
+    // 工具方法
+    transformToValidationData
   }
 })

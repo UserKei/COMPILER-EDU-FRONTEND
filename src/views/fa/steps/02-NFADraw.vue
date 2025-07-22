@@ -13,7 +13,7 @@
           </div>
         </div>
         <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded">
-          正则表达式: <code class="font-mono">{{ regexPattern }}</code>
+          正则表达式: <code class="font-mono">{{ faStore.inputRegex }}</code>
         </div>
       </div>
     </div>
@@ -106,13 +106,13 @@
             </div>
 
             <!-- 答案分析 -->
-            <div v-if="showAnswer && faData" class="border-t border-gray-200 bg-green-50 p-4">
+            <div v-if="showAnswer && hasNFAData" class="border-t border-gray-200 bg-green-50 p-4">
               <div class="flex items-start gap-3">
                 <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 class="font-medium text-green-800">NFA 构造分析</h4>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
-                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ regexPattern }}</code></p>
+                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code></p>
                     <p>• NFA 构造完成</p>
                     <p>• 使用 Thompson 构造法生成</p>
                     <p>• 可进行下一步 NFA → DFA 转换</p>
@@ -162,19 +162,17 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
-import type { FAResult } from '@/types'
+import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
-defineEmits<{
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
   'complete': [data: any]
 }>()
 
-// 从上一步获取数据
-const regexPattern = ref('')
-const faData = ref<FAResult | null>(null)
-const nfaDotString = ref('')
+// 使用 FA Store
+const faStore = useFAStore()
 
 // 答案显示控制
 const showAnswer = ref(false)
@@ -183,21 +181,17 @@ const showAnswer = ref(false)
 const userCanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
-// 从localStorage获取上一步的数据
-onMounted(() => {
-  try {
-    const savedData = localStorage.getItem('fa-step1-data')
-    if (savedData) {
-      const stepData = JSON.parse(savedData)
-      regexPattern.value = stepData.regex || ''
-      faData.value = stepData.faResult || null
-      nfaDotString.value = stepData.faResult?.NFA_dot_str || ''
+// 从store获取NFA数据
+const nfaDotString = computed(() => faStore.nfaDotString)
+const hasNFAData = computed(() => faStore.hasResult())
 
-      console.log('Step 2 loaded data:', stepData)
-      console.log('NFA DOT string:', nfaDotString.value)
-    }
-  } catch (error) {
-    console.error('读取上一步数据失败：', error)
+// 组件挂载时检查数据
+onMounted(() => {
+  if (!hasNFAData.value) {
+    console.warn('No FA data found, please complete step 1 first')
+  } else {
+    console.log('Step 2 loaded FA data from store')
+    console.log('NFA DOT string:', nfaDotString.value)
   }
 })
 

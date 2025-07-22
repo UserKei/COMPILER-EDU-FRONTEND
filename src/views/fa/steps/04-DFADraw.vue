@@ -149,7 +149,7 @@
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p class="font-medium">正则表达式:</p>
-                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ regexPattern }}</code>
+                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ faStore.inputRegex }}</code>
                     </div>
                     <div>
                       <p class="font-medium">DFA 状态数: {{ dfaStates.length }}</p>
@@ -222,7 +222,7 @@
               <div v-else class="h-full overflow-auto">
                 <div class="space-y-6">
                   <!-- SVG 渲染的答案 -->
-                  <div v-if="dfaDotString" class="answer-svg">
+                  <div v-if="faStore.dfaDotString" class="answer-svg">
                     <h4 class="font-medium text-gray-800 mb-3">DFA 图形（标准答案）</h4>
                     <div
                       ref="answerSvgContainer"
@@ -233,7 +233,7 @@
                   </div>
                 </div>
 
-                <div v-if="!dfaDotString" class="h-full flex items-center justify-center text-gray-500">
+                <div v-if="!faStore.dfaDotString" class="h-full flex items-center justify-center text-gray-500">
                   <div class="text-center">
                     <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
                     <p>暂无答案数据</p>
@@ -243,7 +243,7 @@
             </div>
 
             <!-- DOT 字符串显示 -->
-            <div v-if="showAnswer && dfaDotString" class="border-t border-gray-200 bg-green-50 p-4">
+            <div v-if="showAnswer && faStore.dfaDotString" class="border-t border-gray-200 bg-green-50 p-4">
               <div class="flex items-start gap-3">
                 <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div class="flex-1">
@@ -268,14 +268,14 @@
                     </div>
                   </div>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
-                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ regexPattern }}</code></p>
+                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code></p>
                     <p>• DFA 构造完成</p>
                     <p>• 使用子集构造法生成</p>
                     <p>• 可进行下一步 DFA 最小化</p>
                   </div>
                   <!-- DOT 字符串显示 -->
                   <div v-if="showDotString" class="mt-3 bg-white border border-green-200 rounded p-3">
-                    <pre class="text-xs font-mono overflow-auto max-h-32">{{ dfaDotString }}</pre>
+                    <pre class="text-xs font-mono overflow-auto max-h-32">{{ faStore.dfaDotString }}</pre>
                   </div>
                 </div>
               </div>
@@ -314,7 +314,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
-import type { FAResult } from '@/types'
+import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
 defineEmits<{
@@ -323,12 +323,10 @@ defineEmits<{
   'complete': [data: any]
 }>()
 
-// 从上一步获取数据
-const regexPattern = ref('')
-const faData = ref<FAResult | null>(null)
-const dfaDotString = ref('')
+// 使用 FA Store
+const faStore = useFAStore()
 
-// 从第三步获取数据
+// 本地状态
 const dfaStates = ref<string[]>([])
 const alphabetSymbols = ref<string[]>([])
 const totalTransitions = ref(0)
@@ -362,63 +360,49 @@ const isComplete = computed(() => {
 
 // 从localStorage获取数据
 onMounted(() => {
+  if (!faStore.hasResult()) {
+    console.warn('No FA data found, please complete step 1 first')
+    return
+  }
+
   try {
-    // 获取第一步数据
-    const step1Data = localStorage.getItem('fa-step1-data')
-    if (step1Data) {
-      const data = JSON.parse(step1Data)
-      regexPattern.value = data.regex || ''
-      faData.value = data.faResult || null
-      dfaDotString.value = data.faResult?.DFA_dot_str || ''
+    // 直接使用 store 中的数据
+    const faResult = faStore.originalData
+    if (faResult) {
+      console.log('Step 4 loaded data from store')
+      console.log('DFA DOT string:', faStore.dfaDotString)
 
-      console.log('Step 4 loaded data:', data)
-      console.log('DFA DOT string:', dfaDotString.value)
+      // 从后端数据中提取字母表符号
+      extractAlphabetFromFAData(faResult)
 
-      // 直接从后端数据构建所有需要的数据
-      if (data.faResult) {
-        // 从后端数据中提取字母表符号
-        extractAlphabetFromFAData(data.faResult)
+      // 构建转换表（从 table 数据）
+      buildConversionTable()
 
-        // 构建转换表（从 table 数据）
-        buildConversionTable()
+      // 构建状态转换矩阵（从 table_to_num 数据）
+      buildAnswerTransitionMatrix()
 
-        // 构建状态转换矩阵（从 table_to_num 数据）
-        buildAnswerTransitionMatrix()
-
-        // 设置DFA状态
-        if (data.faResult.table_to_num) {
-          const allStates = Object.keys(data.faResult.table_to_num)
-          const sKeys = allStates.filter(x => x === 'S')
-          const nonSKeys = allStates.filter(x => x !== 'S').sort()
-          dfaStates.value = [...sKeys, ...nonSKeys]
-        }
-
-        // 计算转换数量
-        totalTransitions.value = conversionTable.value.reduce((total, row) => {
-          return total + Object.values(row.transitions).filter(t => t && t !== '-').length
-        }, 0)
+      // 设置DFA状态
+      if (faResult.table_to_num) {
+        const allStates = Object.keys(faResult.table_to_num)
+        const sKeys = allStates.filter(x => x === 'S')
+        const nonSKeys = allStates.filter(x => x !== 'S').sort()
+        dfaStates.value = [...sKeys, ...nonSKeys]
       }
-    }
 
-    // 获取第三步数据（作为备用，如果后端数据不完整）
-    const step3Data = localStorage.getItem('fa-step3-data')
-    if (step3Data && (!conversionTable.value.length || !answerTransitionMatrix.value.length)) {
-      const data = JSON.parse(step3Data)
-      if (!dfaStates.value.length) dfaStates.value = data.dfaStates || []
-      if (!alphabetSymbols.value.length) alphabetSymbols.value = data.alphabetSymbols || []
-      if (!totalTransitions.value) totalTransitions.value = data.totalTransitions || 0
-      if (!conversionTable.value.length) conversionTable.value = data.conversionTable || []
-      if (!answerTransitionMatrix.value.length) answerTransitionMatrix.value = data.transitionMatrix || []
+      // 计算转换数量
+      totalTransitions.value = conversionTable.value.reduce((total, row) => {
+        return total + Object.values(row.transitions).filter(t => t && t !== '-').length
+      }, 0)
     }
 
     // 自动渲染答案SVG
-    if (dfaDotString.value && showAnswer.value) {
+    if (faStore.dfaDotString && showAnswer.value) {
       nextTick(() => {
         renderDotToSvg()
       })
     }
   } catch (error) {
-    console.error('读取上一步数据失败：', error)
+    console.error('处理FA数据失败：', error)
   }
 })
 
@@ -440,11 +424,11 @@ const extractAlphabetFromFAData = (data: any) => {
 
 // 从后端数据构建标准答案的状态转换矩阵
 const buildAnswerTransitionMatrix = () => {
-  if (!faData.value?.table_to_num) return
+  if (!faStore.hasResult() || !faStore.originalData?.table_to_num) return
 
-  console.log('Building answer transition matrix from backend data:', faData.value.table_to_num)
+  console.log('Building answer transition matrix from backend data:', faStore.originalData.table_to_num)
 
-  const tableToNum = faData.value.table_to_num
+  const tableToNum = faStore.originalData.table_to_num
 
   // 后端数据结构：table_to_num 是一个对象
   // 键是状态名（如 'S', 'S0', 'S1' 等）
@@ -486,11 +470,11 @@ const buildAnswerTransitionMatrix = () => {
 
 // 从后端数据构建转换表
 const buildConversionTable = () => {
-  if (!faData.value?.table) return
+  if (!faStore.hasResult() || !faStore.originalData?.table) return
 
-  console.log('Building conversion table from backend data:', faData.value.table)
+  console.log('Building conversion table from backend data:', faStore.originalData.table)
 
-  const table = faData.value.table
+  const table = faStore.originalData.table
   const newTable: any[] = []
 
   // 获取所有符号（过滤掉特殊符号）
@@ -529,13 +513,13 @@ const toggleAnswer = async () => {
   console.log('Refreshing answer display')
 
   // 重新从后端数据构建转换表和矩阵
-  if (faData.value) {
+  if (faStore.hasResult()) {
     buildConversionTable()
     buildAnswerTransitionMatrix()
   }
 
   // 重新渲染SVG
-  if (dfaDotString.value) {
+  if (faStore.dfaDotString) {
     // 等待DOM更新
     await nextTick()
     console.log('Re-rendering SVG on refresh')
@@ -551,10 +535,10 @@ const toggleAnswer = async () => {
 
 // 渲染DOT字符串为SVG
 const renderDotToSvg = async () => {
-  if (!answerSvgContainer.value || !dfaDotString.value) {
+  if (!answerSvgContainer.value || !faStore.dfaDotString) {
     console.warn('renderDotToSvg: 缺少必要条件', {
       hasContainer: !!answerSvgContainer.value,
-      hasDotString: !!dfaDotString.value
+      hasDotString: !!faStore.dfaDotString
     })
     return
   }
@@ -562,7 +546,7 @@ const renderDotToSvg = async () => {
   try {
     console.log('开始渲染DFA DOT...')
     console.log('Container:', answerSvgContainer.value)
-    console.log('DOT String:', dfaDotString.value)
+    console.log('DOT String:', faStore.dfaDotString)
 
     // 清除之前的内容
     answerSvgContainer.value.innerHTML = ''
@@ -576,7 +560,7 @@ const renderDotToSvg = async () => {
     console.log('viz.js 初始化成功:', viz)
 
     console.log('正在渲染 SVG...')
-    const svg = viz.renderSVGElement(dfaDotString.value)
+    const svg = viz.renderSVGElement(faStore.dfaDotString)
     console.log('SVG 渲染成功:', svg)
 
     // 清除加载状态
@@ -600,7 +584,7 @@ const renderDotToSvg = async () => {
       <div class="text-center text-red-500">
         <p>渲染失败: ${errorMessage}</p>
         <div class="mt-4 text-xs bg-gray-100 p-2 rounded text-left">
-          <pre class="whitespace-pre-wrap">${dfaDotString.value}</pre>
+          <pre class="whitespace-pre-wrap">${faStore.dfaDotString}</pre>
         </div>
       </div>
     `
@@ -680,7 +664,7 @@ const generateDFA = async () => {
 // 复制DOT字符串
 const copyDotString = async () => {
   try {
-    await navigator.clipboard.writeText(dfaDotString.value)
+    await navigator.clipboard.writeText(faStore.dfaDotString || '')
     // 这里可以添加一个提示
     console.log('DOT字符串已复制')
   } catch (error) {
@@ -705,7 +689,7 @@ const proceedToNext = () => {
     const stepData = {
       dfaResult: dfaResult.value,
       dfaStates: dfaStates.value,
-      dfaDotString: dfaDotString.value,
+      dfaDotString: faStore.dfaDotString,
       timestamp: new Date().toISOString()
     }
 

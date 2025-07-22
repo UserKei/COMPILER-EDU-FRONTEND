@@ -1,31 +1,130 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { getDFAM } from '@/api'
 import type { FAResult } from '@/types'
 import { useCommonStore } from './common'
+
+// 校验数据项的通用接口
+interface ValidationItem {
+  id: string
+  category: 'blank' | 'onlyRead' | 'writed'
+  state: 'normal' | 'waitWriteIn' | 'isCorrect' | 'isError'
+  check: 'normal' | 'isCorrect' | 'isError'
+  text: string
+  coords?: string[]
+}
+
+// FA校验数据结构（前端处理后的格式）
+interface DataFAType {
+  table: ValidationItem[] // NFA->DFA转换表
+  table_to_num: ValidationItem[] // DFA状态转换表
+  table_to_num_min: ValidationItem[] // 最小化DFA状态转换表
+  p_list: ValidationItem[] // 最小化结果集合
+}
 
 export const useFAStore = defineStore('fa', () => {
   const commonStore = useCommonStore()
 
   // 状态
   const inputRegex = ref('')
-  const analysisResult = ref<FAResult | null>(null)
+  const originalData = ref<FAResult | null>(null) // 后端原始数据
+  const validationData = ref<DataFAType | null>(null) // 前端校验数据
 
-  // 分析过程中的数据
-  const nfaTable = ref<any>(null)
-  const dfaTable = ref<any>(null)
-  const minDfaTable = ref<any>(null)
-  const nfaDotString = ref('')
-  const dfaDotString = ref('')
-  const minDfaDotString = ref('')
-  const partitions = ref<any>(null)
-  const partitionChanges = ref<any>(null)
+  // 计算属性 - 从原始数据提取
+  const nfaTable = computed(() => originalData.value?.table || null)
+  const dfaTable = computed(() => originalData.value?.table_to_num || null)
+  const minDfaTable = computed(() => originalData.value?.table_to_num_min || null)
+  const nfaDotString = computed(() => originalData.value?.NFA_dot_str || '')
+  const dfaDotString = computed(() => originalData.value?.DFA_dot_str || '')
+  const minDfaDotString = computed(() => originalData.value?.Min_DFA_dot_str || '')
+  const partitions = computed(() => originalData.value?.P || null)
+  const partitionChanges = computed(() => originalData.value?.P_change || null)
+
+  // 数据转换方法 - 将后端原始数据转换为校验数据
+  const transformToValidationData = (rawData: FAResult): DataFAType => {
+    const data: DataFAType = {
+      table: [],
+      table_to_num: [],
+      table_to_num_min: [],
+      p_list: []
+    }
+
+    // 转换NFA->DFA转换表数据
+    if (rawData.table) {
+      for (const [key, transitions] of Object.entries(rawData.table)) {
+        if (Array.isArray(transitions)) {
+          transitions.forEach((transition: any, index: number) => {
+            data.table.push({
+              id: 'table' + index + key,
+              category: 'blank' as const,
+              state: 'normal' as const,
+              check: 'normal' as const,
+              coords: [index.toString(), key],
+              text: Array.isArray(transition) ? transition.join('') : String(transition)
+            })
+          })
+        }
+      }
+    }
+
+    // 转换DFA状态转换表数据
+    if (rawData.table_to_num) {
+      for (const [key, transitions] of Object.entries(rawData.table_to_num)) {
+        if (Array.isArray(transitions)) {
+          transitions.forEach((transition: any, index: number) => {
+            data.table_to_num.push({
+              id: 'table_to_num' + index + key,
+              category: 'blank' as const,
+              state: 'normal' as const,
+              check: 'normal' as const,
+              coords: [index.toString(), key],
+              text: String(transition)
+            })
+          })
+        }
+      }
+    }
+
+    // 转换最小化DFA状态转换表数据
+    if (rawData.table_to_num_min) {
+      for (const [key, transitions] of Object.entries(rawData.table_to_num_min)) {
+        if (Array.isArray(transitions)) {
+          transitions.forEach((transition: any, index: number) => {
+            data.table_to_num_min.push({
+              id: 'table_to_num_min' + index + key,
+              category: 'blank' as const,
+              state: 'normal' as const,
+              check: 'normal' as const,
+              coords: [index.toString(), key],
+              text: String(transition)
+            })
+          })
+        }
+      }
+    }
+
+    // 转换最小化结果集合数据
+    if (rawData.P) {
+      rawData.P.forEach((partition: string[], index: number) => {
+        data.p_list.push({
+          id: 'p_list' + index,
+          category: 'onlyRead' as const,
+          state: 'normal' as const,
+          check: 'normal' as const,
+          text: '{' + partition.join(', ') + '}'
+        })
+      })
+    }
+
+    return data
+  }
 
   // Actions
   const setInputRegex = (regex: string) => {
     inputRegex.value = regex
     // 清除之前的分析结果
-    analysisResult.value = null
+    originalData.value = null
+    validationData.value = null
   }
 
   // 执行正则表达式转DFAM分析
@@ -42,18 +141,11 @@ export const useFAStore = defineStore('fa', () => {
       const response = await getDFAM(inputRegex.value.trim())
 
       if (response.data.code === 200 && response.data.data) {
-        const result = response.data.data
-        analysisResult.value = result
+        const rawData = response.data.data
+        originalData.value = rawData
 
-        // 更新相关状态
-        nfaTable.value = result.table || null
-        dfaTable.value = result.table_to_num || null
-        minDfaTable.value = result.table_to_num_min || null
-        nfaDotString.value = result.NFA_dot_str || ''
-        dfaDotString.value = result.DFA_dot_str || ''
-        minDfaDotString.value = result.Min_DFA_dot_str || ''
-        partitions.value = result.P || null
-        partitionChanges.value = result.P_change || null
+        // 转换为校验数据
+        validationData.value = transformToValidationData(rawData)
 
         return true
       } else {
@@ -70,15 +162,8 @@ export const useFAStore = defineStore('fa', () => {
 
   // 清除当前分析
   const clearAnalysis = () => {
-    analysisResult.value = null
-    nfaTable.value = null
-    dfaTable.value = null
-    minDfaTable.value = null
-    nfaDotString.value = ''
-    dfaDotString.value = ''
-    minDfaDotString.value = ''
-    partitions.value = null
-    partitionChanges.value = null
+    originalData.value = null
+    validationData.value = null
   }
 
   // 重置所有状态
@@ -90,7 +175,7 @@ export const useFAStore = defineStore('fa', () => {
 
   // 检查是否有分析结果
   const hasResult = () => {
-    return analysisResult.value !== null
+    return originalData.value !== null
   }
 
   // 获取指定类型的dot字符串
@@ -121,10 +206,19 @@ export const useFAStore = defineStore('fa', () => {
     }
   }
 
+  // 获取指定类型的校验数据
+  const getValidationTable = (type: 'table' | 'table_to_num' | 'table_to_num_min' | 'p_list') => {
+    if (!validationData.value) return []
+    return validationData.value[type]
+  }
+
   return {
     // 状态
     inputRegex,
-    analysisResult,
+    originalData,
+    validationData,
+
+    // 计算属性
     nfaTable,
     dfaTable,
     minDfaTable,
@@ -143,6 +237,8 @@ export const useFAStore = defineStore('fa', () => {
     // 辅助方法
     hasResult,
     getDotString,
-    getTable
+    getTable,
+    getValidationTable,
+    transformToValidationData
   }
 })
