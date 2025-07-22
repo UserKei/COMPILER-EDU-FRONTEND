@@ -424,10 +424,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
+
+// 类型定义
+interface TableRow {
+  state: string
+  transitions: Record<string, string>
+}
+
+type TableType = 'table' | 'matrix'
 
 defineEmits<{
   'next-step': []
@@ -440,6 +448,71 @@ const faStore = useFAStore()
 
 // NFA SVG 渲染
 const nfaSvg = ref('')
+
+// 用户填写的表格
+const userConversionTable = ref<TableRow[]>([])
+const userTransitionMatrix = ref<TableRow[]>([])
+
+// 答案数据
+const answerConversionTable = ref<TableRow[]>([])
+const answerTransitionMatrix = ref<TableRow[]>([])
+
+// 答案显示控制
+const showTableAnswer = ref(false)
+const showMatrixAnswer = ref(false)
+
+// 字母表符号和DFA状态
+const alphabetSymbols = ref<string[]>([])
+const dfaStates = ref<string[]>([])
+
+// 计算属性
+const constructionComplete = computed(() => {
+  return userConversionTable.value.length > 0 && userTransitionMatrix.value.length > 0
+})
+
+const totalTransitions = computed(() => {
+  return answerConversionTable.value.reduce((total, row) => {
+    return total + Object.values(row.transitions).filter(t => t && t !== '-').length
+  }, 0)
+})
+
+// 通用表格操作函数
+const createTableOperations = (tableRef: Ref<TableRow[]>) => ({
+  addRow: () => {
+    const newRow: TableRow = {
+      state: '',
+      transitions: {}
+    }
+
+    // 为每个字母表符号初始化空的转换
+    alphabetSymbols.value.forEach(symbol => {
+      newRow.transitions[symbol] = ''
+    })
+
+    tableRef.value.push(newRow)
+  },
+
+  removeRow: (index: number) => {
+    tableRef.value.splice(index, 1)
+  },
+
+  clear: () => {
+    tableRef.value = []
+  }
+})
+
+// 表格操作
+const tableOps = createTableOperations(userConversionTable)
+const matrixOps = createTableOperations(userTransitionMatrix)
+
+// 表格操作方法
+const addTableRow = tableOps.addRow
+const removeTableRow = tableOps.removeRow
+const clearUserTable = tableOps.clear
+
+const addMatrixRow = matrixOps.addRow
+const removeMatrixRow = matrixOps.removeRow
+const clearUserMatrix = matrixOps.clear
 
 // 渲染 NFA SVG
 const renderNFASvg = async () => {
@@ -454,82 +527,6 @@ const renderNFASvg = async () => {
     }
   }
 }
-
-// 用户填写的表格
-const userConversionTable = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-const userTransitionMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-// 答案数据
-const answerConversionTable = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-const answerTransitionMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-// 答案显示控制
-const showTableAnswer = ref(false)
-const showMatrixAnswer = ref(false)
-
-// 状态管理（保留原有的）
-const isGenerating = ref(false)
-const isGeneratingMatrix = ref(false)
-const conversionTable = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-const transitionMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-// 字母表符号
-const alphabetSymbols = ref<string[]>([])
-const dfaStates = ref<string[]>([])
-
-// 计算属性
-const constructionComplete = computed(() => {
-  return userConversionTable.value.length > 0 && userTransitionMatrix.value.length > 0
-})
-
-const totalTransitions = computed(() => {
-  return conversionTable.value.reduce((total, row) => {
-    return total + Object.values(row.transitions).filter(t => t && t !== '-').length
-  }, 0)
-})
-
-// 从localStorage获取上一步的数据
-onMounted(() => {
-  if (!faStore.hasResult()) {
-    console.warn('No FA data found, please complete step 1 first')
-    return
-  }
-
-  try {
-    // 直接使用 store 中的数据
-    const faResult = faStore.originalData
-    if (faResult) {
-      // 从后端数据中提取字母表符号
-      extractAlphabetFromFAData(faResult)
-      // 生成答案数据
-      generateAnswerData(faResult)
-      // 渲染 NFA SVG
-      renderNFASvg()
-    }
-  } catch (error) {
-    console.error('处理FA数据失败：', error)
-  }
-})
 
 // 从FA数据中提取字母表符号
 const extractAlphabetFromFAData = (data: any) => {
@@ -547,132 +544,74 @@ const extractAlphabetFromFAData = (data: any) => {
   alphabetSymbols.value = Array.from(symbols).sort()
 }
 
-// 生成答案数据
-const generateAnswerData = (data: any) => {
-  // 直接使用后端返回的数据结构来显示答案
+// 通用数据处理函数
+const processTableData = (table: any, symbols: string[]): TableRow[] => {
+  if (!table) return []
 
-  // 生成转换表答案 - 直接使用后端的table数据
-  if (data.table) {
-    const table = data.table
-    const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
+  const result: TableRow[] = []
+  const stateCount = table[symbols[0]]?.length || 0
 
-    // 后端数据结构：table 是一个对象
-    // 键是输入符号（如 'a', 'b' 等）
-    // 值是数组，包含每个状态对应的转换结果
-
-    // 获取所有符号（过滤掉特殊符号）
-    const symbols = Object.keys(table).filter(symbol =>
-      symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
-    ).sort()
-
-    // 获取状态数量（假设所有符号的转换数组长度相同）
-    const stateCount = table[symbols[0]]?.length || 0
-
-    // 为每个状态创建行
-    for (let i = 0; i < stateCount; i++) {
-      const row = {
-        state: `S${i}`,
-        transitions: {} as Record<string, string>
-      }
-
-      // 为每个符号填入转换信息
-      symbols.forEach(symbol => {
-        const transition = table[symbol][i]
-        if (Array.isArray(transition)) {
-          // 如果是数组，用空字符串连接（按旧前端的方式）
-          row.transitions[symbol] = transition.join('') || '-'
-        } else {
-          row.transitions[symbol] = transition || '-'
-        }
-      })
-
-      newTable.push(row)
+  for (let i = 0; i < stateCount; i++) {
+    const row: TableRow = {
+      state: `S${i}`,
+      transitions: {}
     }
 
-    answerConversionTable.value = newTable
-  }
-
-  // 生成状态转换矩阵答案 - 直接使用后端的table_to_num数据
-  if (data.table_to_num) {
-    const tableToNum = data.table_to_num
-    const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
-
-    // 后端数据结构：table_to_num 是一个对象
-    // 键是状态名（如 'S', 'S0', 'S1' 等）
-    // 值是数组，包含每个输入符号对应的转换结果
-
-    // 获取所有状态名，按照旧前端的逻辑排序：先取'S'状态，然后其他状态排序
-    const allStates = Object.keys(tableToNum)
-    const sKeys = allStates.filter(x => x === 'S')
-    const nonSKeys = allStates.filter(x => x !== 'S').sort()
-    const stateKeys = [...sKeys, ...nonSKeys]
-
-    // 对每个状态（行），构建其对应的转换
-    stateKeys.forEach((state) => {
-      const row = {
-        state: state,
-        transitions: {} as Record<string, string>
+    symbols.forEach(symbol => {
+      const transition = table[symbol][i]
+      if (Array.isArray(transition)) {
+        row.transitions[symbol] = transition.join('') || '-'
+      } else {
+        row.transitions[symbol] = transition || '-'
       }
-
-      // 获取该状态的转换数组
-      const stateTransitions = tableToNum[state] || []
-
-      // 对每个字母表符号，获取对应的转换
-      alphabetSymbols.value.forEach((symbol, symbolIndex) => {
-        row.transitions[symbol] = stateTransitions[symbolIndex] || '-'
-      })
-
-      matrix.push(row)
     })
 
-    answerTransitionMatrix.value = matrix
+    result.push(row)
   }
+
+  return result
 }
 
-// 用户表格操作方法
-const addTableRow = () => {
-  const newRow: { state: string; transitions: Record<string, string> } = {
-    state: '',
-    transitions: {}
-  }
+const processMatrixData = (tableToNum: any, symbols: string[]): TableRow[] => {
+  if (!tableToNum) return []
 
-  // 为每个字母表符号初始化空的转换
-  alphabetSymbols.value.forEach(symbol => {
-    newRow.transitions[symbol] = ''
+  const result: TableRow[] = []
+  const allStates = Object.keys(tableToNum)
+  const sKeys = allStates.filter(x => x === 'S')
+  const nonSKeys = allStates.filter(x => x !== 'S').sort()
+  const stateKeys = [...sKeys, ...nonSKeys]
+
+  stateKeys.forEach((state) => {
+    const row: TableRow = {
+      state: state,
+      transitions: {}
+    }
+
+    const stateTransitions = tableToNum[state] || []
+    symbols.forEach((symbol, symbolIndex) => {
+      row.transitions[symbol] = stateTransitions[symbolIndex] || '-'
+    })
+
+    result.push(row)
   })
 
-  userConversionTable.value.push(newRow)
+  return result
 }
 
-const removeTableRow = (index: number) => {
-  userConversionTable.value.splice(index, 1)
-}
+// 生成答案数据（同步处理）
+const generateAnswerData = (data: any) => {
+  const symbols = Object.keys(data.table || {}).filter(symbol =>
+    symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
+  ).sort()
 
-const clearUserTable = () => {
-  userConversionTable.value = []
-}
+  // 生成转换表答案
+  answerConversionTable.value = processTableData(data.table, symbols)
 
-// 用户矩阵操作方法
-const addMatrixRow = () => {
-  const newRow: { state: string; transitions: Record<string, string> } = {
-    state: '',
-    transitions: {}
-  }
+  // 生成状态转换矩阵答案
+  answerTransitionMatrix.value = processMatrixData(data.table_to_num, symbols)
 
-  // 为每个字母表符号初始化空的转换
-  alphabetSymbols.value.forEach(symbol => {
-    newRow.transitions[symbol] = ''
-  })
-
-  userTransitionMatrix.value.push(newRow)
-}
-
-const removeMatrixRow = (index: number) => {
-  userTransitionMatrix.value.splice(index, 1)
-}
-
-const clearUserMatrix = () => {
-  userTransitionMatrix.value = []
+  // 更新DFA状态
+  dfaStates.value = answerConversionTable.value.map(row => row.state)
 }
 
 // 答案显示控制
@@ -684,114 +623,43 @@ const toggleMatrixAnswer = () => {
   showMatrixAnswer.value = !showMatrixAnswer.value
 }
 
-// 生成转换表
-const generateTable = async () => {
-  if (!faStore.hasResult() || isGenerating.value) return
-
-  isGenerating.value = true
-
-  try {
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 使用后端返回的table数据
-    const table = faStore.originalData?.table
-    if (table) {
-      const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
-
-      // 处理转换表数据
-      Object.keys(table).forEach(symbol => {
-        const transitions = table[symbol]
-        transitions.forEach((transitionSet: string[], index: number) => {
-          const stateName = `S${index}`
-
-          // 找到或创建对应的行
-          let row = newTable.find(r => r.state === stateName)
-          if (!row) {
-            row = { state: stateName, transitions: {} }
-            newTable.push(row)
-          }
-
-          // 设置转换
-          row.transitions[symbol] = transitionSet.join(',') || '-'
-        })
-      })
-
-      conversionTable.value = newTable
-      dfaStates.value = newTable.map(row => row.state)
-    }
-  } catch (error) {
-    console.error('生成转换表失败：', error)
-  } finally {
-    isGenerating.value = false
-  }
-}
-
-// 生成状态转换矩阵
-const generateMatrix = async () => {
-  if (!faStore.hasResult() || isGeneratingMatrix.value) return
-
-  isGeneratingMatrix.value = true
-
-  try {
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    // 使用后端返回的table_to_num数据
-    const tableToNum = faStore.originalData?.table_to_num
-    if (tableToNum) {
-      const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
-
-      // 处理状态转换矩阵数据
-      Object.keys(tableToNum).forEach(symbol => {
-        const transitions = tableToNum[symbol]
-        transitions.forEach((targetState: string, index: number) => {
-          const stateName = `S${index}`
-
-          // 找到或创建对应的行
-          let row = matrix.find(r => r.state === stateName)
-          if (!row) {
-            row = { state: stateName, transitions: {} }
-            matrix.push(row)
-          }
-
-          // 设置转换
-          row.transitions[symbol] = targetState || '-'
-        })
-      })
-
-      transitionMatrix.value = matrix
-    }
-  } catch (error) {
-    console.error('生成状态转换矩阵失败：', error)
-  } finally {
-    isGeneratingMatrix.value = false
-  }
-}
-
 // 进入下一步
 const proceedToNext = () => {
   if (constructionComplete.value) {
     const stepData = {
-      // 保存答案数据供下一步参考
       conversionTable: answerConversionTable.value,
       transitionMatrix: answerTransitionMatrix.value,
       dfaStates: dfaStates.value,
       alphabetSymbols: alphabetSymbols.value,
       totalTransitions: totalTransitions.value,
-      // 同时保存用户填写的数据
       userConversionTable: userConversionTable.value,
       userTransitionMatrix: userTransitionMatrix.value,
       timestamp: new Date().toISOString()
     }
 
-    // 保存数据
     localStorage.setItem('fa-step3-data', JSON.stringify(stepData))
-
-    // 触发下一步事件
     document.dispatchEvent(new CustomEvent('next-step'))
   }
 }
+
+// 组件挂载时的初始化
+onMounted(() => {
+  if (!faStore.hasResult()) {
+    console.warn('No FA data found, please complete step 1 first')
+    return
+  }
+
+  try {
+    const faResult = faStore.originalData
+    if (faResult) {
+      extractAlphabetFromFAData(faResult)
+      generateAnswerData(faResult)
+      renderNFASvg()
+    }
+  } catch (error) {
+    console.error('处理FA数据失败：', error)
+  }
+})
 </script>
 
 <style scoped>
