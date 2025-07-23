@@ -5,7 +5,10 @@
       <div class="max-w-7xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <router-link to="/" class="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors">
+            <router-link
+              to="/"
+              class="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors"
+            >
               编译原理可视化
             </router-link>
             <span class="text-gray-400">|</span>
@@ -33,11 +36,7 @@
     <main class="max-w-7xl mx-auto px-4 py-8">
       <!-- 流程图导航 -->
       <div class="mb-8">
-        <StepFlowChart
-          :steps="faSteps"
-          :current-step="currentStep"
-          @step-click="navigateToStep"
-        />
+        <StepFlowChart :steps="faSteps" :current-step="currentStep" @step-click="navigateToStep" />
       </div>
 
       <!-- 步骤内容 -->
@@ -84,7 +83,7 @@ const faSteps = [
     title: '正则表达式',
     description: '输入正则表达式',
     color: '#3B82F6',
-    component: 'RegexInput'
+    component: 'RegexInput',
   },
   {
     id: 2,
@@ -92,7 +91,7 @@ const faSteps = [
     title: '非确定有限自动机',
     description: 'Thompson构造',
     color: '#8B5CF6',
-    component: 'NFADraw'
+    component: 'NFADraw',
   },
   {
     id: 3,
@@ -100,7 +99,7 @@ const faSteps = [
     title: '转换表和状态矩阵',
     description: '子集构造法',
     color: '#10B981',
-    component: 'SubsetConstruction'
+    component: 'SubsetConstruction',
   },
   {
     id: 4,
@@ -108,7 +107,7 @@ const faSteps = [
     title: '确定有限自动机',
     description: '转换构造',
     color: '#F59E0B',
-    component: 'DFADraw'
+    component: 'DFADraw',
   },
   {
     id: 5,
@@ -116,7 +115,7 @@ const faSteps = [
     title: '最小化DFA',
     description: 'Hopcroft算法',
     color: '#EF4444',
-    component: 'DFAMinimization'
+    component: 'DFAMinimization',
   },
   {
     id: 6,
@@ -124,8 +123,8 @@ const faSteps = [
     title: '最小化DFA图',
     description: '可视化绘制',
     color: '#6366F1',
-    component: 'MinimizedDFADraw'
-  }
+    component: 'MinimizedDFADraw',
+  },
 ]
 
 // 组件映射
@@ -135,7 +134,7 @@ const componentMap = {
   SubsetConstruction,
   DFADraw,
   DFAMinimization,
-  MinimizedDFADraw
+  MinimizedDFADraw,
 }
 
 // 当前步骤
@@ -143,7 +142,7 @@ const currentStep = ref(1)
 
 // 计算当前步骤组件
 const currentStepComponent = computed(() => {
-  const step = faSteps.find(s => s.id === currentStep.value)
+  const step = faSteps.find((s) => s.id === currentStep.value)
   return step ? componentMap[step.component as keyof typeof componentMap] : RegexInput
 })
 

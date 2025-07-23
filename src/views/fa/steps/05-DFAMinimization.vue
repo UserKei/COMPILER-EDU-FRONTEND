@@ -15,7 +15,9 @@
     <div class="step-content">
       <div class="instruction">
         <div class="info space-y-2 text-sm text-gray-600">
-          <p>根据上述绘制的DFA，将其状态子集最小化，并重新命名状态子集序号，填写状态转换矩阵，可使用"空格"作为输入的间隔符（也可以不输入间隔符）</p>
+          <p>
+            根据上述绘制的DFA，将其状态子集最小化，并重新命名状态子集序号，填写状态转换矩阵，可使用"空格"作为输入的间隔符（也可以不输入间隔符）
+          </p>
           <p>化简DFA状态子集---参考输入：123、3 1（可乱序，可接受空格分隔符）</p>
           <p>状态转换矩阵---参考输入：1、2、3</p>
         </div>
@@ -28,7 +30,8 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">化简DFA状态子集</h3>
 
             <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
-              请将状态集 {{ Array.from({length: originalStateCount}, (_, i) => i).join(', ') }} 最小化
+              请将状态集
+              {{ Array.from({ length: originalStateCount }, (_, i) => i).join(', ') }} 最小化
             </p>
             <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
 
@@ -43,9 +46,11 @@
                   v-model="pItem.text"
                   :class="[
                     'flex-1 px-3 py-2 border rounded text-sm',
-                    pItem.check === 'isCorrect' ? 'bg-green-50 border-green-300' :
-                    pItem.check === 'isError' ? 'bg-red-50 border-red-300' :
-                    'bg-white border-gray-300'
+                    pItem.check === 'isCorrect'
+                      ? 'bg-green-50 border-green-300'
+                      : pItem.check === 'isError'
+                        ? 'bg-red-50 border-red-300'
+                        : 'bg-white border-gray-300',
                   ]"
                   :disabled="pItem.category === 'onlyRead' || step6Open"
                   @focus="handlePSetFocus(pItem)"
@@ -65,9 +70,7 @@
                 >
                   <Icon icon="lucide:plus" class="w-4 h-4" />
                 </button>
-                <div v-if="step6Open" class="text-sm text-gray-500">
-                  => {{ index }}
-                </div>
+                <div v-if="step6Open" class="text-sm text-gray-500">=> {{ index }}</div>
               </div>
             </div>
 
@@ -79,7 +82,7 @@
                   'px-4 py-2 rounded-lg transition-colors',
                   step6Open
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700',
                 ]"
               >
                 校验
@@ -111,7 +114,11 @@
                   </thead>
                   <tbody>
                     <tr
-                      v-for="row in Math.max(...Object.values(faStore.originalData?.table_to_num_min || {}).map((arr: any) => Array.isArray(arr) ? arr.length : 0))"
+                      v-for="row in Math.max(
+                        ...Object.values(faStore.originalData?.table_to_num_min || {}).map(
+                          (arr: any) => (Array.isArray(arr) ? arr.length : 0),
+                        ),
+                      )"
                       :key="row - 1"
                       :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
                     >
@@ -123,8 +130,11 @@
                         :key="symbol"
                         :class="[
                           'border border-gray-300 px-3 py-2 text-center',
-                          getMatrixCell(row - 1, colIndex)?.check === 'isCorrect' ? 'bg-green-50' :
-                          getMatrixCell(row - 1, colIndex)?.check === 'isError' ? 'bg-red-50' : ''
+                          getMatrixCell(row - 1, colIndex)?.check === 'isCorrect'
+                            ? 'bg-green-50'
+                            : getMatrixCell(row - 1, colIndex)?.check === 'isError'
+                              ? 'bg-red-50'
+                              : '',
                         ]"
                       >
                         <input
@@ -132,13 +142,15 @@
                           v-model="getMatrixCell(row - 1, colIndex)!.value"
                           :class="[
                             'w-full text-center border-none bg-transparent text-sm',
-                            'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded'
+                            'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded',
                           ]"
                           :disabled="step7Open"
                           @focus="handleMatrixCellFocus(getMatrixCell(row - 1, colIndex)!)"
                           placeholder="-"
                         />
-                        <span v-else class="text-gray-600">{{ getMatrixCell(row - 1, colIndex)?.value }}</span>
+                        <span v-else class="text-gray-600">{{
+                          getMatrixCell(row - 1, colIndex)?.value
+                        }}</span>
                       </td>
                     </tr>
                   </tbody>
@@ -153,7 +165,7 @@
                     'px-4 py-2 rounded-lg transition-colors',
                     step7Open
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700',
                   ]"
                 >
                   校验
@@ -169,7 +181,10 @@
           <!-- 最小化完成信息 -->
           <div v-if="isComplete" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <Icon
+                icon="lucide:check-circle"
+                class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+              />
               <div>
                 <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
                 <div class="text-sm text-green-700 mt-2 space-y-1">
@@ -186,7 +201,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -198,7 +216,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -217,7 +235,7 @@ import { useFAStore } from '@/stores'
 defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 数据类型定义
@@ -251,13 +269,15 @@ const step6Open = ref(false) // P集合校验完成
 const step7Open = ref(false) // 矩阵校验完成
 
 // P集合相关
-const localPSets = ref<PSetItem[]>([{
-  id: "localp_list0",
-  category: "blank",
-  state: "normal",
-  check: "normal",
-  text: ""
-}])
+const localPSets = ref<PSetItem[]>([
+  {
+    id: 'localp_list0',
+    category: 'blank',
+    state: 'normal',
+    check: 'normal',
+    text: '',
+  },
+])
 let localPSetsCnt = 1
 
 // 矩阵相关
@@ -265,7 +285,7 @@ const minimizedMatrix = ref<MatrixCell[]>([])
 const tableView = {
   cellWidth: 80,
   cellHeight: 40,
-  gap: 10
+  gap: 10,
 }
 
 // 计算属性
@@ -275,7 +295,10 @@ const isComplete = computed(() => {
 
 const reductionPercentage = computed(() => {
   if (originalStateCount.value === 0) return 0
-  return ((originalStateCount.value - localPSets.value.length) / originalStateCount.value * 100).toFixed(1)
+  return (
+    ((originalStateCount.value - localPSets.value.length) / originalStateCount.value) *
+    100
+  ).toFixed(1)
 })
 
 // 从localStorage获取数据
@@ -300,7 +323,7 @@ onMounted(() => {
       // 从后端数据中提取字母表符号
       if (faResult.table) {
         const symbols = new Set<string>()
-        Object.keys(faResult.table).forEach(symbol => {
+        Object.keys(faResult.table).forEach((symbol) => {
           if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
             symbols.add(symbol)
           }
@@ -327,11 +350,11 @@ const removePSet = (index: number) => {
 const addPSet = (index: number) => {
   if (step6Open.value) return
   localPSets.value.splice(index + 1, 0, {
-    id: "localp_list" + (++localPSetsCnt),
-    category: "blank",
-    state: "normal",
-    check: "normal",
-    text: ""
+    id: 'localp_list' + ++localPSetsCnt,
+    category: 'blank',
+    state: 'normal',
+    check: 'normal',
+    text: '',
   })
 }
 
@@ -358,7 +381,7 @@ const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
 
   for (const item of inputList) {
     const itemText = item.text.replace(/\s+/g, '')
-    const answerItem = answerList.find(answer => areCharacterSetsEqual(answer, itemText))
+    const answerItem = answerList.find((answer) => areCharacterSetsEqual(answer, itemText))
 
     if (answerItem) {
       item.check = 'isCorrect'
@@ -368,7 +391,7 @@ const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
     }
   }
 
-  return answerSet.size === 0 && inputList.every(item => item.check === 'isCorrect')
+  return answerSet.size === 0 && inputList.every((item) => item.check === 'isCorrect')
 }
 
 // 校验P集合
@@ -387,11 +410,11 @@ const validatePSets = () => {
     localPSets.value = []
     answerList.forEach((answer: string, index: number) => {
       localPSets.value.push({
-        id: "localp_list" + (++localPSetsCnt),
-        category: "blank",
-        state: "normal",
-        check: "isCorrect",
-        text: answer
+        id: 'localp_list' + ++localPSetsCnt,
+        category: 'blank',
+        state: 'normal',
+        check: 'isCorrect',
+        text: answer,
       })
     })
     step6Open.value = true
@@ -405,7 +428,9 @@ const initMinimizedMatrix = () => {
 
   const tableToNumMin = faStore.originalData.table_to_num_min
   const symbols = alphabetSymbols.value
-  const rowCount = Math.max(...Object.values(tableToNumMin).map((arr: any) => Array.isArray(arr) ? arr.length : 0))
+  const rowCount = Math.max(
+    ...Object.values(tableToNumMin).map((arr: any) => (Array.isArray(arr) ? arr.length : 0)),
+  )
 
   minimizedMatrix.value = []
 
@@ -420,12 +445,12 @@ const initMinimizedMatrix = () => {
 
       minimizedMatrix.value.push({
         id: cellId,
-        category: col === 0 ? "onlyRead" : "blank",
-        check: col === 0 ? "isCorrect" : "normal",
-        value: col === 0 ? sColumnAnswer : "",
+        category: col === 0 ? 'onlyRead' : 'blank',
+        check: col === 0 ? 'isCorrect' : 'normal',
+        value: col === 0 ? sColumnAnswer : '',
         rowIndex: row,
         colIndex: col,
-        isRowHeader: false
+        isRowHeader: false,
       })
     }
   }
@@ -439,7 +464,7 @@ const handleMatrixCellFocus = (cell: MatrixCell) => {
 
 // 获取矩阵单元格
 const getMatrixCell = (row: number, col: number): MatrixCell | undefined => {
-  return minimizedMatrix.value.find(cell => cell.rowIndex === row && cell.colIndex === col)
+  return minimizedMatrix.value.find((cell) => cell.rowIndex === row && cell.colIndex === col)
 }
 
 // 校验矩阵
@@ -469,7 +494,7 @@ const validateMatrix = () => {
   } else {
     // 显示错误或自动展示答案
     for (const cell of minimizedMatrix.value) {
-      if (cell.category === "onlyRead" || cell.check === 'isCorrect') continue
+      if (cell.category === 'onlyRead' || cell.check === 'isCorrect') continue
 
       const symbol = alphabetSymbols.value[cell.colIndex]
       const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
@@ -489,7 +514,7 @@ const proceedToNext = () => {
       minimizedMatrix: minimizedMatrix.value,
       step6Open: step6Open.value,
       step7Open: step7Open.value,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
 
     // 保存数据
@@ -502,8 +527,25 @@ const proceedToNext = () => {
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #fecaca; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #fecaca;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>
