@@ -26,7 +26,10 @@
               <p class="text-sm text-gray-600 mt-1">根据这些表格绘制 DFA 图</p>
             </div>
             <div class="p-6">
-              <div v-if="conversionTableColumns.length || transitionMatrix.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div
+                v-if="conversionTableColumns.length || transitionMatrix.length"
+                class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              >
                 <!-- 转换表 -->
                 <div v-if="conversionTableColumns.length" class="conversion-table">
                   <h4 class="font-medium text-gray-800 mb-3">NFA → DFA 转换表</h4>
@@ -47,7 +50,11 @@
                       <tbody>
                         <!-- 每行代表一个状态集合 -->
                         <tr
-                          v-for="(_, rowIndex) in Math.max(...conversionTableColumns.map(col => conversionTable[col]?.length || 0))"
+                          v-for="(_, rowIndex) in Math.max(
+                            ...conversionTableColumns.map(
+                              (col) => conversionTable[col]?.length || 0,
+                            ),
+                          )"
                           :key="rowIndex"
                           :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                         >
@@ -71,7 +78,9 @@
                     <table class="w-full border-collapse border border-gray-300 text-sm">
                       <thead>
                         <tr class="bg-purple-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">
+                            状态
+                          </th>
                           <th
                             v-for="symbol in alphabetSymbols"
                             :key="symbol"
@@ -146,7 +155,9 @@
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p class="font-medium">正则表达式:</p>
-                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ faStore.inputRegex }}</code>
+                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{
+                        faStore.inputRegex
+                      }}</code>
                     </div>
                     <div>
                       <p class="font-medium">DFA 状态数: {{ dfaStates.length }}</p>
@@ -214,7 +225,10 @@
                   </div>
                 </div>
 
-                <div v-if="!faStore.dfaDotString" class="h-full flex items-center justify-center text-gray-500">
+                <div
+                  v-if="!faStore.dfaDotString"
+                  class="h-full flex items-center justify-center text-gray-500"
+                >
                   <div class="text-center">
                     <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
                     <p>暂无答案数据</p>
@@ -224,9 +238,15 @@
             </div>
 
             <!-- DOT 字符串显示 -->
-            <div v-if="showAnswer && faStore.dfaDotString" class="border-t border-gray-200 bg-green-50 p-4">
+            <div
+              v-if="showAnswer && faStore.dfaDotString"
+              class="border-t border-gray-200 bg-green-50 p-4"
+            >
               <div class="flex items-start gap-3">
-                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Icon
+                  icon="lucide:check-circle"
+                  class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+                />
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
                     <h4 class="font-medium text-green-800">DFA 构造分析</h4>
@@ -249,14 +269,22 @@
                     </div>
                   </div>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
-                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code></p>
+                    <p>
+                      • 正则表达式:
+                      <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code>
+                    </p>
                     <p>• DFA 构造完成</p>
                     <p>• 使用子集构造法生成</p>
                     <p>• 可进行下一步 DFA 最小化</p>
                   </div>
                   <!-- DOT 字符串显示 -->
-                  <div v-if="showDotString" class="mt-3 bg-white border border-green-200 rounded p-3">
-                    <pre class="text-xs font-mono overflow-auto max-h-32">{{ faStore.dfaDotString }}</pre>
+                  <div
+                    v-if="showDotString"
+                    class="mt-3 bg-white border border-green-200 rounded p-3"
+                  >
+                    <pre class="text-xs font-mono overflow-auto max-h-32">{{
+                      faStore.dfaDotString
+                    }}</pre>
                   </div>
                 </div>
               </div>
@@ -268,7 +296,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -280,7 +311,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
           :title="!isComplete ? '请先查看标准答案后继续' : ''"
         >
@@ -301,13 +332,13 @@ import { instance } from '@viz-js/viz'
 
 // 转换表数据结构 - 按列组织（每个输入符号对应一列）
 interface ConversionTableData {
-  [inputSymbol: string]: string[]  // 每个输入符号对应一列数据
+  [inputSymbol: string]: string[] // 每个输入符号对应一列数据
 }
 
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 使用 FA Store
@@ -317,8 +348,8 @@ const faStore = useFAStore()
 const dfaStates = ref<string[]>([])
 const alphabetSymbols = ref<string[]>([])
 const totalTransitions = ref(0)
-const conversionTable = ref<ConversionTableData>({})  // 转换表：列布局
-const conversionTableColumns = ref<string[]>([])  // 转换表列标题 ['I', 'Ia', 'Ib']
+const conversionTable = ref<ConversionTableData>({}) // 转换表：列布局
+const conversionTableColumns = ref<string[]>([]) // 转换表列标题 ['I', 'Ia', 'Ib']
 const transitionMatrix = ref<any[]>([])
 const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩阵
 
@@ -363,8 +394,8 @@ onMounted(() => {
       // 设置DFA状态
       if (faResult.table_to_num) {
         const allStates = Object.keys(faResult.table_to_num)
-        const sKeys = allStates.filter(x => x === 'S')
-        const nonSKeys = allStates.filter(x => x !== 'S').sort()
+        const sKeys = allStates.filter((x) => x === 'S')
+        const nonSKeys = allStates.filter((x) => x !== 'S').sort()
         dfaStates.value = [...sKeys, ...nonSKeys]
       }
 
@@ -372,7 +403,7 @@ onMounted(() => {
       totalTransitions.value = conversionTableColumns.value.reduce((total, column) => {
         if (column !== 'I') {
           const columnData = conversionTable.value[column] || []
-          return total + columnData.filter(cell => cell && cell !== '-').length
+          return total + columnData.filter((cell) => cell && cell !== '-').length
         }
         return total
       }, 0)
@@ -388,7 +419,7 @@ const extractAlphabetFromFAData = (data: any) => {
 
   // 从转换表中提取符号
   if (data.table) {
-    Object.keys(data.table).forEach(symbol => {
+    Object.keys(data.table).forEach((symbol) => {
       if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
         symbols.add(symbol)
       }
@@ -402,7 +433,10 @@ const extractAlphabetFromFAData = (data: any) => {
 const buildAnswerTransitionMatrix = () => {
   if (!faStore.hasResult() || !faStore.originalData?.table_to_num) return
 
-  console.log('Building answer transition matrix from backend data:', faStore.originalData.table_to_num)
+  console.log(
+    'Building answer transition matrix from backend data:',
+    faStore.originalData.table_to_num,
+  )
 
   const tableToNum = faStore.originalData.table_to_num
 
@@ -412,8 +446,8 @@ const buildAnswerTransitionMatrix = () => {
 
   // 获取所有状态名，按照旧前端的逻辑排序：先取'S'状态，然后其他状态排序
   const allStates = Object.keys(tableToNum)
-  const sKeys = allStates.filter(x => x === 'S')
-  const nonSKeys = allStates.filter(x => x !== 'S').sort()
+  const sKeys = allStates.filter((x) => x === 'S')
+  const nonSKeys = allStates.filter((x) => x !== 'S').sort()
   const stateKeys = [...sKeys, ...nonSKeys]
 
   console.log('State keys:', stateKeys)
@@ -426,7 +460,7 @@ const buildAnswerTransitionMatrix = () => {
   stateKeys.forEach((state) => {
     const row: any = {
       state: state,
-      transitions: {}
+      transitions: {},
     }
 
     // 获取该状态的转换数组
@@ -451,15 +485,15 @@ const processTableDataToColumns = (table: any, symbols: string[]): ConversionTab
   if (!table) return result
 
   // 创建列数据结构
-  const allColumns = ['I', ...symbols.map(s => `I${s}`)]
+  const allColumns = ['I', ...symbols.map((s) => `I${s}`)]
 
   // 初始化每列
-  allColumns.forEach(column => {
+  allColumns.forEach((column) => {
     result[column] = []
   })
 
   // 填充数据
-  const maxRows = Math.max(...symbols.map(s => table[s]?.length || 0))
+  const maxRows = Math.max(...symbols.map((s) => table[s]?.length || 0))
 
   for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
     // I 列：初始状态集合（通常基于第一个符号的数据结构）
@@ -468,7 +502,7 @@ const processTableDataToColumns = (table: any, symbols: string[]): ConversionTab
     }
 
     // 各符号列：I + symbol
-    symbols.forEach(symbol => {
+    symbols.forEach((symbol) => {
       const colKey = `I${symbol}`
       const transition = table[symbol]?.[rowIndex]
       if (transition) {
@@ -495,12 +529,12 @@ const buildConversionTable = () => {
   const table = faStore.originalData.table
 
   // 获取所有符号（过滤掉特殊符号）
-  const symbols = Object.keys(table).filter(symbol =>
-    symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
-  ).sort()
+  const symbols = Object.keys(table)
+    .filter((symbol) => symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon')
+    .sort()
 
   // 设置列标题
-  conversionTableColumns.value = ['I', ...symbols.map(s => `I${s}`)]
+  conversionTableColumns.value = ['I', ...symbols.map((s) => `I${s}`)]
 
   // 使用与第3步相同的数据处理逻辑
   conversionTable.value = processTableDataToColumns(table, symbols)
@@ -552,7 +586,7 @@ const renderDotToSvg = async () => {
   if (!answerSvgContainer.value || !faStore.dfaDotString) {
     console.warn('renderDotToSvg: 缺少必要条件', {
       hasContainer: !!answerSvgContainer.value,
-      hasDotString: !!faStore.dfaDotString
+      hasDotString: !!faStore.dfaDotString,
     })
     return
   }
@@ -566,7 +600,8 @@ const renderDotToSvg = async () => {
     answerSvgContainer.value.innerHTML = ''
 
     // 显示加载状态
-    answerSvgContainer.value.innerHTML = '<div class="text-center text-blue-600">正在渲染图形...</div>'
+    answerSvgContainer.value.innerHTML =
+      '<div class="text-center text-blue-600">正在渲染图形...</div>'
 
     // 使用 viz.js 渲染 DOT 字符串
     console.log('正在初始化 viz.js...')
@@ -622,7 +657,7 @@ const proceedToNext = () => {
     const stepData = {
       dfaStates: dfaStates.value,
       dfaDotString: faStore.dfaDotString,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
 
     // 保存数据
@@ -635,8 +670,25 @@ const proceedToNext = () => {
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #fed7aa; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #fed7aa;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>
