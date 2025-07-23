@@ -26,39 +26,37 @@
               <p class="text-sm text-gray-600 mt-1">根据这些表格绘制 DFA 图</p>
             </div>
             <div class="p-6">
-              <div v-if="conversionTable.length || transitionMatrix.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div v-if="conversionTableColumns.length || transitionMatrix.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- 转换表 -->
-                <div v-if="conversionTable.length" class="conversion-table">
+                <div v-if="conversionTableColumns.length" class="conversion-table">
                   <h4 class="font-medium text-gray-800 mb-3">NFA → DFA 转换表</h4>
                   <div class="overflow-x-auto">
                     <table class="w-full border-collapse border border-gray-300 text-sm">
                       <thead>
                         <tr class="bg-green-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <!-- 转换表：列标题为 I, Ia, Ib 等输入符号 -->
                           <th
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center font-semibold"
                           >
-                            {{ symbol }}
+                            {{ column }}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- 每行代表一个状态集合 -->
                         <tr
-                          v-for="(row, index) in conversionTable"
-                          :key="index"
-                          :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                          v-for="(_, rowIndex) in Math.max(...conversionTableColumns.map(col => conversionTable[col]?.length || 0))"
+                          :key="rowIndex"
+                          :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                         >
-                          <td class="border border-gray-300 px-3 py-2 font-medium">
-                            {{ row.state }}
-                          </td>
                           <td
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center"
                           >
-                            {{ row.transitions?.[symbol] || '-' }}
+                            {{ conversionTable[column]?.[rowIndex] || '-' }}
                           </td>
                         </tr>
                       </tbody>
@@ -301,6 +299,11 @@ import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
+// 转换表数据结构 - 按列组织（每个输入符号对应一列）
+interface ConversionTableData {
+  [inputSymbol: string]: string[]  // 每个输入符号对应一列数据
+}
+
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
@@ -314,7 +317,8 @@ const faStore = useFAStore()
 const dfaStates = ref<string[]>([])
 const alphabetSymbols = ref<string[]>([])
 const totalTransitions = ref(0)
-const conversionTable = ref<any[]>([])
+const conversionTable = ref<ConversionTableData>({})  // 转换表：列布局
+const conversionTableColumns = ref<string[]>([])  // 转换表列标题 ['I', 'Ia', 'Ib']
 const transitionMatrix = ref<any[]>([])
 const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩阵
 
@@ -365,8 +369,12 @@ onMounted(() => {
       }
 
       // 计算转换数量
-      totalTransitions.value = conversionTable.value.reduce((total, row) => {
-        return total + Object.values(row.transitions).filter(t => t && t !== '-').length
+      totalTransitions.value = conversionTableColumns.value.reduce((total, column) => {
+        if (column !== 'I') {
+          const columnData = conversionTable.value[column] || []
+          return total + columnData.filter(cell => cell && cell !== '-').length
+        }
+        return total
       }, 0)
     }
   } catch (error) {
@@ -436,6 +444,48 @@ const buildAnswerTransitionMatrix = () => {
   answerTransitionMatrix.value = matrix
 }
 
+// 数据处理函数 - 转换表数据处理（列布局）
+const processTableDataToColumns = (table: any, symbols: string[]): ConversionTableData => {
+  const result: ConversionTableData = {}
+
+  if (!table) return result
+
+  // 创建列数据结构
+  const allColumns = ['I', ...symbols.map(s => `I${s}`)]
+
+  // 初始化每列
+  allColumns.forEach(column => {
+    result[column] = []
+  })
+
+  // 填充数据
+  const maxRows = Math.max(...symbols.map(s => table[s]?.length || 0))
+
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+    // I 列：初始状态集合（通常基于第一个符号的数据结构）
+    if (table[symbols[0]]?.[rowIndex]) {
+      result['I'].push(`{${rowIndex}}`)
+    }
+
+    // 各符号列：I + symbol
+    symbols.forEach(symbol => {
+      const colKey = `I${symbol}`
+      const transition = table[symbol]?.[rowIndex]
+      if (transition) {
+        if (Array.isArray(transition)) {
+          result[colKey].push(transition.join('') || '-')
+        } else {
+          result[colKey].push(transition || '-')
+        }
+      } else {
+        result[colKey].push('-')
+      }
+    })
+  }
+
+  return result
+}
+
 // 从后端数据构建转换表
 const buildConversionTable = () => {
   if (!faStore.hasResult() || !faStore.originalData?.table) return
@@ -443,39 +493,20 @@ const buildConversionTable = () => {
   console.log('Building conversion table from backend data:', faStore.originalData.table)
 
   const table = faStore.originalData.table
-  const newTable: any[] = []
 
   // 获取所有符号（过滤掉特殊符号）
   const symbols = Object.keys(table).filter(symbol =>
     symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
   ).sort()
 
-  // 获取状态数量（假设所有符号的转换数组长度相同）
-  const stateCount = table[symbols[0]]?.length || 0
+  // 设置列标题
+  conversionTableColumns.value = ['I', ...symbols.map(s => `I${s}`)]
 
-  // 为每个状态创建行
-  for (let i = 0; i < stateCount; i++) {
-    const row = {
-      state: `S${i}`,
-      transitions: {} as Record<string, string>
-    }
+  // 使用与第3步相同的数据处理逻辑
+  conversionTable.value = processTableDataToColumns(table, symbols)
 
-    // 为每个符号填入转换信息
-    symbols.forEach(symbol => {
-      const transition = table[symbol][i]
-      if (Array.isArray(transition)) {
-        // 如果是数组，用空字符串连接（按旧前端的方式）
-        row.transitions[symbol] = transition.join('') || '-'
-      } else {
-        row.transitions[symbol] = transition || '-'
-      }
-    })
-
-    newTable.push(row)
-  }
-
-  console.log('Built conversion table:', newTable)
-  conversionTable.value = newTable
+  console.log('Built conversion table:', conversionTable.value)
+  console.log('Conversion table columns:', conversionTableColumns.value)
 }
 
 // 切换答案显示/隐藏
@@ -487,7 +518,7 @@ const toggleAnswer = async () => {
     console.log('First time viewing answer, rendering...')
 
     // 重新从后端数据构建转换表和矩阵（如果还没有构建过）
-    if (faStore.hasResult() && conversionTable.value.length === 0) {
+    if (faStore.hasResult() && conversionTableColumns.value.length === 0) {
       buildConversionTable()
       buildAnswerTransitionMatrix()
     }
