@@ -252,7 +252,7 @@
         </div>
 
         <!-- 状态转换矩阵区域 -->
-        <div class="transition-matrix-section">
+        <div class="transition-matrix-section relative">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- 左侧：用户填写状态转换矩阵 -->
             <div class="user-matrix-section">
@@ -437,6 +437,37 @@
               </div>
             </div>
           </div>
+
+          <!-- 大毛玻璃覆盖层 - 覆盖整个状态转换矩阵区域 -->
+          <div v-if="isMatrixLocked" class="matrix-glass-overlay">
+            <div class="flex flex-col items-center justify-center h-full w-full px-8 py-12">
+              <!-- 锁图标 -->
+              <div class="flex items-center justify-center mb-8 animate-pulse">
+                <Icon icon="lucide:lock" class="w-16 h-16 text-blue-100 drop-shadow-lg" />
+              </div>
+
+              <!-- 文字内容 -->
+              <div class="text-center space-y-4 max-w-md">
+                <h3 class="text-xl font-bold text-gray-900 drop-shadow-md">需要先查看转换表答案</h3>
+                <p class="text-base text-gray-800 leading-relaxed drop-shadow-sm">
+                  请先查看上方 NFA → DFA 转换表的标准答案后再填写状态转换矩阵
+                </p>
+
+                <!-- 引导按钮 -->
+                <div class="mt-8 animate-bounce">
+                  <div
+                    class="inline-flex items-center px-5 py-3 bg-blue-600/90 hover:bg-blue-700/90 rounded-xl shadow-lg backdrop-blur-sm border border-blue-400/30 transition-all duration-300 cursor-pointer group"
+                  >
+                    <Icon
+                      icon="lucide:arrow-up"
+                      class="w-5 h-5 text-white mr-2 group-hover:animate-pulse"
+                    />
+                    <span class="text-white font-medium text-sm">点击上方转换表"查看答案"按钮</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 填写提示 -->
@@ -576,6 +607,11 @@ const totalTransitions = computed(() => {
     total += columnData.filter((cell) => cell && cell !== '-').length
   })
   return total
+})
+
+// 矩阵锁定状态：只有查看了转换表答案后才能操作矩阵
+const isMatrixLocked = computed(() => {
+  return !showTableAnswer.value
 })
 
 // 新的表格操作函数
@@ -1051,5 +1087,41 @@ onMounted(() => {
   padding: 1rem 2rem 2rem;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
+}
+
+/* 大毛玻璃覆盖层样式 */
+.matrix-glass-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px) saturate(150%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: glassAppear 0.3s ease-out;
+}
+
+@keyframes glassAppear {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px) saturate(100%);
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px) saturate(150%);
+    transform: scale(1);
+  }
 }
 </style>
