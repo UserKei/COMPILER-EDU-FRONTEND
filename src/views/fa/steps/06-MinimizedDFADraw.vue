@@ -53,7 +53,7 @@
             <div class="h-80 p-4">
               <div v-if="showAnswer" class="w-full h-full flex items-center justify-center">
                 <div
-                  v-if="minimizedDotString"
+                  v-if="faStore.minDfaDotString"
                   ref="answerSvgContainer"
                   class="w-full h-full overflow-auto bg-gray-50 rounded border"
                 >
@@ -99,6 +99,8 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
+import { useFAStore } from '@/stores'
+import { instance } from '@viz-js/viz'
 
 const emit = defineEmits<{
   'next-step': []
@@ -106,11 +108,12 @@ const emit = defineEmits<{
   'complete': [data: any]
 }>()
 
-// 从各步骤获取数据
-const regexPattern = ref('')
+// 使用 FA Store
+const faStore = useFAStore()
+
+// 本地状态
 const dfaStateCount = ref(0)
 const minimizedStateCount = ref(0)
-const minimizedDotString = ref('')
 
 // 状态管理
 const showAnswer = ref(false)
@@ -121,30 +124,29 @@ const answerSvgContainer = ref<HTMLElement>()
 
 // 从localStorage获取数据
 onMounted(() => {
+  if (!faStore.hasResult()) {
+    console.warn('No FA data found, please complete step 1 first')
+    return
+  }
+
   try {
-    // 获取第一步数据
-    const step1Data = localStorage.getItem('fa-step1-data')
-    if (step1Data) {
-      const data = JSON.parse(step1Data)
-      regexPattern.value = data.regex || ''
-      minimizedDotString.value = data.faResult?.Min_DFA_dot_str || ''
-    }
+    // 直接使用 store 中的数据
+    const faResult = faStore.originalData
+    if (faResult) {
+      console.log('Step 6 loaded data from store')
+      console.log('Minimized DFA DOT string:', faStore.minDfaDotString)
 
-    // 获取第四步数据
-    const step4Data = localStorage.getItem('fa-step4-data')
-    if (step4Data) {
-      const data = JSON.parse(step4Data)
-      dfaStateCount.value = data.dfaStates?.length || 0
-    }
-
-    // 获取第五步数据
-    const step5Data = localStorage.getItem('fa-step5-data')
-    if (step5Data) {
-      const data = JSON.parse(step5Data)
-      minimizedStateCount.value = data.minimizationResult?.stateCount || 0
+      // 从后端数据中获取状态数量
+      if (faResult.table_to_num) {
+        dfaStateCount.value = Object.keys(faResult.table_to_num).length
+      }
+      if (faResult.table_to_num_min) {
+        const minStates = Math.max(...Object.values(faResult.table_to_num_min).map((arr: any) => Array.isArray(arr) ? arr.length : 0))
+        minimizedStateCount.value = minStates
+      }
     }
   } catch (error) {
-    console.error('读取上一步数据失败：', error)
+    console.error('处理FA数据失败：', error)
   }
 })
 
@@ -152,7 +154,7 @@ onMounted(() => {
 const toggleAnswer = async () => {
   showAnswer.value = !showAnswer.value
 
-  if (showAnswer.value && minimizedDotString.value) {
+  if (showAnswer.value && faStore.minDfaDotString) {
     await nextTick()
     renderSvgAnswer()
   }
@@ -160,15 +162,14 @@ const toggleAnswer = async () => {
 
 // 渲染SVG答案
 const renderSvgAnswer = async () => {
-  if (!answerSvgContainer.value || !minimizedDotString.value) return
+  if (!answerSvgContainer.value || !faStore.minDfaDotString) return
 
   try {
-    // 动态导入 @viz-js/viz
-    const { instance } = await import('@viz-js/viz')
+    // 使用 viz.js 渲染 DOT 字符串
     const viz = await instance()
 
     // 渲染DOT为SVG
-    const svg = viz.renderSVGElement(minimizedDotString.value)
+    const svg = viz.renderSVGElement(faStore.minDfaDotString)
 
     // 清空容器并添加SVG
     answerSvgContainer.value.innerHTML = ''
@@ -194,7 +195,7 @@ const renderSvgAnswer = async () => {
 const complete = () => {
   const stepData = {
     completed: true,
-    regexPattern: regexPattern.value,
+    regexPattern: faStore.inputRegex,
     finalResults: {
       dfaStateCount: dfaStateCount.value,
       minimizedStateCount: minimizedStateCount.value

@@ -27,7 +27,7 @@
               <p class="text-sm text-gray-600 mt-1">根据此 NFA 图填写下方的转换表和状态转换矩阵</p>
             </div>
             <div class="p-6">
-              <div v-if="faData?.NFA_dot_str" class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
+              <div v-if="faStore.nfaDotString" class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
                 <div v-html="nfaSvg" class="flex justify-center"></div>
               </div>
               <div v-else class="text-center py-8 text-gray-500">
@@ -62,12 +62,19 @@
                         <Icon icon="lucide:eraser" class="w-4 h-4 inline mr-1" />
                         清空
                       </button>
+                      <button
+                        @click="handleValidateTable"
+                        class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-1" />
+                        检验答案
+                      </button>
                     </div>
                   </div>
                 </div>
 
                 <div class="p-4">
-                  <div v-if="!userConversionTable.length" class="text-center py-8 text-gray-500">
+                  <div v-if="conversionTableColumns.length === 0" class="text-center py-8 text-gray-500">
                     <Icon icon="lucide:edit" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p>点击"添加行"开始填写转换表</p>
                   </div>
@@ -76,46 +83,40 @@
                     <table class="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr class="bg-gray-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <!-- 转换表：列标题为 I, Ia, Ib 等输入符号 -->
                           <th
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center font-semibold"
                           >
-                            {{ symbol }}
+                            {{ column }}
                           </th>
                           <th class="border border-gray-300 px-3 py-2 text-center font-semibold">操作</th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- 每行代表一个状态集合 -->
                         <tr
-                          v-for="(row, index) in userConversionTable"
-                          :key="index"
-                          :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
+                          v-for="(_, rowIndex) in conversionTableRowCount"
+                          :key="rowIndex"
+                          :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'"
                         >
-                          <td class="border border-gray-300 px-3 py-2">
-                            <input
-                              v-model="row.state"
-                              type="text"
-                              placeholder="状态名"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                          </td>
                           <td
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2"
                           >
                             <input
-                              v-model="row.transitions[symbol]"
+                              v-model="userConversionTable[column][rowIndex]"
                               type="text"
                               placeholder="-"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              :class="getFieldClass(rowIndex, column, 'table') + ' text-center'"
+                              @blur="() => validateField(userConversionTable[column][rowIndex], rowIndex, column, 'table')"
                             />
                           </td>
                           <td class="border border-gray-300 px-3 py-2 text-center">
                             <button
-                              @click="removeTableRow(index)"
+                              @click="removeTableRow(rowIndex)"
                               class="text-red-600 hover:text-red-800 transition-colors"
                             >
                               <Icon icon="lucide:trash-2" class="w-4 h-4" />
@@ -124,6 +125,24 @@
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  <!-- 转换表错误信息显示 -->
+                  <div v-if="showTableErrors && Object.keys(tableValidationErrors).length > 0" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start gap-2">
+                      <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 class="font-medium text-red-800 mb-2">转换表填写错误</h4>
+                        <ul class="text-sm text-red-700 space-y-1">
+                          <li v-for="(errors, fieldKey) in tableValidationErrors" :key="fieldKey">
+                            <strong>{{ formatFieldKey(fieldKey, 'table') }}：</strong>
+                            <span v-for="(error, index) in errors" :key="index">
+                              {{ error }}{{ index < errors.length - 1 ? '，' : '' }}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -160,35 +179,33 @@
                     <p class="text-sm mt-1">完成填写后点击"查看答案"按钮</p>
                   </div>
 
-                  <div v-else-if="answerConversionTable.length" class="overflow-x-auto">
+                  <div v-else-if="Object.keys(answerConversionTable).length > 0" class="overflow-x-auto">
                     <table class="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr class="bg-green-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <!-- 列标题为输入符号 I, Ia, Ib 等 -->
                           <th
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center font-semibold"
                           >
-                            {{ symbol }}
+                            {{ column }}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- 动态行数，基于最长列的长度 -->
                         <tr
-                          v-for="(row, index) in answerConversionTable"
-                          :key="index"
-                          :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                          v-for="(_, rowIndex) in Math.max(...conversionTableColumns.map(col => answerConversionTable[col]?.length || 0))"
+                          :key="rowIndex"
+                          :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                         >
-                          <td class="border border-gray-300 px-3 py-2 font-medium">
-                            {{ row.state }}
-                          </td>
                           <td
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center"
                           >
-                            {{ row.transitions[symbol] || '-' }}
+                            {{ answerConversionTable[column]?.[rowIndex] || '-' }}
                           </td>
                         </tr>
                       </tbody>
@@ -216,81 +233,84 @@
                     <h3 class="font-semibold text-gray-900">状态转换矩阵（用户填写）</h3>
                     <div class="flex items-center gap-2">
                       <button
-                        @click="addMatrixRow"
-                        class="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-                      >
-                        <Icon icon="lucide:plus" class="w-4 h-4 inline mr-1" />
-                        添加行
-                      </button>
-                      <button
                         @click="clearUserMatrix"
                         class="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
                       >
                         <Icon icon="lucide:eraser" class="w-4 h-4 inline mr-1" />
                         清空
                       </button>
+                      <button
+                        @click="handleValidateMatrix"
+                        class="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      >
+                        <Icon icon="lucide:check-circle" class="w-4 h-4 inline mr-1" />
+                        检验答案
+                      </button>
                     </div>
                   </div>
                 </div>
 
                 <div class="p-4">
-                  <div v-if="!userTransitionMatrix.length" class="text-center py-8 text-gray-500">
+                  <div v-if="alphabetSymbols.length === 0" class="text-center py-8 text-gray-500">
                     <Icon icon="lucide:grid-3x3" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>点击"添加行"开始填写状态转换矩阵</p>
+                    <p>初始化完成后开始填写状态转换矩阵</p>
                   </div>
 
                   <div v-else class="overflow-x-auto">
                     <table class="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr class="bg-purple-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <!-- 矩阵：列标题为状态名 S, a, b 等 -->
                           <th
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="state in matrixStateColumns"
+                            :key="state"
                             class="border border-gray-300 px-3 py-2 text-center font-semibold"
                           >
-                            {{ symbol }}
+                            {{ state }}
                           </th>
-                          <th class="border border-gray-300 px-3 py-2 text-center font-semibold">操作</th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- 每行代表一个输入符号 -->
                         <tr
-                          v-for="(row, index) in userTransitionMatrix"
-                          :key="index"
+                          v-for="(symbol, index) in alphabetSymbols"
+                          :key="symbol"
                           :class="index % 2 === 0 ? 'bg-white' : 'bg-purple-50'"
                         >
-                          <td class="border border-gray-300 px-3 py-2">
-                            <input
-                              v-model="row.state"
-                              type="text"
-                              placeholder="状态编号"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-                            />
-                          </td>
                           <td
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="state in matrixStateColumns"
+                            :key="state"
                             class="border border-gray-300 px-3 py-2"
                           >
                             <input
-                              v-model="row.transitions[symbol]"
+                              v-model="userTransitionMatrix[symbol][state]"
                               type="text"
                               placeholder="-"
-                              class="w-full px-2 py-1 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-1 focus:ring-purple-500"
+                              :class="getFieldClass(index, `${symbol}-${state}`, 'matrix') + ' text-center'"
+                              @blur="() => validateField(userTransitionMatrix[symbol][state], index, `${symbol}-${state}`, 'matrix')"
                             />
-                          </td>
-                          <td class="border border-gray-300 px-3 py-2 text-center">
-                            <button
-                              @click="removeMatrixRow(index)"
-                              class="text-red-600 hover:text-red-800 transition-colors"
-                            >
-                              <Icon icon="lucide:trash-2" class="w-4 h-4" />
-                            </button>
                           </td>
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  <!-- 矩阵错误信息显示 -->
+                  <div v-if="showMatrixErrors && Object.keys(matrixValidationErrors).length > 0" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start gap-2">
+                      <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 class="font-medium text-red-800 mb-2">状态转换矩阵填写错误</h4>
+                        <ul class="text-sm text-red-700 space-y-1">
+                          <li v-for="(errors, fieldKey) in matrixValidationErrors" :key="fieldKey">
+                            <strong>{{ formatFieldKey(fieldKey, 'matrix') }}：</strong>
+                            <span v-for="(error, index) in errors" :key="index">
+                              {{ error }}{{ index < errors.length - 1 ? '，' : '' }}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -327,35 +347,33 @@
                     <p class="text-sm mt-1">完成填写后点击"查看答案"按钮</p>
                   </div>
 
-                  <div v-else-if="answerTransitionMatrix.length" class="overflow-x-auto">
+                  <div v-else-if="Object.keys(answerTransitionMatrix).length > 0" class="overflow-x-auto">
                     <table class="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr class="bg-green-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <!-- 列标题为状态名 -->
                           <th
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="state in matrixStateColumns"
+                            :key="state"
                             class="border border-gray-300 px-3 py-2 text-center font-semibold"
                           >
-                            {{ symbol }}
+                            {{ state }}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- 每行代表一个输入符号 -->
                         <tr
-                          v-for="(row, index) in answerTransitionMatrix"
-                          :key="index"
+                          v-for="(symbol, index) in alphabetSymbols"
+                          :key="symbol"
                           :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                         >
-                          <td class="border border-gray-300 px-3 py-2 font-medium">
-                            {{ row.state }}
-                          </td>
                           <td
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="state in matrixStateColumns"
+                            :key="state"
                             class="border border-gray-300 px-3 py-2 text-center"
                           >
-                            {{ row.transitions[symbol] || '-' }}
+                            {{ answerTransitionMatrix[symbol]?.[state] || '-' }}
                           </td>
                         </tr>
                       </tbody>
@@ -383,6 +401,7 @@
                 <li>• 状态转换矩阵：用数字编号表示状态间的转换关系</li>
                 <li>• 无转换的格子可以填写"-"或留空</li>
                 <li>• 完成填写后可以查看标准答案进行对比</li>
+                <li>• <strong>必须查看转换表和状态转换矩阵的标准答案后才能进入下一步</strong></li>
               </ul>
             </div>
           </div>
@@ -414,6 +433,7 @@
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           ]"
+          :title="!constructionComplete ? '请完成填写并查看任一标准答案后继续' : ''"
         >
           下一步
           <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
@@ -424,30 +444,356 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, type Ref } from 'vue'
 import { Icon } from '@iconify/vue'
-import type { FAResult } from '@/types'
+import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
-defineEmits<{
+// 类型定义
+interface TableRow {
+  state: string
+  transitions: Record<string, string>
+}
+
+// 新的转换表结构 - 按列组织（每列一个输入符号）
+interface ConversionTableData {
+  [inputSymbol: string]: string[]  // 每个输入符号对应一列数据
+}
+
+// 新的状态转换矩阵结构 - 按行组织（每行一个输入符号）
+interface TransitionMatrixData {
+  [inputSymbol: string]: Record<string, string>  // 每个输入符号对应一行的状态转换
+}
+
+type TableType = 'table' | 'matrix'
+
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
   'complete': [data: any]
 }>()
 
-// 从上一步获取数据
-const faData = ref<FAResult | null>(null)
-const regexPattern = ref('')
+// 使用 FA Store
+const faStore = useFAStore()
 
 // NFA SVG 渲染
 const nfaSvg = ref('')
 
+// 用户填写的表格 - 新的数据结构
+const userConversionTable = ref<ConversionTableData>({})  // 转换表：列布局
+const userTransitionMatrix = ref<TransitionMatrixData>({})  // 状态转换矩阵：行布局
+
+// 答案数据 - 新的数据结构
+const answerConversionTable = ref<ConversionTableData>({})
+const answerTransitionMatrix = ref<TransitionMatrixData>({})
+
+// 答案显示控制
+const showTableAnswer = ref(false)
+const showMatrixAnswer = ref(false)
+
+// 字母表符号和状态信息
+const alphabetSymbols = ref<string[]>([])  // 输入符号 ['a', 'b']
+const conversionTableColumns = ref<string[]>([])  // 转换表列标题 ['I', 'Ia', 'Ib']
+const matrixStateColumns = ref<string[]>([])  // 矩阵状态列 ['S', 'a', 'b']
+const dfaStates = ref<string[]>([])
+
+// 表格行数控制
+const conversionTableRowCount = ref(0)  // 转换表的行数（动态调整）
+
+// 验证状态管理
+const tableValidationErrors = ref<Record<string, string[]>>({}) // 每个字段的错误信息
+const matrixValidationErrors = ref<Record<string, string[]>>({})
+const tableFieldValidation = ref<Record<string, 'valid' | 'invalid' | 'normal'>>({}) // 字段验证状态
+const matrixFieldValidation = ref<Record<string, 'valid' | 'invalid' | 'normal'>>({})
+const showTableErrors = ref(false) // 是否显示转换表错误
+const showMatrixErrors = ref(false) // 是否显示矩阵错误
+
+// 计算属性
+const constructionComplete = computed(() => {
+  const hasTableContent = conversionTableRowCount.value > 0 &&
+                          conversionTableColumns.value.length > 0
+  const hasMatrixContent = alphabetSymbols.value.length > 0 &&
+                          matrixStateColumns.value.length > 0
+  const hasNoErrors = Object.keys(tableValidationErrors.value).length === 0 &&
+                     Object.keys(matrixValidationErrors.value).length === 0
+  // 至少查看过一个答案
+  const hasViewedAnyAnswer = showTableAnswer.value || showMatrixAnswer.value
+  // return hasTableContent && hasMatrixContent && hasNoErrors && hasViewedAnyAnswer
+  return hasViewedAnyAnswer
+})
+
+const totalTransitions = computed(() => {
+  let total = 0
+  conversionTableColumns.value.forEach(column => {
+    const columnData = answerConversionTable.value[column] || []
+    total += columnData.filter(cell => cell && cell !== '-').length
+  })
+  return total
+})
+
+// 新的表格操作函数
+const addTableRow = () => {
+  conversionTableRowCount.value++
+  // 确保每列都有足够的数据
+  conversionTableColumns.value.forEach(column => {
+    if (!userConversionTable.value[column]) {
+      userConversionTable.value[column] = []
+    }
+    // 填充到新的行数
+    while (userConversionTable.value[column].length < conversionTableRowCount.value) {
+      userConversionTable.value[column].push('')
+    }
+  })
+}
+
+const removeTableRow = (rowIndex: number) => {
+  if (conversionTableRowCount.value > 0) {
+    conversionTableRowCount.value--
+    // 从每列中删除指定行
+    conversionTableColumns.value.forEach(column => {
+      if (userConversionTable.value[column]) {
+        userConversionTable.value[column].splice(rowIndex, 1)
+      }
+    })
+  }
+}
+
+const clearUserTable = () => {
+  conversionTableRowCount.value = 0
+  userConversionTable.value = {}
+  tableValidationErrors.value = {}
+  tableFieldValidation.value = {}
+  showTableErrors.value = false
+}
+
+// 矩阵操作函数 - 矩阵是固定结构，不需要添加/删除行
+const clearUserMatrix = () => {
+  // 重新初始化矩阵数据
+  alphabetSymbols.value.forEach(symbol => {
+    userTransitionMatrix.value[symbol] = {}
+    matrixStateColumns.value.forEach(state => {
+      userTransitionMatrix.value[symbol][state] = ''
+    })
+  })
+  matrixValidationErrors.value = {}
+  matrixFieldValidation.value = {}
+  showMatrixErrors.value = false
+}
+
+// 初始化数据结构
+const initializeDataStructures = () => {
+  // 初始化转换表数据结构
+  conversionTableColumns.value.forEach(column => {
+    if (!userConversionTable.value[column]) {
+      userConversionTable.value[column] = []
+    }
+  })
+
+  // 初始化矩阵数据结构
+  alphabetSymbols.value.forEach(symbol => {
+    if (!userTransitionMatrix.value[symbol]) {
+      userTransitionMatrix.value[symbol] = {}
+    }
+    matrixStateColumns.value.forEach(state => {
+      if (!userTransitionMatrix.value[symbol][state]) {
+        userTransitionMatrix.value[symbol][state] = ''
+      }
+    })
+  })
+}
+
+// 验证功能
+const validateField = (value: string | undefined, rowIndex: number, field: string, tableType: 'table' | 'matrix') => {
+  const fieldKey = `${tableType}-${rowIndex}-${field}`
+  const errors: string[] = []
+
+  // 确保value是字符串
+  const fieldValue = value || ''
+
+  console.log('Validating field:', { fieldKey, fieldValue, rowIndex, field, tableType })
+
+  // 1. 检查是否为空
+  if (!fieldValue || fieldValue.trim() === '') {
+    if (field === 'state') {
+      errors.push('状态名称不能为空')
+    } else {
+      errors.push('转换关系不能为空')
+    }
+  }
+
+  // 2. 如果是状态字段，检查状态来源合法性
+  if (field === 'state' && fieldValue && fieldValue.trim() !== '') {
+    const isValidState = validateStateSource(fieldValue.trim(), rowIndex, tableType)
+    if (!isValidState) {
+      errors.push('新状态必须来源于之前行的转换结果')
+    }
+  }
+
+  // 3. 如果是转换字段，检查转换正确性
+  if (field !== 'state' && fieldValue && fieldValue.trim() !== '') {
+    const isValidTransition = validateTransition(rowIndex, field, fieldValue.trim(), tableType)
+    if (!isValidTransition) {
+      errors.push('转换结果与标准答案不符')
+    }
+  }
+
+  // 更新验证状态
+  const validationRef = tableType === 'table' ? tableValidationErrors : matrixValidationErrors
+  const fieldValidationRef = tableType === 'table' ? tableFieldValidation : matrixFieldValidation
+
+  if (errors.length > 0) {
+    console.log('Setting errors for field:', fieldKey, errors)
+    validationRef.value[fieldKey] = errors
+    fieldValidationRef.value[fieldKey] = 'invalid'
+    // 失焦验证时也要显示错误信息
+    if (tableType === 'table') {
+      showTableErrors.value = true
+      console.log('Table errors after setting:', tableValidationErrors.value)
+      console.log('showTableErrors:', showTableErrors.value)
+    } else {
+      showMatrixErrors.value = true
+      console.log('Matrix errors after setting:', matrixValidationErrors.value)
+      console.log('showMatrixErrors:', showMatrixErrors.value)
+    }
+  } else {
+    console.log('Clearing errors for field:', fieldKey)
+    delete validationRef.value[fieldKey]
+    fieldValidationRef.value[fieldKey] = 'valid'
+    // 检查是否还有其他错误，如果没有则隐藏错误面板
+    if (Object.keys(validationRef.value).length === 0) {
+      if (tableType === 'table') {
+        showTableErrors.value = false
+      } else {
+        showMatrixErrors.value = false
+      }
+    }
+  }
+
+  console.log('Validation complete for field:', fieldKey, 'Errors count:', errors.length)
+}
+
+// 验证状态来源合法性 - 更新为新数据结构
+const validateStateSource = (stateName: string, currentRowIndex: number, tableType: 'table' | 'matrix'): boolean => {
+  // 第一行的状态（通常是初始状态）总是合法的
+  if (currentRowIndex === 0) return true
+
+  if (tableType === 'table') {
+    // 转换表：检查该状态是否在之前的行中作为转换结果出现过
+    for (let rowIndex = 0; rowIndex < currentRowIndex; rowIndex++) {
+      for (const column of conversionTableColumns.value) {
+        const cellValue = userConversionTable.value[column]?.[rowIndex]?.trim()
+        if (cellValue && cellValue !== '-' && cellValue.includes(stateName)) {
+          return true
+        }
+      }
+    }
+  } else {
+    // 矩阵：不需要验证状态来源，因为状态列是固定的
+    return matrixStateColumns.value.includes(stateName)
+  }
+
+  return false
+}
+
+// 验证转换正确性 - 更新为新数据结构
+const validateTransition = (rowIndex: number, field: string, userValue: string, tableType: 'table' | 'matrix'): boolean => {
+  if (tableType === 'table') {
+    // 转换表验证：根据列名找到对应的答案数据
+    const answerColumn = answerConversionTable.value[field]
+    if (!answerColumn || !answerColumn[rowIndex]) return false
+
+    const correctValue = answerColumn[rowIndex] || '-'
+    return userValue === correctValue
+  } else {
+    // 矩阵验证：解析字段名 "symbol-state"
+    const [symbol, state] = field.split('-')
+    if (!symbol || !state) return false
+
+    const answerRow = answerTransitionMatrix.value[symbol]
+    if (!answerRow) return false
+
+    const correctValue = answerRow[state] || '-'
+    return userValue === correctValue
+  }
+}
+
+// 验证整个表格 - 更新为新数据结构
+const validateTable = (tableType: 'table' | 'matrix') => {
+  if (tableType === 'table') {
+    // 验证转换表
+    for (let rowIndex = 0; rowIndex < conversionTableRowCount.value; rowIndex++) {
+      conversionTableColumns.value.forEach(column => {
+        const value = userConversionTable.value[column]?.[rowIndex] || ''
+        validateField(value, rowIndex, column, tableType)
+      })
+    }
+  } else {
+    // 验证矩阵
+    alphabetSymbols.value.forEach((symbol, symbolIndex) => {
+      matrixStateColumns.value.forEach(state => {
+        const value = userTransitionMatrix.value[symbol]?.[state] || ''
+        validateField(value, symbolIndex, `${symbol}-${state}`, tableType)
+      })
+    })
+  }
+
+  // 显示错误信息
+  if (tableType === 'table') {
+    showTableErrors.value = Object.keys(tableValidationErrors.value).length > 0
+  } else {
+    showMatrixErrors.value = Object.keys(matrixValidationErrors.value).length > 0
+  }
+}
+
+// 获取字段的CSS类
+const getFieldClass = (rowIndex: number, field: string, tableType: 'table' | 'matrix') => {
+  const fieldKey = `${tableType}-${rowIndex}-${field}`
+  const fieldValidationRef = tableType === 'table' ? tableFieldValidation : matrixFieldValidation
+  const validationStatus = fieldValidationRef.value[fieldKey]
+
+  const baseClass = 'w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1'
+
+  if (validationStatus === 'valid') {
+    return `${baseClass} border-green-500 bg-green-50 focus:ring-green-500`
+  } else if (validationStatus === 'invalid') {
+    return `${baseClass} border-red-500 bg-red-50 focus:ring-red-500`
+  } else {
+    const ringColor = tableType === 'table' ? 'focus:ring-blue-500' : 'focus:ring-purple-500'
+    return `${baseClass} border-gray-300 ${ringColor}`
+  }
+}
+
+// 手动验证按钮处理
+const handleValidateTable = () => {
+  validateTable('table')
+}
+
+const handleValidateMatrix = () => {
+  validateTable('matrix')
+}
+
+// 格式化错误信息的辅助函数
+const formatFieldKey = (fieldKey: string, tableType: 'table' | 'matrix') => {
+  const parts = fieldKey.split('-')
+  if (parts.length >= 3) {
+    const rowIndex = parseInt(parts[1]) + 1 // 转换为1-based索引
+    const fieldName = parts[2]
+
+    if (fieldName === 'state') {
+      return `第${rowIndex}行状态字段`
+    } else {
+      return `第${rowIndex}行符号"${fieldName}"`
+    }
+  }
+  return fieldKey
+}
+
 // 渲染 NFA SVG
 const renderNFASvg = async () => {
-  if (faData.value?.NFA_dot_str) {
+  if (faStore.nfaDotString) {
     try {
       const viz = await instance()
-      const svg = viz.renderSVGElement(faData.value.NFA_dot_str)
+      const svg = viz.renderSVGElement(faStore.nfaDotString)
       nfaSvg.value = svg.outerHTML
     } catch (error) {
       console.error('渲染 NFA SVG 失败：', error)
@@ -456,84 +802,8 @@ const renderNFASvg = async () => {
   }
 }
 
-// 用户填写的表格
-const userConversionTable = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-const userTransitionMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-// 答案数据
-const answerConversionTable = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-const answerTransitionMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-// 答案显示控制
-const showTableAnswer = ref(false)
-const showMatrixAnswer = ref(false)
-
-// 状态管理（保留原有的）
-const isGenerating = ref(false)
-const isGeneratingMatrix = ref(false)
-const conversionTable = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-const transitionMatrix = ref<Array<{
-  state: string
-  transitions: Record<string, string>
-}>>([])
-
-// 字母表符号
-const alphabetSymbols = ref<string[]>([])
-const dfaStates = ref<string[]>([])
-
-// 计算属性
-const constructionComplete = computed(() => {
-  return userConversionTable.value.length > 0 && userTransitionMatrix.value.length > 0
-})
-
-const totalTransitions = computed(() => {
-  return conversionTable.value.reduce((total, row) => {
-    return total + Object.values(row.transitions).filter(t => t && t !== '-').length
-  }, 0)
-})
-
-// 从localStorage获取上一步的数据
-onMounted(() => {
-  try {
-    const savedData = localStorage.getItem('fa-step1-data')
-    if (savedData) {
-      const stepData = JSON.parse(savedData)
-      regexPattern.value = stepData.regex || ''
-      faData.value = stepData.faResult || null
-
-      if (stepData.faResult) {
-        // 从后端数据中提取字母表符号
-        extractAlphabetFromFAData(stepData.faResult)
-        // 生成答案数据
-        generateAnswerData(stepData.faResult)
-        // 渲染 NFA SVG
-        renderNFASvg()
-      }
-    }
-  } catch (error) {
-    console.error('读取上一步数据失败：', error)
-  }
-})
-
 // 从FA数据中提取字母表符号
-const extractAlphabetFromFAData = (data: FAResult) => {
+const extractAlphabetFromFAData = (data: any) => {
   const symbols = new Set<string>()
 
   // 从转换表中提取符号
@@ -548,132 +818,98 @@ const extractAlphabetFromFAData = (data: FAResult) => {
   alphabetSymbols.value = Array.from(symbols).sort()
 }
 
-// 生成答案数据
-const generateAnswerData = (data: FAResult) => {
-  // 直接使用后端返回的数据结构来显示答案
+// 新的数据处理函数 - 转换表数据处理（列布局）
+const processTableDataToColumns = (table: any, symbols: string[]): ConversionTableData => {
+  const result: ConversionTableData = {}
 
-  // 生成转换表答案 - 直接使用后端的table数据
-  if (data.table) {
-    const table = data.table
-    const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
+  if (!table) return result
 
-    // 后端数据结构：table 是一个对象
-    // 键是输入符号（如 'a', 'b' 等）
-    // 值是数组，包含每个状态对应的转换结果
+  // 创建列数据结构
+  const allColumns = ['I', ...symbols.map(s => `I${s}`)]
 
-    // 获取所有符号（过滤掉特殊符号）
-    const symbols = Object.keys(table).filter(symbol =>
-      symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
-    ).sort()
+  // 初始化每列
+  allColumns.forEach(column => {
+    result[column] = []
+  })
 
-    // 获取状态数量（假设所有符号的转换数组长度相同）
-    const stateCount = table[symbols[0]]?.length || 0
+  // 填充数据
+  const maxRows = Math.max(...symbols.map(s => table[s]?.length || 0))
 
-    // 为每个状态创建行
-    for (let i = 0; i < stateCount; i++) {
-      const row = {
-        state: `S${i}`,
-        transitions: {} as Record<string, string>
-      }
-
-      // 为每个符号填入转换信息
-      symbols.forEach(symbol => {
-        const transition = table[symbol][i]
-        if (Array.isArray(transition)) {
-          // 如果是数组，用空字符串连接（按旧前端的方式）
-          row.transitions[symbol] = transition.join('') || '-'
-        } else {
-          row.transitions[symbol] = transition || '-'
-        }
-      })
-
-      newTable.push(row)
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+    // I 列：初始状态集合（通常基于第一个符号的数据结构）
+    if (table[symbols[0]]?.[rowIndex]) {
+      result['I'].push(`{${rowIndex}}`)
     }
 
-    answerConversionTable.value = newTable
+    // 各符号列：I + symbol
+    symbols.forEach(symbol => {
+      const colKey = `I${symbol}`
+      const transition = table[symbol]?.[rowIndex]
+      if (transition) {
+        if (Array.isArray(transition)) {
+          result[colKey].push(transition.join('') || '-')
+        } else {
+          result[colKey].push(transition || '-')
+        }
+      } else {
+        result[colKey].push('-')
+      }
+    })
   }
 
-  // 生成状态转换矩阵答案 - 直接使用后端的table_to_num数据
+  return result
+}
+
+// 新的数据处理函数 - 矩阵数据处理（行布局）
+const processMatrixDataToRows = (tableToNum: any, symbols: string[]): TransitionMatrixData => {
+  const result: TransitionMatrixData = {}
+
+  if (!tableToNum) return result
+
+  // 获取所有状态
+  const allStates = Object.keys(tableToNum)
+  const sKeys = allStates.filter(x => x === 'S')
+  const nonSKeys = allStates.filter(x => x !== 'S').sort()
+  const stateKeys = [...sKeys, ...nonSKeys]
+
+  // 为每个输入符号创建一行
+  symbols.forEach(symbol => {
+    result[symbol] = {}
+    stateKeys.forEach(state => {
+      const stateTransitions = tableToNum[state] || []
+      const symbolIndex = symbols.indexOf(symbol)
+      result[symbol][state] = stateTransitions[symbolIndex] || '-'
+    })
+  })
+
+  return result
+}
+
+// 生成答案数据（更新为新数据结构）
+const generateAnswerData = (data: any) => {
+  const symbols = Object.keys(data.table || {}).filter(symbol =>
+    symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
+  ).sort()
+
+  // 生成转换表答案（列布局）
+  answerConversionTable.value = processTableDataToColumns(data.table, symbols)
+
+  // 生成状态转换矩阵答案（行布局）
+  answerTransitionMatrix.value = processMatrixDataToRows(data.table_to_num, symbols)
+
+  // 设置列信息
+  conversionTableColumns.value = ['I', ...symbols.map(s => `I${s}`)]
+
+  // 设置矩阵状态列
   if (data.table_to_num) {
-    const tableToNum = data.table_to_num
-    const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
-
-    // 后端数据结构：table_to_num 是一个对象
-    // 键是状态名（如 'S', 'S0', 'S1' 等）
-    // 值是数组，包含每个输入符号对应的转换结果
-
-    // 获取所有状态名，按照旧前端的逻辑排序：先取'S'状态，然后其他状态排序
-    const allStates = Object.keys(tableToNum)
+    const allStates = Object.keys(data.table_to_num)
     const sKeys = allStates.filter(x => x === 'S')
     const nonSKeys = allStates.filter(x => x !== 'S').sort()
-    const stateKeys = [...sKeys, ...nonSKeys]
-
-    // 对每个状态（行），构建其对应的转换
-    stateKeys.forEach((state) => {
-      const row = {
-        state: state,
-        transitions: {} as Record<string, string>
-      }
-
-      // 获取该状态的转换数组
-      const stateTransitions = tableToNum[state] || []
-
-      // 对每个字母表符号，获取对应的转换
-      alphabetSymbols.value.forEach((symbol, symbolIndex) => {
-        row.transitions[symbol] = stateTransitions[symbolIndex] || '-'
-      })
-
-      matrix.push(row)
-    })
-
-    answerTransitionMatrix.value = matrix
-  }
-}
-
-// 用户表格操作方法
-const addTableRow = () => {
-  const newRow: { state: string; transitions: Record<string, string> } = {
-    state: '',
-    transitions: {}
+    matrixStateColumns.value = [...sKeys, ...nonSKeys]
   }
 
-  // 为每个字母表符号初始化空的转换
-  alphabetSymbols.value.forEach(symbol => {
-    newRow.transitions[symbol] = ''
-  })
-
-  userConversionTable.value.push(newRow)
-}
-
-const removeTableRow = (index: number) => {
-  userConversionTable.value.splice(index, 1)
-}
-
-const clearUserTable = () => {
-  userConversionTable.value = []
-}
-
-// 用户矩阵操作方法
-const addMatrixRow = () => {
-  const newRow: { state: string; transitions: Record<string, string> } = {
-    state: '',
-    transitions: {}
-  }
-
-  // 为每个字母表符号初始化空的转换
-  alphabetSymbols.value.forEach(symbol => {
-    newRow.transitions[symbol] = ''
-  })
-
-  userTransitionMatrix.value.push(newRow)
-}
-
-const removeMatrixRow = (index: number) => {
-  userTransitionMatrix.value.splice(index, 1)
-}
-
-const clearUserMatrix = () => {
-  userTransitionMatrix.value = []
+  // 更新DFA状态（从转换表的I列获取）
+  dfaStates.value = answerConversionTable.value['I'] || []
 }
 
 // 答案显示控制
@@ -685,114 +921,49 @@ const toggleMatrixAnswer = () => {
   showMatrixAnswer.value = !showMatrixAnswer.value
 }
 
-// 生成转换表
-const generateTable = async () => {
-  if (!faData.value || isGenerating.value) return
-
-  isGenerating.value = true
-
-  try {
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 使用后端返回的table数据
-    const table = faData.value.table
-    if (table) {
-      const newTable: Array<{ state: string; transitions: Record<string, string> }> = []
-
-      // 处理转换表数据
-      Object.keys(table).forEach(symbol => {
-        const transitions = table[symbol]
-        transitions.forEach((transitionSet: string[], index: number) => {
-          const stateName = `S${index}`
-
-          // 找到或创建对应的行
-          let row = newTable.find(r => r.state === stateName)
-          if (!row) {
-            row = { state: stateName, transitions: {} }
-            newTable.push(row)
-          }
-
-          // 设置转换
-          row.transitions[symbol] = transitionSet.join(',') || '-'
-        })
-      })
-
-      conversionTable.value = newTable
-      dfaStates.value = newTable.map(row => row.state)
-    }
-  } catch (error) {
-    console.error('生成转换表失败：', error)
-  } finally {
-    isGenerating.value = false
-  }
-}
-
-// 生成状态转换矩阵
-const generateMatrix = async () => {
-  if (!faData.value || isGeneratingMatrix.value) return
-
-  isGeneratingMatrix.value = true
-
-  try {
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    // 使用后端返回的table_to_num数据
-    const tableToNum = faData.value.table_to_num
-    if (tableToNum) {
-      const matrix: Array<{ state: string; transitions: Record<string, string> }> = []
-
-      // 处理状态转换矩阵数据
-      Object.keys(tableToNum).forEach(symbol => {
-        const transitions = tableToNum[symbol]
-        transitions.forEach((targetState: string, index: number) => {
-          const stateName = `S${index}`
-
-          // 找到或创建对应的行
-          let row = matrix.find(r => r.state === stateName)
-          if (!row) {
-            row = { state: stateName, transitions: {} }
-            matrix.push(row)
-          }
-
-          // 设置转换
-          row.transitions[symbol] = targetState || '-'
-        })
-      })
-
-      transitionMatrix.value = matrix
-    }
-  } catch (error) {
-    console.error('生成状态转换矩阵失败：', error)
-  } finally {
-    isGeneratingMatrix.value = false
-  }
-}
-
 // 进入下一步
 const proceedToNext = () => {
   if (constructionComplete.value) {
     const stepData = {
-      // 保存答案数据供下一步参考
       conversionTable: answerConversionTable.value,
       transitionMatrix: answerTransitionMatrix.value,
       dfaStates: dfaStates.value,
       alphabetSymbols: alphabetSymbols.value,
+      conversionTableColumns: conversionTableColumns.value,
+      matrixStateColumns: matrixStateColumns.value,
       totalTransitions: totalTransitions.value,
-      // 同时保存用户填写的数据
       userConversionTable: userConversionTable.value,
       userTransitionMatrix: userTransitionMatrix.value,
       timestamp: new Date().toISOString()
     }
 
-    // 保存数据
     localStorage.setItem('fa-step3-data', JSON.stringify(stepData))
-
-    // 触发下一步事件
-    document.dispatchEvent(new CustomEvent('next-step'))
+    emit('next-step')
   }
 }
+
+// 组件挂载时的初始化
+onMounted(() => {
+  if (!faStore.hasResult()) {
+    console.warn('No FA data found, please complete step 1 first')
+    return
+  }
+
+  try {
+    const faResult = faStore.originalData
+    if (faResult) {
+      extractAlphabetFromFAData(faResult)
+      generateAnswerData(faResult)
+
+      // 初始化用户数据结构
+      initializeDataStructures()
+
+      renderNFASvg()
+    }
+  } catch (error) {
+    console.error('处理FA数据失败：', error)
+  }
+})
 </script>
 
 <style scoped>

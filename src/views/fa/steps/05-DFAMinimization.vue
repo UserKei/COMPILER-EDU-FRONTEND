@@ -111,7 +111,7 @@
                   </thead>
                   <tbody>
                     <tr
-                      v-for="row in Math.max(...Object.values(faData?.table_to_num_min || {}).map((arr: any) => Array.isArray(arr) ? arr.length : 0))"
+                      v-for="row in Math.max(...Object.values(faStore.originalData?.table_to_num_min || {}).map((arr: any) => Array.isArray(arr) ? arr.length : 0))"
                       :key="row - 1"
                       :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
                     >
@@ -212,7 +212,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import type { FAResult } from '@/types'
+import { useFAStore } from '@/stores'
 
 defineEmits<{
   'next-step': []
@@ -239,8 +239,10 @@ interface MatrixCell {
   isRowHeader?: boolean
 }
 
-// 从上一步获取数据
-const faData = ref<FAResult | null>(null)
+// 使用 FA Store
+const faStore = useFAStore()
+
+// 本地状态
 const alphabetSymbols = ref<string[]>([])
 const originalStateCount = ref(0)
 
@@ -278,29 +280,36 @@ const reductionPercentage = computed(() => {
 
 // 从localStorage获取数据
 onMounted(() => {
+  if (!faStore.hasResult()) {
+    console.warn('No FA data found, please complete step 1 first')
+    return
+  }
+
   try {
-    // 获取第一步数据
-    const step1Data = localStorage.getItem('fa-step1-data')
-    if (step1Data) {
-      const data = JSON.parse(step1Data)
-      faData.value = data.faResult || null
-    }
+    // 直接使用 store 中的数据
+    const faResult = faStore.originalData
+    if (faResult) {
+      console.log('Step 5 loaded data from store')
 
-    // 获取第四步数据
-    const step4Data = localStorage.getItem('fa-step4-data')
-    if (step4Data) {
-      const data = JSON.parse(step4Data)
-      originalStateCount.value = data.dfaStates?.length || 0
-    }
+      // 从后端数据中提取状态数量
+      if (faResult.table_to_num) {
+        const allStates = Object.keys(faResult.table_to_num)
+        originalStateCount.value = allStates.length
+      }
 
-    // 获取第三步数据（字母表）
-    const step3Data = localStorage.getItem('fa-step3-data')
-    if (step3Data) {
-      const data = JSON.parse(step3Data)
-      alphabetSymbols.value = data.alphabetSymbols || []
+      // 从后端数据中提取字母表符号
+      if (faResult.table) {
+        const symbols = new Set<string>()
+        Object.keys(faResult.table).forEach(symbol => {
+          if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
+            symbols.add(symbol)
+          }
+        })
+        alphabetSymbols.value = Array.from(symbols).sort()
+      }
     }
   } catch (error) {
-    console.error('读取上一步数据失败：', error)
+    console.error('处理FA数据失败：', error)
   }
 })
 
@@ -364,9 +373,9 @@ const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
 
 // 校验P集合
 const validatePSets = () => {
-  if (step6Open.value || !faData.value?.P) return
+  if (step6Open.value || !faStore.originalData?.P) return
 
-  const answerList = faData.value.P.map((pSet: string[]) => pSet.join(''))
+  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
 
   if (matchPSetsValue(answerList, localPSets.value)) {
     step6Open.value = true
@@ -392,9 +401,9 @@ const validatePSets = () => {
 
 // 初始化最小化矩阵
 const initMinimizedMatrix = () => {
-  if (!faData.value?.table_to_num_min) return
+  if (!faStore.originalData?.table_to_num_min) return
 
-  const tableToNumMin = faData.value.table_to_num_min
+  const tableToNumMin = faStore.originalData.table_to_num_min
   const symbols = alphabetSymbols.value
   const rowCount = Math.max(...Object.values(tableToNumMin).map((arr: any) => Array.isArray(arr) ? arr.length : 0))
 
@@ -435,10 +444,10 @@ const getMatrixCell = (row: number, col: number): MatrixCell | undefined => {
 
 // 校验矩阵
 const validateMatrix = () => {
-  if (step7Open.value || !faData.value?.table_to_num_min) return
+  if (step7Open.value || !faStore.originalData?.table_to_num_min) return
 
   let isAllCorrect = true
-  const tableToNumMin = faData.value.table_to_num_min
+  const tableToNumMin = faStore.originalData.table_to_num_min
 
   for (const cell of minimizedMatrix.value) {
     if (cell.category === 'onlyRead' || cell.check === 'isCorrect') continue
