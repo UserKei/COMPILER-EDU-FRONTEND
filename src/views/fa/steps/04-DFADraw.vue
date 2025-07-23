@@ -124,16 +124,15 @@
           </div>
 
           <!-- DFA 信息面板 -->
-          <div v-if="dfaResult" class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <Icon icon="lucide:info" class="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 class="font-medium text-orange-800">DFA 构造完成</h4>
+                <h4 class="font-medium text-orange-800">DFA 绘制区域</h4>
                 <div class="text-sm text-orange-700 mt-2 space-y-1">
-                  <p>• 状态数量: {{ dfaResult.stateCount }}</p>
-                  <p>• 转换数量: {{ dfaResult.transitionCount }}</p>
-                  <p>• 初始状态: {{ dfaResult.initialState }}</p>
-                  <p>• 接受状态: {{ dfaResult.finalStates.join(', ') }}</p>
+                  <p>• 在上方画布中手动绘制DFA</p>
+                  <p>• 根据转换表添加状态和转换</p>
+                  <p>• 完成绘制后可进入下一步</p>
                 </div>
               </div>
             </div>
@@ -179,22 +178,6 @@
               <div class="flex items-center justify-between">
                 <h3 class="font-semibold text-gray-900">标准答案</h3>
                 <div class="flex items-center gap-2">
-                  <button
-                    @click="generateDFA"
-                    :disabled="isGenerating || !hasTransitionData"
-                    :class="[
-                      'px-4 py-2 rounded-lg transition-colors',
-                      (isGenerating || !hasTransitionData)
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-orange-600 text-white hover:bg-orange-700'
-                    ]"
-                  >
-                    <Icon
-                      :icon="isGenerating ? 'lucide:loader-2' : 'lucide:play'"
-                      :class="['w-4 h-4 inline mr-2', isGenerating ? 'animate-spin' : '']"
-                    />
-                    {{ isGenerating ? '生成中...' : '生成 DFA' }}
-                  </button>
                   <button
                     @click="toggleAnswer"
                     class="px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
@@ -317,7 +300,7 @@ import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
-defineEmits<{
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
   'complete': [data: any]
@@ -335,27 +318,23 @@ const transitionMatrix = ref<any[]>([])
 const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩阵
 
 // 状态管理
-const isGenerating = ref(false)
 const showDotString = ref(false)
 const showAnswer = ref(true) // 默认显示答案
-const dfaResult = ref<{
-  stateCount: number
-  transitionCount: number
-  initialState: string
-  finalStates: string[]
-} | null>(null)
 
 // DFA 画布引用
 const dfaCanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
 // 计算属性
-const hasTransitionData = computed(() => {
-  return conversionTable.value.length > 0 && alphabetSymbols.value.length > 0
-})
-
 const isComplete = computed(() => {
-  return dfaResult.value !== null
+  // 检查画布是否有内容（用户是否手动绘制了DFA）
+  if (!dfaCanvasRef.value) return false
+
+  // 检查画布中是否有节点和边
+  const hasNodes = dfaCanvasRef.value.getNodes && dfaCanvasRef.value.getNodes().length > 0
+  const hasEdges = dfaCanvasRef.value.getEdges && dfaCanvasRef.value.getEdges().length > 0
+
+  return hasNodes && hasEdges
 })
 
 // 从localStorage获取数据
@@ -591,76 +570,6 @@ const renderDotToSvg = async () => {
   }
 }
 
-// 生成DFA
-const generateDFA = async () => {
-  if (!hasTransitionData.value || isGenerating.value) return
-
-  isGenerating.value = true
-
-  try {
-    // 清空画布
-    if (dfaCanvasRef.value) {
-      dfaCanvasRef.value.clearCanvas()
-    }
-
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 使用转换表数据在画布上生成DFA
-    if (dfaCanvasRef.value && conversionTable.value.length > 0) {
-      const canvas = dfaCanvasRef.value
-
-      // 添加状态节点
-      dfaStates.value.forEach((state, index) => {
-        const x = 150 + (index % 4) * 200
-        const y = 150 + Math.floor(index / 4) * 150
-
-        canvas.addNode({
-          id: state,
-          type: 'circle',
-          position: { x, y },
-          data: {
-            label: state,
-            isInitial: index === 0, // 第一个状态为初始状态
-            isFinal: state.includes('F') || index === dfaStates.value.length - 1 // 简单的终态判断
-          }
-        })
-      })
-
-      // 添加转换边
-      let edgeCount = 0
-      conversionTable.value.forEach(row => {
-        alphabetSymbols.value.forEach(symbol => {
-          const target = row.transitions[symbol]
-          if (target && target !== '-') {
-            canvas.addEdge({
-              id: `edge-${edgeCount++}`,
-              type: 'custom',
-              source: row.state,
-              target: target,
-              data: { label: symbol },
-              markerEnd: 'url(#dfa-arrow)'
-            })
-          }
-        })
-      })
-
-      // 设置结果
-      dfaResult.value = {
-        stateCount: dfaStates.value.length,
-        transitionCount: edgeCount,
-        initialState: dfaStates.value[0] || 'S0',
-        finalStates: dfaStates.value.filter(state => state.includes('F')) || [dfaStates.value[dfaStates.value.length - 1]]
-      }
-    }
-
-  } catch (error) {
-    console.error('生成DFA失败：', error)
-  } finally {
-    isGenerating.value = false
-  }
-}
-
 // 复制DOT字符串
 const copyDotString = async () => {
   try {
@@ -672,22 +581,10 @@ const copyDotString = async () => {
   }
 }
 
-// 重置DFA
-const resetDFA = () => {
-  dfaResult.value = null
-  showDotString.value = false
-  showAnswer.value = false
-
-  if (dfaCanvasRef.value) {
-    dfaCanvasRef.value.clearCanvas()
-  }
-}
-
 // 进入下一步
 const proceedToNext = () => {
   if (isComplete.value) {
     const stepData = {
-      dfaResult: dfaResult.value,
       dfaStates: dfaStates.value,
       dfaDotString: faStore.dfaDotString,
       timestamp: new Date().toISOString()
@@ -697,7 +594,7 @@ const proceedToNext = () => {
     localStorage.setItem('fa-step4-data', JSON.stringify(stepData))
 
     // 触发下一步事件
-    document.dispatchEvent(new CustomEvent('next-step'))
+    emit('next-step')
   }
 }
 </script>
