@@ -183,10 +183,10 @@
                     class="px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
                   >
                     <Icon
-                      icon="lucide:refresh-cw"
+                      :icon="showAnswer ? 'lucide:eye-off' : 'lucide:eye'"
                       class="w-4 h-4 inline mr-2"
                     />
-                    刷新答案
+                    {{ showAnswer ? '隐藏答案' : '查看答案' }}
                   </button>
                 </div>
               </div>
@@ -198,7 +198,7 @@
                 <div class="text-center text-gray-500">
                   <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
                   <p class="text-lg font-medium">答案已隐藏</p>
-                  <p class="text-sm mt-1">完成你的绘制后点击"查看答案"按钮</p>
+                  <p class="text-sm mt-1">完成你的绘制后点击"查看答案"查看标准答案</p>
                 </div>
               </div>
 
@@ -284,6 +284,7 @@
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           ]"
+          :title="!isComplete ? '请先查看标准答案后继续' : ''"
         >
           下一步
           <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
@@ -319,7 +320,8 @@ const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩�
 
 // 状态管理
 const showDotString = ref(false)
-const showAnswer = ref(true) // 默认显示答案
+const showAnswer = ref(false) // 默认隐藏答案
+const hasRenderedAnswer = ref(false) // 记录是否已经渲染过答案
 
 // DFA 画布引用
 const dfaCanvasRef = ref<InstanceType<typeof FACanvas>>()
@@ -327,14 +329,8 @@ const answerSvgContainer = ref<HTMLElement>()
 
 // 计算属性
 const isComplete = computed(() => {
-  // 检查画布是否有内容（用户是否手动绘制了DFA）
-  if (!dfaCanvasRef.value) return false
-
-  // 检查画布中是否有节点和边
-  const hasNodes = dfaCanvasRef.value.getNodes && dfaCanvasRef.value.getNodes().length > 0
-  const hasEdges = dfaCanvasRef.value.getEdges && dfaCanvasRef.value.getEdges().length > 0
-
-  return hasNodes && hasEdges
+  // 检查用户是否已经查看过答案
+  return hasRenderedAnswer.value
 })
 
 // 从localStorage获取数据
@@ -372,13 +368,6 @@ onMounted(() => {
       totalTransitions.value = conversionTable.value.reduce((total, row) => {
         return total + Object.values(row.transitions).filter(t => t && t !== '-').length
       }, 0)
-    }
-
-    // 自动渲染答案SVG
-    if (faStore.dfaDotString && showAnswer.value) {
-      nextTick(() => {
-        renderDotToSvg()
-      })
     }
   } catch (error) {
     console.error('处理FA数据失败：', error)
@@ -487,28 +476,43 @@ const buildConversionTable = () => {
 
   console.log('Built conversion table:', newTable)
   conversionTable.value = newTable
-}// 刷新答案显示
+}
+
+// 切换答案显示/隐藏
 const toggleAnswer = async () => {
-  console.log('Refreshing answer display')
+  console.log('Toggling answer display')
 
-  // 重新从后端数据构建转换表和矩阵
-  if (faStore.hasResult()) {
-    buildConversionTable()
-    buildAnswerTransitionMatrix()
-  }
+  // 如果是要显示答案且还没有渲染过，则进行首次渲染
+  if (!showAnswer.value && !hasRenderedAnswer.value) {
+    console.log('First time viewing answer, rendering...')
 
-  // 重新渲染SVG
-  if (faStore.dfaDotString) {
-    // 等待DOM更新
-    await nextTick()
-    console.log('Re-rendering SVG on refresh')
-
-    if (answerSvgContainer.value) {
-      // 使用 viz.js 渲染 DOT 图
-      await renderDotToSvg()
-    } else {
-      console.error('answerSvgContainer ref is null after nextTick')
+    // 重新从后端数据构建转换表和矩阵（如果还没有构建过）
+    if (faStore.hasResult() && conversionTable.value.length === 0) {
+      buildConversionTable()
+      buildAnswerTransitionMatrix()
     }
+
+    // 切换显示状态
+    showAnswer.value = true
+
+    // 渲染SVG
+    if (faStore.dfaDotString) {
+      // 等待DOM更新
+      await nextTick()
+      console.log('Rendering SVG for first time')
+
+      if (answerSvgContainer.value) {
+        // 使用 viz.js 渲染 DOT 图
+        await renderDotToSvg()
+        hasRenderedAnswer.value = true // 标记已经渲染过
+      } else {
+        console.error('answerSvgContainer ref is null after nextTick')
+      }
+    }
+  } else {
+    // 后续点击只切换显示状态
+    showAnswer.value = !showAnswer.value
+    console.log('Answer visibility toggled to:', showAnswer.value)
   }
 }
 
