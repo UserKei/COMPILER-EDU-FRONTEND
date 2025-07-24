@@ -37,7 +37,7 @@
                     'px-4 py-2 rounded-lg transition-colors',
                     showAnswer
                       ? 'bg-gray-600 text-white hover:bg-gray-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-green-600 text-white hover:bg-green-700',
                   ]"
                 >
                   <Icon
@@ -78,7 +78,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -105,7 +108,7 @@ import { instance } from '@viz-js/viz'
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 使用 FA Store
@@ -141,7 +144,11 @@ onMounted(() => {
         dfaStateCount.value = Object.keys(faResult.table_to_num).length
       }
       if (faResult.table_to_num_min) {
-        const minStates = Math.max(...Object.values(faResult.table_to_num_min).map((arr: any) => Array.isArray(arr) ? arr.length : 0))
+        const minStates = Math.max(
+          ...Object.values(faResult.table_to_num_min).map((arr: any) =>
+            Array.isArray(arr) ? arr.length : 0,
+          ),
+        )
         minimizedStateCount.value = minStates
       }
     }
@@ -198,9 +205,9 @@ const complete = () => {
     regexPattern: faStore.inputRegex,
     finalResults: {
       dfaStateCount: dfaStateCount.value,
-      minimizedStateCount: minimizedStateCount.value
+      minimizedStateCount: minimizedStateCount.value,
     },
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
 
   // 保存最终数据
@@ -214,8 +221,25 @@ const complete = () => {
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #e0e7ff; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #e0e7ff;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>

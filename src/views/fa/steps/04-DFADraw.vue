@@ -26,39 +26,44 @@
               <p class="text-sm text-gray-600 mt-1">根据这些表格绘制 DFA 图</p>
             </div>
             <div class="p-6">
-              <div v-if="conversionTable.length || transitionMatrix.length" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div
+                v-if="conversionTableColumns.length || transitionMatrix.length"
+                class="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              >
                 <!-- 转换表 -->
-                <div v-if="conversionTable.length" class="conversion-table">
+                <div v-if="conversionTableColumns.length" class="conversion-table">
                   <h4 class="font-medium text-gray-800 mb-3">NFA → DFA 转换表</h4>
                   <div class="overflow-x-auto">
                     <table class="w-full border-collapse border border-gray-300 text-sm">
                       <thead>
                         <tr class="bg-green-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">新状态</th>
+                          <!-- 转换表：列标题为 I, Ia, Ib 等输入符号 -->
                           <th
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center font-semibold"
                           >
-                            {{ symbol }}
+                            {{ column }}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
+                        <!-- 每行代表一个状态集合 -->
                         <tr
-                          v-for="(row, index) in conversionTable"
-                          :key="index"
-                          :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                          v-for="(_, rowIndex) in Math.max(
+                            ...conversionTableColumns.map(
+                              (col) => conversionTable[col]?.length || 0,
+                            ),
+                          )"
+                          :key="rowIndex"
+                          :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                         >
-                          <td class="border border-gray-300 px-3 py-2 font-medium">
-                            {{ row.state }}
-                          </td>
                           <td
-                            v-for="symbol in alphabetSymbols"
-                            :key="symbol"
+                            v-for="column in conversionTableColumns"
+                            :key="column"
                             class="border border-gray-300 px-3 py-2 text-center"
                           >
-                            {{ row.transitions?.[symbol] || '-' }}
+                            {{ conversionTable[column]?.[rowIndex] || '-' }}
                           </td>
                         </tr>
                       </tbody>
@@ -73,7 +78,9 @@
                     <table class="w-full border-collapse border border-gray-300 text-sm">
                       <thead>
                         <tr class="bg-purple-50">
-                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">状态</th>
+                          <th class="border border-gray-300 px-3 py-2 text-left font-semibold">
+                            状态
+                          </th>
                           <th
                             v-for="symbol in alphabetSymbols"
                             :key="symbol"
@@ -124,16 +131,15 @@
           </div>
 
           <!-- DFA 信息面板 -->
-          <div v-if="dfaResult" class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+          <div class="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+              <Icon icon="lucide:info" class="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 class="font-medium text-orange-800">DFA 构造完成</h4>
+                <h4 class="font-medium text-orange-800">DFA 绘制区域</h4>
                 <div class="text-sm text-orange-700 mt-2 space-y-1">
-                  <p>• 状态数量: {{ dfaResult.stateCount }}</p>
-                  <p>• 转换数量: {{ dfaResult.transitionCount }}</p>
-                  <p>• 初始状态: {{ dfaResult.initialState }}</p>
-                  <p>• 接受状态: {{ dfaResult.finalStates.join(', ') }}</p>
+                  <p>• 在上方画布中手动绘制DFA</p>
+                  <p>• 根据转换表添加状态和转换</p>
+                  <p>• 完成绘制后可进入下一步</p>
                 </div>
               </div>
             </div>
@@ -149,7 +155,9 @@
                   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <p class="font-medium">正则表达式:</p>
-                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{ faStore.inputRegex }}</code>
+                      <code class="block mt-1 p-2 bg-white rounded border font-mono text-xs">{{
+                        faStore.inputRegex
+                      }}</code>
                     </div>
                     <div>
                       <p class="font-medium">DFA 状态数: {{ dfaStates.length }}</p>
@@ -180,30 +188,14 @@
                 <h3 class="font-semibold text-gray-900">标准答案</h3>
                 <div class="flex items-center gap-2">
                   <button
-                    @click="generateDFA"
-                    :disabled="isGenerating || !hasTransitionData"
-                    :class="[
-                      'px-4 py-2 rounded-lg transition-colors',
-                      (isGenerating || !hasTransitionData)
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-orange-600 text-white hover:bg-orange-700'
-                    ]"
-                  >
-                    <Icon
-                      :icon="isGenerating ? 'lucide:loader-2' : 'lucide:play'"
-                      :class="['w-4 h-4 inline mr-2', isGenerating ? 'animate-spin' : '']"
-                    />
-                    {{ isGenerating ? '生成中...' : '生成 DFA' }}
-                  </button>
-                  <button
                     @click="toggleAnswer"
                     class="px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
                   >
                     <Icon
-                      icon="lucide:refresh-cw"
+                      :icon="showAnswer ? 'lucide:eye-off' : 'lucide:eye'"
                       class="w-4 h-4 inline mr-2"
                     />
-                    刷新答案
+                    {{ showAnswer ? '隐藏答案' : '查看答案' }}
                   </button>
                 </div>
               </div>
@@ -215,7 +207,7 @@
                 <div class="text-center text-gray-500">
                   <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
                   <p class="text-lg font-medium">答案已隐藏</p>
-                  <p class="text-sm mt-1">完成你的绘制后点击"查看答案"按钮</p>
+                  <p class="text-sm mt-1">完成你的绘制后点击"查看答案"查看标准答案</p>
                 </div>
               </div>
 
@@ -233,7 +225,10 @@
                   </div>
                 </div>
 
-                <div v-if="!faStore.dfaDotString" class="h-full flex items-center justify-center text-gray-500">
+                <div
+                  v-if="!faStore.dfaDotString"
+                  class="h-full flex items-center justify-center text-gray-500"
+                >
                   <div class="text-center">
                     <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
                     <p>暂无答案数据</p>
@@ -243,9 +238,15 @@
             </div>
 
             <!-- DOT 字符串显示 -->
-            <div v-if="showAnswer && faStore.dfaDotString" class="border-t border-gray-200 bg-green-50 p-4">
+            <div
+              v-if="showAnswer && faStore.dfaDotString"
+              class="border-t border-gray-200 bg-green-50 p-4"
+            >
               <div class="flex items-start gap-3">
-                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Icon
+                  icon="lucide:check-circle"
+                  class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+                />
                 <div class="flex-1">
                   <div class="flex items-center justify-between">
                     <h4 class="font-medium text-green-800">DFA 构造分析</h4>
@@ -268,14 +269,22 @@
                     </div>
                   </div>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
-                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code></p>
+                    <p>
+                      • 正则表达式:
+                      <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code>
+                    </p>
                     <p>• DFA 构造完成</p>
                     <p>• 使用子集构造法生成</p>
                     <p>• 可进行下一步 DFA 最小化</p>
                   </div>
                   <!-- DOT 字符串显示 -->
-                  <div v-if="showDotString" class="mt-3 bg-white border border-green-200 rounded p-3">
-                    <pre class="text-xs font-mono overflow-auto max-h-32">{{ faStore.dfaDotString }}</pre>
+                  <div
+                    v-if="showDotString"
+                    class="mt-3 bg-white border border-green-200 rounded p-3"
+                  >
+                    <pre class="text-xs font-mono overflow-auto max-h-32">{{
+                      faStore.dfaDotString
+                    }}</pre>
                   </div>
                 </div>
               </div>
@@ -287,7 +296,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -299,8 +311,9 @@
             'px-6 py-2 rounded-lg transition-colors',
             isComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
+          :title="!isComplete ? '请先查看标准答案后继续' : ''"
         >
           下一步
           <Icon icon="lucide:chevron-right" class="w-4 h-4 inline ml-2" />
@@ -317,10 +330,15 @@ import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
-defineEmits<{
+// 转换表数据结构 - 按列组织（每个输入符号对应一列）
+interface ConversionTableData {
+  [inputSymbol: string]: string[] // 每个输入符号对应一列数据
+}
+
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 使用 FA Store
@@ -330,32 +348,24 @@ const faStore = useFAStore()
 const dfaStates = ref<string[]>([])
 const alphabetSymbols = ref<string[]>([])
 const totalTransitions = ref(0)
-const conversionTable = ref<any[]>([])
+const conversionTable = ref<ConversionTableData>({}) // 转换表：列布局
+const conversionTableColumns = ref<string[]>([]) // 转换表列标题 ['I', 'Ia', 'Ib']
 const transitionMatrix = ref<any[]>([])
 const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩阵
 
 // 状态管理
-const isGenerating = ref(false)
 const showDotString = ref(false)
-const showAnswer = ref(true) // 默认显示答案
-const dfaResult = ref<{
-  stateCount: number
-  transitionCount: number
-  initialState: string
-  finalStates: string[]
-} | null>(null)
+const showAnswer = ref(false) // 默认隐藏答案
+const hasRenderedAnswer = ref(false) // 记录是否已经渲染过答案
 
 // DFA 画布引用
 const dfaCanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
 // 计算属性
-const hasTransitionData = computed(() => {
-  return conversionTable.value.length > 0 && alphabetSymbols.value.length > 0
-})
-
 const isComplete = computed(() => {
-  return dfaResult.value !== null
+  // 检查用户是否已经查看过答案
+  return hasRenderedAnswer.value
 })
 
 // 从localStorage获取数据
@@ -384,22 +394,19 @@ onMounted(() => {
       // 设置DFA状态
       if (faResult.table_to_num) {
         const allStates = Object.keys(faResult.table_to_num)
-        const sKeys = allStates.filter(x => x === 'S')
-        const nonSKeys = allStates.filter(x => x !== 'S').sort()
+        const sKeys = allStates.filter((x) => x === 'S')
+        const nonSKeys = allStates.filter((x) => x !== 'S').sort()
         dfaStates.value = [...sKeys, ...nonSKeys]
       }
 
       // 计算转换数量
-      totalTransitions.value = conversionTable.value.reduce((total, row) => {
-        return total + Object.values(row.transitions).filter(t => t && t !== '-').length
+      totalTransitions.value = conversionTableColumns.value.reduce((total, column) => {
+        if (column !== 'I') {
+          const columnData = conversionTable.value[column] || []
+          return total + columnData.filter((cell) => cell && cell !== '-').length
+        }
+        return total
       }, 0)
-    }
-
-    // 自动渲染答案SVG
-    if (faStore.dfaDotString && showAnswer.value) {
-      nextTick(() => {
-        renderDotToSvg()
-      })
     }
   } catch (error) {
     console.error('处理FA数据失败：', error)
@@ -412,7 +419,7 @@ const extractAlphabetFromFAData = (data: any) => {
 
   // 从转换表中提取符号
   if (data.table) {
-    Object.keys(data.table).forEach(symbol => {
+    Object.keys(data.table).forEach((symbol) => {
       if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
         symbols.add(symbol)
       }
@@ -426,7 +433,10 @@ const extractAlphabetFromFAData = (data: any) => {
 const buildAnswerTransitionMatrix = () => {
   if (!faStore.hasResult() || !faStore.originalData?.table_to_num) return
 
-  console.log('Building answer transition matrix from backend data:', faStore.originalData.table_to_num)
+  console.log(
+    'Building answer transition matrix from backend data:',
+    faStore.originalData.table_to_num,
+  )
 
   const tableToNum = faStore.originalData.table_to_num
 
@@ -436,8 +446,8 @@ const buildAnswerTransitionMatrix = () => {
 
   // 获取所有状态名，按照旧前端的逻辑排序：先取'S'状态，然后其他状态排序
   const allStates = Object.keys(tableToNum)
-  const sKeys = allStates.filter(x => x === 'S')
-  const nonSKeys = allStates.filter(x => x !== 'S').sort()
+  const sKeys = allStates.filter((x) => x === 'S')
+  const nonSKeys = allStates.filter((x) => x !== 'S').sort()
   const stateKeys = [...sKeys, ...nonSKeys]
 
   console.log('State keys:', stateKeys)
@@ -450,7 +460,7 @@ const buildAnswerTransitionMatrix = () => {
   stateKeys.forEach((state) => {
     const row: any = {
       state: state,
-      transitions: {}
+      transitions: {},
     }
 
     // 获取该状态的转换数组
@@ -468,6 +478,48 @@ const buildAnswerTransitionMatrix = () => {
   answerTransitionMatrix.value = matrix
 }
 
+// 数据处理函数 - 转换表数据处理（列布局）
+const processTableDataToColumns = (table: any, symbols: string[]): ConversionTableData => {
+  const result: ConversionTableData = {}
+
+  if (!table) return result
+
+  // 创建列数据结构
+  const allColumns = ['I', ...symbols.map((s) => `I${s}`)]
+
+  // 初始化每列
+  allColumns.forEach((column) => {
+    result[column] = []
+  })
+
+  // 填充数据
+  const maxRows = Math.max(...symbols.map((s) => table[s]?.length || 0))
+
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+    // I 列：初始状态集合（通常基于第一个符号的数据结构）
+    if (table[symbols[0]]?.[rowIndex]) {
+      result['I'].push(`{${rowIndex}}`)
+    }
+
+    // 各符号列：I + symbol
+    symbols.forEach((symbol) => {
+      const colKey = `I${symbol}`
+      const transition = table[symbol]?.[rowIndex]
+      if (transition) {
+        if (Array.isArray(transition)) {
+          result[colKey].push(transition.join('') || '-')
+        } else {
+          result[colKey].push(transition || '-')
+        }
+      } else {
+        result[colKey].push('-')
+      }
+    })
+  }
+
+  return result
+}
+
 // 从后端数据构建转换表
 const buildConversionTable = () => {
   if (!faStore.hasResult() || !faStore.originalData?.table) return
@@ -475,61 +527,57 @@ const buildConversionTable = () => {
   console.log('Building conversion table from backend data:', faStore.originalData.table)
 
   const table = faStore.originalData.table
-  const newTable: any[] = []
 
   // 获取所有符号（过滤掉特殊符号）
-  const symbols = Object.keys(table).filter(symbol =>
-    symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
-  ).sort()
+  const symbols = Object.keys(table)
+    .filter((symbol) => symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon')
+    .sort()
 
-  // 获取状态数量（假设所有符号的转换数组长度相同）
-  const stateCount = table[symbols[0]]?.length || 0
+  // 设置列标题
+  conversionTableColumns.value = ['I', ...symbols.map((s) => `I${s}`)]
 
-  // 为每个状态创建行
-  for (let i = 0; i < stateCount; i++) {
-    const row = {
-      state: `S${i}`,
-      transitions: {} as Record<string, string>
-    }
+  // 使用与第3步相同的数据处理逻辑
+  conversionTable.value = processTableDataToColumns(table, symbols)
 
-    // 为每个符号填入转换信息
-    symbols.forEach(symbol => {
-      const transition = table[symbol][i]
-      if (Array.isArray(transition)) {
-        // 如果是数组，用空字符串连接（按旧前端的方式）
-        row.transitions[symbol] = transition.join('') || '-'
-      } else {
-        row.transitions[symbol] = transition || '-'
-      }
-    })
+  console.log('Built conversion table:', conversionTable.value)
+  console.log('Conversion table columns:', conversionTableColumns.value)
+}
 
-    newTable.push(row)
-  }
-
-  console.log('Built conversion table:', newTable)
-  conversionTable.value = newTable
-}// 刷新答案显示
+// 切换答案显示/隐藏
 const toggleAnswer = async () => {
-  console.log('Refreshing answer display')
+  console.log('Toggling answer display')
 
-  // 重新从后端数据构建转换表和矩阵
-  if (faStore.hasResult()) {
-    buildConversionTable()
-    buildAnswerTransitionMatrix()
-  }
+  // 如果是要显示答案且还没有渲染过，则进行首次渲染
+  if (!showAnswer.value && !hasRenderedAnswer.value) {
+    console.log('First time viewing answer, rendering...')
 
-  // 重新渲染SVG
-  if (faStore.dfaDotString) {
-    // 等待DOM更新
-    await nextTick()
-    console.log('Re-rendering SVG on refresh')
-
-    if (answerSvgContainer.value) {
-      // 使用 viz.js 渲染 DOT 图
-      await renderDotToSvg()
-    } else {
-      console.error('answerSvgContainer ref is null after nextTick')
+    // 重新从后端数据构建转换表和矩阵（如果还没有构建过）
+    if (faStore.hasResult() && conversionTableColumns.value.length === 0) {
+      buildConversionTable()
+      buildAnswerTransitionMatrix()
     }
+
+    // 切换显示状态
+    showAnswer.value = true
+
+    // 渲染SVG
+    if (faStore.dfaDotString) {
+      // 等待DOM更新
+      await nextTick()
+      console.log('Rendering SVG for first time')
+
+      if (answerSvgContainer.value) {
+        // 使用 viz.js 渲染 DOT 图
+        await renderDotToSvg()
+        hasRenderedAnswer.value = true // 标记已经渲染过
+      } else {
+        console.error('answerSvgContainer ref is null after nextTick')
+      }
+    }
+  } else {
+    // 后续点击只切换显示状态
+    showAnswer.value = !showAnswer.value
+    console.log('Answer visibility toggled to:', showAnswer.value)
   }
 }
 
@@ -538,7 +586,7 @@ const renderDotToSvg = async () => {
   if (!answerSvgContainer.value || !faStore.dfaDotString) {
     console.warn('renderDotToSvg: 缺少必要条件', {
       hasContainer: !!answerSvgContainer.value,
-      hasDotString: !!faStore.dfaDotString
+      hasDotString: !!faStore.dfaDotString,
     })
     return
   }
@@ -552,7 +600,8 @@ const renderDotToSvg = async () => {
     answerSvgContainer.value.innerHTML = ''
 
     // 显示加载状态
-    answerSvgContainer.value.innerHTML = '<div class="text-center text-blue-600">正在渲染图形...</div>'
+    answerSvgContainer.value.innerHTML =
+      '<div class="text-center text-blue-600">正在渲染图形...</div>'
 
     // 使用 viz.js 渲染 DOT 字符串
     console.log('正在初始化 viz.js...')
@@ -591,76 +640,6 @@ const renderDotToSvg = async () => {
   }
 }
 
-// 生成DFA
-const generateDFA = async () => {
-  if (!hasTransitionData.value || isGenerating.value) return
-
-  isGenerating.value = true
-
-  try {
-    // 清空画布
-    if (dfaCanvasRef.value) {
-      dfaCanvasRef.value.clearCanvas()
-    }
-
-    // 模拟生成过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // 使用转换表数据在画布上生成DFA
-    if (dfaCanvasRef.value && conversionTable.value.length > 0) {
-      const canvas = dfaCanvasRef.value
-
-      // 添加状态节点
-      dfaStates.value.forEach((state, index) => {
-        const x = 150 + (index % 4) * 200
-        const y = 150 + Math.floor(index / 4) * 150
-
-        canvas.addNode({
-          id: state,
-          type: 'circle',
-          position: { x, y },
-          data: {
-            label: state,
-            isInitial: index === 0, // 第一个状态为初始状态
-            isFinal: state.includes('F') || index === dfaStates.value.length - 1 // 简单的终态判断
-          }
-        })
-      })
-
-      // 添加转换边
-      let edgeCount = 0
-      conversionTable.value.forEach(row => {
-        alphabetSymbols.value.forEach(symbol => {
-          const target = row.transitions[symbol]
-          if (target && target !== '-') {
-            canvas.addEdge({
-              id: `edge-${edgeCount++}`,
-              type: 'custom',
-              source: row.state,
-              target: target,
-              data: { label: symbol },
-              markerEnd: 'url(#dfa-arrow)'
-            })
-          }
-        })
-      })
-
-      // 设置结果
-      dfaResult.value = {
-        stateCount: dfaStates.value.length,
-        transitionCount: edgeCount,
-        initialState: dfaStates.value[0] || 'S0',
-        finalStates: dfaStates.value.filter(state => state.includes('F')) || [dfaStates.value[dfaStates.value.length - 1]]
-      }
-    }
-
-  } catch (error) {
-    console.error('生成DFA失败：', error)
-  } finally {
-    isGenerating.value = false
-  }
-}
-
 // 复制DOT字符串
 const copyDotString = async () => {
   try {
@@ -672,39 +651,44 @@ const copyDotString = async () => {
   }
 }
 
-// 重置DFA
-const resetDFA = () => {
-  dfaResult.value = null
-  showDotString.value = false
-  showAnswer.value = false
-
-  if (dfaCanvasRef.value) {
-    dfaCanvasRef.value.clearCanvas()
-  }
-}
-
 // 进入下一步
 const proceedToNext = () => {
   if (isComplete.value) {
     const stepData = {
-      dfaResult: dfaResult.value,
       dfaStates: dfaStates.value,
       dfaDotString: faStore.dfaDotString,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
 
     // 保存数据
     localStorage.setItem('fa-step4-data', JSON.stringify(stepData))
 
     // 触发下一步事件
-    document.dispatchEvent(new CustomEvent('next-step'))
+    emit('next-step')
   }
 }
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #fed7aa; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #fed7aa;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>

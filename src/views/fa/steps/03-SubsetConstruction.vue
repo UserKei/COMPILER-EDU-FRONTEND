@@ -27,7 +27,10 @@
               <p class="text-sm text-gray-600 mt-1">根据此 NFA 图填写下方的转换表和状态转换矩阵</p>
             </div>
             <div class="p-6">
-              <div v-if="faStore.nfaDotString" class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
+              <div
+                v-if="faStore.nfaDotString"
+                class="nfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto"
+              >
                 <div v-html="nfaSvg" class="flex justify-center"></div>
               </div>
               <div v-else class="text-center py-8 text-gray-500">
@@ -74,7 +77,10 @@
                 </div>
 
                 <div class="p-4">
-                  <div v-if="conversionTableColumns.length === 0" class="text-center py-8 text-gray-500">
+                  <div
+                    v-if="conversionTableColumns.length === 0"
+                    class="text-center py-8 text-gray-500"
+                  >
                     <Icon icon="lucide:edit" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p>点击"添加行"开始填写转换表</p>
                   </div>
@@ -91,7 +97,9 @@
                           >
                             {{ column }}
                           </th>
-                          <th class="border border-gray-300 px-3 py-2 text-center font-semibold">操作</th>
+                          <th class="border border-gray-300 px-3 py-2 text-center font-semibold">
+                            操作
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -111,7 +119,15 @@
                               type="text"
                               placeholder="-"
                               :class="getFieldClass(rowIndex, column, 'table') + ' text-center'"
-                              @blur="() => validateField(userConversionTable[column][rowIndex], rowIndex, column, 'table')"
+                              @blur="
+                                () =>
+                                  validateField(
+                                    userConversionTable[column][rowIndex],
+                                    rowIndex,
+                                    column,
+                                    'table',
+                                  )
+                              "
                             />
                           </td>
                           <td class="border border-gray-300 px-3 py-2 text-center">
@@ -128,9 +144,15 @@
                   </div>
 
                   <!-- 转换表错误信息显示 -->
-                  <div v-if="showTableErrors && Object.keys(tableValidationErrors).length > 0" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div
+                    v-if="showTableErrors && Object.keys(tableValidationErrors).length > 0"
+                    class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg"
+                  >
                     <div class="flex items-start gap-2">
-                      <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <Icon
+                        icon="lucide:alert-circle"
+                        class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
+                      />
                       <div>
                         <h4 class="font-medium text-red-800 mb-2">转换表填写错误</h4>
                         <ul class="text-sm text-red-700 space-y-1">
@@ -160,7 +182,7 @@
                         'px-4 py-2 rounded-lg transition-colors',
                         showTableAnswer
                           ? 'bg-gray-600 text-white hover:bg-gray-700'
-                          : 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-green-600 text-white hover:bg-green-700',
                       ]"
                     >
                       <Icon
@@ -179,7 +201,10 @@
                     <p class="text-sm mt-1">完成填写后点击"查看答案"按钮</p>
                   </div>
 
-                  <div v-else-if="Object.keys(answerConversionTable).length > 0" class="overflow-x-auto">
+                  <div
+                    v-else-if="Object.keys(answerConversionTable).length > 0"
+                    class="overflow-x-auto"
+                  >
                     <table class="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr class="bg-green-50">
@@ -196,7 +221,11 @@
                       <tbody>
                         <!-- 动态行数，基于最长列的长度 -->
                         <tr
-                          v-for="(_, rowIndex) in Math.max(...conversionTableColumns.map(col => answerConversionTable[col]?.length || 0))"
+                          v-for="(_, rowIndex) in Math.max(
+                            ...conversionTableColumns.map(
+                              (col) => answerConversionTable[col]?.length || 0,
+                            ),
+                          )"
                           :key="rowIndex"
                           :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                         >
@@ -223,7 +252,7 @@
         </div>
 
         <!-- 状态转换矩阵区域 -->
-        <div class="transition-matrix-section">
+        <div class="transition-matrix-section relative">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- 左侧：用户填写状态转换矩阵 -->
             <div class="user-matrix-section">
@@ -286,8 +315,19 @@
                               v-model="userTransitionMatrix[symbol][state]"
                               type="text"
                               placeholder="-"
-                              :class="getFieldClass(index, `${symbol}-${state}`, 'matrix') + ' text-center'"
-                              @blur="() => validateField(userTransitionMatrix[symbol][state], index, `${symbol}-${state}`, 'matrix')"
+                              :class="
+                                getFieldClass(index, `${symbol}-${state}`, 'matrix') +
+                                ' text-center'
+                              "
+                              @blur="
+                                () =>
+                                  validateField(
+                                    userTransitionMatrix[symbol][state],
+                                    index,
+                                    `${symbol}-${state}`,
+                                    'matrix',
+                                  )
+                              "
                             />
                           </td>
                         </tr>
@@ -296,9 +336,15 @@
                   </div>
 
                   <!-- 矩阵错误信息显示 -->
-                  <div v-if="showMatrixErrors && Object.keys(matrixValidationErrors).length > 0" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div
+                    v-if="showMatrixErrors && Object.keys(matrixValidationErrors).length > 0"
+                    class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg"
+                  >
                     <div class="flex items-start gap-2">
-                      <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <Icon
+                        icon="lucide:alert-circle"
+                        class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
+                      />
                       <div>
                         <h4 class="font-medium text-red-800 mb-2">状态转换矩阵填写错误</h4>
                         <ul class="text-sm text-red-700 space-y-1">
@@ -328,7 +374,7 @@
                         'px-4 py-2 rounded-lg transition-colors',
                         showMatrixAnswer
                           ? 'bg-gray-600 text-white hover:bg-gray-700'
-                          : 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-green-600 text-white hover:bg-green-700',
                       ]"
                     >
                       <Icon
@@ -347,7 +393,10 @@
                     <p class="text-sm mt-1">完成填写后点击"查看答案"按钮</p>
                   </div>
 
-                  <div v-else-if="Object.keys(answerTransitionMatrix).length > 0" class="overflow-x-auto">
+                  <div
+                    v-else-if="Object.keys(answerTransitionMatrix).length > 0"
+                    class="overflow-x-auto"
+                  >
                     <table class="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr class="bg-green-50">
@@ -388,6 +437,37 @@
               </div>
             </div>
           </div>
+
+          <!-- 大毛玻璃覆盖层 - 覆盖整个状态转换矩阵区域 -->
+          <div v-if="isMatrixLocked" class="matrix-glass-overlay">
+            <div class="flex flex-col items-center justify-center h-full w-full px-8 py-12">
+              <!-- 锁图标 -->
+              <div class="flex items-center justify-center mb-8 animate-pulse">
+                <Icon icon="lucide:lock" class="w-16 h-16 text-blue-100 drop-shadow-lg" />
+              </div>
+
+              <!-- 文字内容 -->
+              <div class="text-center space-y-4 max-w-md">
+                <h3 class="text-xl font-bold text-gray-900 drop-shadow-md">需要先查看转换表答案</h3>
+                <p class="text-base text-gray-800 leading-relaxed drop-shadow-sm">
+                  请先查看上方 NFA → DFA 转换表的标准答案后再填写状态转换矩阵
+                </p>
+
+                <!-- 引导按钮 -->
+                <div class="mt-8 animate-bounce">
+                  <div
+                    class="inline-flex items-center px-5 py-3 bg-blue-600/90 hover:bg-blue-700/90 rounded-xl shadow-lg backdrop-blur-sm border border-blue-400/30 transition-all duration-300 cursor-pointer group"
+                  >
+                    <Icon
+                      icon="lucide:arrow-up"
+                      class="w-5 h-5 text-white mr-2 group-hover:animate-pulse"
+                    />
+                    <span class="text-white font-medium text-sm">点击上方转换表"查看答案"按钮</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 填写提示 -->
@@ -420,9 +500,7 @@
           上一步
         </button>
 
-        <div class="text-sm text-gray-500">
-          步骤 3 / 6
-        </div>
+        <div class="text-sm text-gray-500">步骤 3 / 6</div>
 
         <button
           @click="proceedToNext"
@@ -431,7 +509,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             constructionComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
           :title="!constructionComplete ? '请完成填写并查看任一标准答案后继续' : ''"
         >
@@ -457,12 +535,12 @@ interface TableRow {
 
 // 新的转换表结构 - 按列组织（每列一个输入符号）
 interface ConversionTableData {
-  [inputSymbol: string]: string[]  // 每个输入符号对应一列数据
+  [inputSymbol: string]: string[] // 每个输入符号对应一列数据
 }
 
 // 新的状态转换矩阵结构 - 按行组织（每行一个输入符号）
 interface TransitionMatrixData {
-  [inputSymbol: string]: Record<string, string>  // 每个输入符号对应一行的状态转换
+  [inputSymbol: string]: Record<string, string> // 每个输入符号对应一行的状态转换
 }
 
 type TableType = 'table' | 'matrix'
@@ -470,7 +548,7 @@ type TableType = 'table' | 'matrix'
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 使用 FA Store
@@ -480,8 +558,8 @@ const faStore = useFAStore()
 const nfaSvg = ref('')
 
 // 用户填写的表格 - 新的数据结构
-const userConversionTable = ref<ConversionTableData>({})  // 转换表：列布局
-const userTransitionMatrix = ref<TransitionMatrixData>({})  // 状态转换矩阵：行布局
+const userConversionTable = ref<ConversionTableData>({}) // 转换表：列布局
+const userTransitionMatrix = ref<TransitionMatrixData>({}) // 状态转换矩阵：行布局
 
 // 答案数据 - 新的数据结构
 const answerConversionTable = ref<ConversionTableData>({})
@@ -492,13 +570,13 @@ const showTableAnswer = ref(false)
 const showMatrixAnswer = ref(false)
 
 // 字母表符号和状态信息
-const alphabetSymbols = ref<string[]>([])  // 输入符号 ['a', 'b']
-const conversionTableColumns = ref<string[]>([])  // 转换表列标题 ['I', 'Ia', 'Ib']
-const matrixStateColumns = ref<string[]>([])  // 矩阵状态列 ['S', 'a', 'b']
+const alphabetSymbols = ref<string[]>([]) // 输入符号 ['a', 'b']
+const conversionTableColumns = ref<string[]>([]) // 转换表列标题 ['I', 'Ia', 'Ib']
+const matrixStateColumns = ref<string[]>([]) // 矩阵状态列 ['S', 'a', 'b']
 const dfaStates = ref<string[]>([])
 
 // 表格行数控制
-const conversionTableRowCount = ref(0)  // 转换表的行数（动态调整）
+const conversionTableRowCount = ref(0) // 转换表的行数（动态调整）
 
 // 验证状态管理
 const tableValidationErrors = ref<Record<string, string[]>>({}) // 每个字段的错误信息
@@ -510,12 +588,12 @@ const showMatrixErrors = ref(false) // 是否显示矩阵错误
 
 // 计算属性
 const constructionComplete = computed(() => {
-  const hasTableContent = conversionTableRowCount.value > 0 &&
-                          conversionTableColumns.value.length > 0
-  const hasMatrixContent = alphabetSymbols.value.length > 0 &&
-                          matrixStateColumns.value.length > 0
-  const hasNoErrors = Object.keys(tableValidationErrors.value).length === 0 &&
-                     Object.keys(matrixValidationErrors.value).length === 0
+  const hasTableContent =
+    conversionTableRowCount.value > 0 && conversionTableColumns.value.length > 0
+  const hasMatrixContent = alphabetSymbols.value.length > 0 && matrixStateColumns.value.length > 0
+  const hasNoErrors =
+    Object.keys(tableValidationErrors.value).length === 0 &&
+    Object.keys(matrixValidationErrors.value).length === 0
   // 至少查看过一个答案
   const hasViewedAnyAnswer = showTableAnswer.value || showMatrixAnswer.value
   // return hasTableContent && hasMatrixContent && hasNoErrors && hasViewedAnyAnswer
@@ -524,18 +602,23 @@ const constructionComplete = computed(() => {
 
 const totalTransitions = computed(() => {
   let total = 0
-  conversionTableColumns.value.forEach(column => {
+  conversionTableColumns.value.forEach((column) => {
     const columnData = answerConversionTable.value[column] || []
-    total += columnData.filter(cell => cell && cell !== '-').length
+    total += columnData.filter((cell) => cell && cell !== '-').length
   })
   return total
+})
+
+// 矩阵锁定状态：只有查看了转换表答案后才能操作矩阵
+const isMatrixLocked = computed(() => {
+  return !showTableAnswer.value
 })
 
 // 新的表格操作函数
 const addTableRow = () => {
   conversionTableRowCount.value++
   // 确保每列都有足够的数据
-  conversionTableColumns.value.forEach(column => {
+  conversionTableColumns.value.forEach((column) => {
     if (!userConversionTable.value[column]) {
       userConversionTable.value[column] = []
     }
@@ -550,7 +633,7 @@ const removeTableRow = (rowIndex: number) => {
   if (conversionTableRowCount.value > 0) {
     conversionTableRowCount.value--
     // 从每列中删除指定行
-    conversionTableColumns.value.forEach(column => {
+    conversionTableColumns.value.forEach((column) => {
       if (userConversionTable.value[column]) {
         userConversionTable.value[column].splice(rowIndex, 1)
       }
@@ -569,9 +652,9 @@ const clearUserTable = () => {
 // 矩阵操作函数 - 矩阵是固定结构，不需要添加/删除行
 const clearUserMatrix = () => {
   // 重新初始化矩阵数据
-  alphabetSymbols.value.forEach(symbol => {
+  alphabetSymbols.value.forEach((symbol) => {
     userTransitionMatrix.value[symbol] = {}
-    matrixStateColumns.value.forEach(state => {
+    matrixStateColumns.value.forEach((state) => {
       userTransitionMatrix.value[symbol][state] = ''
     })
   })
@@ -583,18 +666,18 @@ const clearUserMatrix = () => {
 // 初始化数据结构
 const initializeDataStructures = () => {
   // 初始化转换表数据结构
-  conversionTableColumns.value.forEach(column => {
+  conversionTableColumns.value.forEach((column) => {
     if (!userConversionTable.value[column]) {
       userConversionTable.value[column] = []
     }
   })
 
   // 初始化矩阵数据结构
-  alphabetSymbols.value.forEach(symbol => {
+  alphabetSymbols.value.forEach((symbol) => {
     if (!userTransitionMatrix.value[symbol]) {
       userTransitionMatrix.value[symbol] = {}
     }
-    matrixStateColumns.value.forEach(state => {
+    matrixStateColumns.value.forEach((state) => {
       if (!userTransitionMatrix.value[symbol][state]) {
         userTransitionMatrix.value[symbol][state] = ''
       }
@@ -603,7 +686,12 @@ const initializeDataStructures = () => {
 }
 
 // 验证功能
-const validateField = (value: string | undefined, rowIndex: number, field: string, tableType: 'table' | 'matrix') => {
+const validateField = (
+  value: string | undefined,
+  rowIndex: number,
+  field: string,
+  tableType: 'table' | 'matrix',
+) => {
   const fieldKey = `${tableType}-${rowIndex}-${field}`
   const errors: string[] = []
 
@@ -673,7 +761,11 @@ const validateField = (value: string | undefined, rowIndex: number, field: strin
 }
 
 // 验证状态来源合法性 - 更新为新数据结构
-const validateStateSource = (stateName: string, currentRowIndex: number, tableType: 'table' | 'matrix'): boolean => {
+const validateStateSource = (
+  stateName: string,
+  currentRowIndex: number,
+  tableType: 'table' | 'matrix',
+): boolean => {
   // 第一行的状态（通常是初始状态）总是合法的
   if (currentRowIndex === 0) return true
 
@@ -696,7 +788,12 @@ const validateStateSource = (stateName: string, currentRowIndex: number, tableTy
 }
 
 // 验证转换正确性 - 更新为新数据结构
-const validateTransition = (rowIndex: number, field: string, userValue: string, tableType: 'table' | 'matrix'): boolean => {
+const validateTransition = (
+  rowIndex: number,
+  field: string,
+  userValue: string,
+  tableType: 'table' | 'matrix',
+): boolean => {
   if (tableType === 'table') {
     // 转换表验证：根据列名找到对应的答案数据
     const answerColumn = answerConversionTable.value[field]
@@ -722,7 +819,7 @@ const validateTable = (tableType: 'table' | 'matrix') => {
   if (tableType === 'table') {
     // 验证转换表
     for (let rowIndex = 0; rowIndex < conversionTableRowCount.value; rowIndex++) {
-      conversionTableColumns.value.forEach(column => {
+      conversionTableColumns.value.forEach((column) => {
         const value = userConversionTable.value[column]?.[rowIndex] || ''
         validateField(value, rowIndex, column, tableType)
       })
@@ -730,7 +827,7 @@ const validateTable = (tableType: 'table' | 'matrix') => {
   } else {
     // 验证矩阵
     alphabetSymbols.value.forEach((symbol, symbolIndex) => {
-      matrixStateColumns.value.forEach(state => {
+      matrixStateColumns.value.forEach((state) => {
         const value = userTransitionMatrix.value[symbol]?.[state] || ''
         validateField(value, symbolIndex, `${symbol}-${state}`, tableType)
       })
@@ -808,7 +905,7 @@ const extractAlphabetFromFAData = (data: any) => {
 
   // 从转换表中提取符号
   if (data.table) {
-    Object.keys(data.table).forEach(symbol => {
+    Object.keys(data.table).forEach((symbol) => {
       if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
         symbols.add(symbol)
       }
@@ -825,15 +922,15 @@ const processTableDataToColumns = (table: any, symbols: string[]): ConversionTab
   if (!table) return result
 
   // 创建列数据结构
-  const allColumns = ['I', ...symbols.map(s => `I${s}`)]
+  const allColumns = ['I', ...symbols.map((s) => `I${s}`)]
 
   // 初始化每列
-  allColumns.forEach(column => {
+  allColumns.forEach((column) => {
     result[column] = []
   })
 
   // 填充数据
-  const maxRows = Math.max(...symbols.map(s => table[s]?.length || 0))
+  const maxRows = Math.max(...symbols.map((s) => table[s]?.length || 0))
 
   for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
     // I 列：初始状态集合（通常基于第一个符号的数据结构）
@@ -842,7 +939,7 @@ const processTableDataToColumns = (table: any, symbols: string[]): ConversionTab
     }
 
     // 各符号列：I + symbol
-    symbols.forEach(symbol => {
+    symbols.forEach((symbol) => {
       const colKey = `I${symbol}`
       const transition = table[symbol]?.[rowIndex]
       if (transition) {
@@ -868,14 +965,14 @@ const processMatrixDataToRows = (tableToNum: any, symbols: string[]): Transition
 
   // 获取所有状态
   const allStates = Object.keys(tableToNum)
-  const sKeys = allStates.filter(x => x === 'S')
-  const nonSKeys = allStates.filter(x => x !== 'S').sort()
+  const sKeys = allStates.filter((x) => x === 'S')
+  const nonSKeys = allStates.filter((x) => x !== 'S').sort()
   const stateKeys = [...sKeys, ...nonSKeys]
 
   // 为每个输入符号创建一行
-  symbols.forEach(symbol => {
+  symbols.forEach((symbol) => {
     result[symbol] = {}
-    stateKeys.forEach(state => {
+    stateKeys.forEach((state) => {
       const stateTransitions = tableToNum[state] || []
       const symbolIndex = symbols.indexOf(symbol)
       result[symbol][state] = stateTransitions[symbolIndex] || '-'
@@ -887,9 +984,9 @@ const processMatrixDataToRows = (tableToNum: any, symbols: string[]): Transition
 
 // 生成答案数据（更新为新数据结构）
 const generateAnswerData = (data: any) => {
-  const symbols = Object.keys(data.table || {}).filter(symbol =>
-    symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon'
-  ).sort()
+  const symbols = Object.keys(data.table || {})
+    .filter((symbol) => symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon')
+    .sort()
 
   // 生成转换表答案（列布局）
   answerConversionTable.value = processTableDataToColumns(data.table, symbols)
@@ -898,13 +995,13 @@ const generateAnswerData = (data: any) => {
   answerTransitionMatrix.value = processMatrixDataToRows(data.table_to_num, symbols)
 
   // 设置列信息
-  conversionTableColumns.value = ['I', ...symbols.map(s => `I${s}`)]
+  conversionTableColumns.value = ['I', ...symbols.map((s) => `I${s}`)]
 
   // 设置矩阵状态列
   if (data.table_to_num) {
     const allStates = Object.keys(data.table_to_num)
-    const sKeys = allStates.filter(x => x === 'S')
-    const nonSKeys = allStates.filter(x => x !== 'S').sort()
+    const sKeys = allStates.filter((x) => x === 'S')
+    const nonSKeys = allStates.filter((x) => x !== 'S').sort()
     matrixStateColumns.value = [...sKeys, ...nonSKeys]
   }
 
@@ -934,7 +1031,7 @@ const proceedToNext = () => {
       totalTransitions: totalTransitions.value,
       userConversionTable: userConversionTable.value,
       userTransitionMatrix: userTransitionMatrix.value,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
 
     localStorage.setItem('fa-step3-data', JSON.stringify(stepData))
@@ -990,5 +1087,41 @@ onMounted(() => {
   padding: 1rem 2rem 2rem;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
+}
+
+/* 大毛玻璃覆盖层样式 */
+.matrix-glass-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px) saturate(150%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0.7) 100%
+  );
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: glassAppear 0.3s ease-out;
+}
+
+@keyframes glassAppear {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px) saturate(100%);
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(12px) saturate(150%);
+    transform: scale(1);
+  }
 }
 </style>

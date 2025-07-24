@@ -23,9 +23,7 @@
 
             <!-- 输入框 -->
             <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                正则表达式
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"> 正则表达式 </label>
               <input
                 v-model="faStore.inputRegex"
                 type="text"
@@ -37,9 +35,7 @@
 
             <!-- 快速示例 -->
             <div class="mb-6">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                快速示例
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"> 快速示例 </label>
               <div class="flex flex-wrap gap-2">
                 <button
                   v-for="example in examples"
@@ -79,7 +75,9 @@
               <div
                 :class="[
                   'p-3 rounded-lg',
-                  validationResult.valid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                  validationResult.valid
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-red-50 border border-red-200',
                 ]"
               >
                 <div class="flex items-start gap-2">
@@ -87,14 +85,14 @@
                     :icon="validationResult.valid ? 'lucide:check-circle' : 'lucide:alert-circle'"
                     :class="[
                       'w-5 h-5 flex-shrink-0 mt-0.5',
-                      validationResult.valid ? 'text-green-600' : 'text-red-600'
+                      validationResult.valid ? 'text-green-600' : 'text-red-600',
                     ]"
                   />
                   <div>
                     <p
                       :class="[
                         'font-medium',
-                        validationResult.valid ? 'text-green-800' : 'text-red-800'
+                        validationResult.valid ? 'text-green-800' : 'text-red-800',
                       ]"
                     >
                       {{ validationResult.valid ? '正则表达式有效' : '正则表达式无效' }}
@@ -102,7 +100,7 @@
                     <p
                       :class="[
                         'text-sm mt-1',
-                        validationResult.valid ? 'text-green-600' : 'text-red-600'
+                        validationResult.valid ? 'text-green-600' : 'text-red-600',
                       ]"
                     >
                       {{ validationResult.message }}
@@ -129,18 +127,24 @@
                 </div>
                 <div class="flex items-start gap-3">
                   <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">|</code>
-                  <span class="text-gray-700">或运算符，用于表示多个选择。例如：a|b 表示匹配 a 或 b</span>
+                  <span class="text-gray-700"
+                    >或运算符，用于表示多个选择。例如：a|b 表示匹配 a 或 b</span
+                  >
                 </div>
                 <div class="flex items-start gap-3">
                   <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">*</code>
-                  <span class="text-gray-700">闭包运算符，表示前面的元素可以出现0次或多次。例如：a* 表示可以匹配0个或多个 a</span>
+                  <span class="text-gray-700"
+                    >闭包运算符，表示前面的元素可以出现0次或多次。例如：a* 表示可以匹配0个或多个
+                    a</span
+                  >
                 </div>
                 <div class="flex items-start gap-3">
                   <code class="px-2 py-1 bg-white rounded text-blue-600 font-mono">()</code>
                   <span class="text-gray-700">辅助括号，用来改变运算优先级。例如：(a|b)•c</span>
                 </div>
                 <div class="text-gray-600 text-xs mt-2">
-                  <strong>运算优先级：</strong>括号内的表达式 > 闭包运算符 * > 连接运算符 • > 或运算符 |
+                  <strong>运算优先级：</strong>括号内的表达式 > 闭包运算符 * > 连接运算符 • >
+                  或运算符 |
                 </div>
               </div>
             </div>
@@ -149,8 +153,13 @@
             <div class="mb-6">
               <h4 class="font-medium text-gray-900 mb-3">2. 字符规定</h4>
               <div class="space-y-2 text-sm ml-4">
-                <div class="text-gray-700">• 可输入字母、数字、标点符等ASCII表中编号范围为32-126的可显示字符</div>
-                <div class="text-gray-700">• 以及特殊字符 <code class="px-1 bg-white rounded text-blue-600 font-mono">ε</code></div>
+                <div class="text-gray-700">
+                  • 可输入字母、数字、标点符等ASCII表中编号范围为32-126的可显示字符
+                </div>
+                <div class="text-gray-700">
+                  • 以及特殊字符
+                  <code class="px-1 bg-white rounded text-blue-600 font-mono">ε</code>
+                </div>
                 <div class="text-gray-700">• 输入的空格不会被视为有效字符参与正则表达式匹配</div>
               </div>
             </div>
@@ -158,9 +167,7 @@
             <!-- 注意事项 -->
             <div>
               <h4 class="font-medium text-gray-900 mb-3">3. 注意事项</h4>
-              <div class="text-sm text-gray-700 ml-4">
-                • 请在英文键盘下输入正则表达式
-              </div>
+              <div class="text-sm text-gray-700 ml-4">• 请在英文键盘下输入正则表达式</div>
             </div>
 
             <!-- 示例 -->
@@ -184,7 +191,10 @@
           </div>
 
           <!-- 当前输入预览 -->
-          <div v-if="faStore.inputRegex" class="mt-6 bg-white border border-gray-200 rounded-lg p-6">
+          <div
+            v-if="faStore.inputRegex"
+            class="mt-6 bg-white border border-gray-200 rounded-lg p-6"
+          >
             <h3 class="text-lg font-semibold text-gray-900 mb-4">当前输入</h3>
             <div class="font-mono text-lg bg-gray-100 p-3 rounded border">
               {{ faStore.inputRegex }}
@@ -214,9 +224,7 @@
           上一步
         </button>
 
-        <div class="text-sm text-gray-500">
-          步骤 1 / 6
-        </div>
+        <div class="text-sm text-gray-500">步骤 1 / 6</div>
 
         <button
           @click="proceedToNext"
@@ -225,7 +233,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isValidAndReady
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -244,7 +252,7 @@ import { useFAStore, useCommonStore } from '@/stores'
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 使用 Pinia stores
@@ -263,7 +271,7 @@ const examples = [
   { pattern: '(a|b)*a(a|b)', description: '倒数第二个字符是 a' },
   { pattern: '(0|1)*101', description: '二进制数以 101 结尾' },
   { pattern: 'ab*c', description: 'a 后跟零个或多个 b 再跟 c' },
-  { pattern: 'a(a|b)*', description: 'a 开头后跟任意 a 或 b' }
+  { pattern: 'a(a|b)*', description: 'a 开头后跟任意 a 或 b' },
 ]
 
 // 解析信息
@@ -288,7 +296,7 @@ const parsedInfo = computed(() => {
   return {
     charCount,
     operatorCount,
-    nestingDepth: maxDepth
+    nestingDepth: maxDepth,
   }
 })
 
@@ -302,7 +310,7 @@ const validateRegex = async () => {
   if (!faStore.inputRegex.trim()) {
     validationResult.value = {
       valid: false,
-      message: '请输入正则表达式'
+      message: '请输入正则表达式',
     }
     return
   }
@@ -310,15 +318,15 @@ const validateRegex = async () => {
   // 基本语法检查
   try {
     // 关键修改：像旧代码一样处理空格，只消除空格但不消除换行
-    const pattern = faStore.inputRegex.replace(/ +/g, "")
+    const pattern = faStore.inputRegex.replace(/ +/g, '')
 
-    console.log("经过处理后的输入Regex：", pattern) // 调试用
+    console.log('经过处理后的输入Regex：', pattern) // 调试用
 
     // 检查是否包含中文
     if (/[\u4e00-\u9fa5]/.test(pattern)) {
       validationResult.value = {
         valid: false,
-        message: '输入不能包含中文字符'
+        message: '输入不能包含中文字符',
       }
       return
     }
@@ -329,7 +337,7 @@ const validateRegex = async () => {
       if (char !== 'ε' && (charCode < 32 || charCode > 126)) {
         validationResult.value = {
           valid: false,
-          message: `字符 "${char}" 不在允许范围内。只能输入ASCII字符(32-126)和特殊字符ε`
+          message: `字符 "${char}" 不在允许范围内。只能输入ASCII字符(32-126)和特殊字符ε`,
         }
         return
       }
@@ -370,19 +378,18 @@ const validateRegex = async () => {
     if (success) {
       validationResult.value = {
         valid: true,
-        message: '正则表达式验证成功，已生成 NFA/DFA'
+        message: '正则表达式验证成功，已生成 NFA/DFA',
       }
     } else {
       validationResult.value = {
         valid: false,
-        message: commonStore.error || '分析失败'
+        message: commonStore.error || '分析失败',
       }
     }
-
   } catch (error) {
     validationResult.value = {
       valid: false,
-      message: error instanceof Error ? error.message : '未知错误'
+      message: error instanceof Error ? error.message : '未知错误',
     }
   }
 }
@@ -403,7 +410,7 @@ const proceedToNext = () => {
     parsedInfo: parsedInfo.value,
     faResult: faStore.originalData,
     validationData: faStore.validationData,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
 
   console.log('Step 1 completed with data:', stepData)
@@ -414,13 +421,16 @@ const proceedToNext = () => {
 }
 
 // 监听输入变化，自动验证
-watch(() => faStore.inputRegex, (newValue) => {
-  if (newValue && validationResult.value) {
-    // 清空之前的验证结果，用户修改时重新验证
-    validationResult.value = null
-    faStore.clearAnalysis()
-  }
-})
+watch(
+  () => faStore.inputRegex,
+  (newValue) => {
+    if (newValue && validationResult.value) {
+      // 清空之前的验证结果，用户修改时重新验证
+      validationResult.value = null
+      faStore.clearAnalysis()
+    }
+  },
+)
 </script>
 
 <style scoped>
@@ -457,7 +467,8 @@ input:focus {
 
 /* 代码样式 */
 code {
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family:
+    'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
 }
 
 /* 动画效果 */

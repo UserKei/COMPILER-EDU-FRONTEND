@@ -13,170 +13,366 @@
     </div>
 
     <div class="step-content">
-      <div class="instruction">
-        <div class="info space-y-2 text-sm text-gray-600">
-          <p>根据上述绘制的DFA，将其状态子集最小化，并重新命名状态子集序号，填写状态转换矩阵，可使用"空格"作为输入的间隔符（也可以不输入间隔符）</p>
-          <p>化简DFA状态子集---参考输入：123、3 1（可乱序，可接受空格分隔符）</p>
-          <p>状态转换矩阵---参考输入：1、2、3</p>
+      <!-- DFA 参考图 -->
+      <div class="dfa-reference mb-6">
+        <div class="bg-white border border-gray-200 rounded-lg">
+          <div class="border-b border-gray-200 p-4">
+            <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+              <Icon icon="lucide:share-2" class="w-5 h-5 text-orange-600" />
+              DFA 图（参考）
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">根据此 DFA 图进行最小化操作</p>
+          </div>
+          <div class="p-6">
+            <div v-if="dfaSvg" class="dfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
+              <div v-html="dfaSvg" class="flex justify-center"></div>
+            </div>
+            <div v-else class="text-center py-8 text-gray-500">
+              <Icon icon="lucide:image-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p>暂无 DFA 图数据</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-        <!-- 左侧：化简DFA状态子集 -->
-        <div class="minimization-process">
-          <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">化简DFA状态子集</h3>
+      <div class="grid grid-cols-1 gap-8 mt-6">
+        <!-- A区域：化简DFA状态子集 -->
+        <div class="minimization-sets-section">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左侧：用户填写 -->
+            <div class="user-sets-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <h3 class="font-semibold text-gray-900">化简DFA状态子集（用户填写）</h3>
+                </div>
+                <div class="p-6">
+                  <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
+                    请将状态集
+                    {{
+                      faStore.originalData?.table_to_num_min?.['S']?.join(', ') ||
+                      Array.from({ length: originalStateCount }, (_, i) => i).join(', ')
+                    }}
+                    最小化
+                  </p>
+                  <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
 
-            <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
-              请将状态集 {{ Array.from({length: originalStateCount}, (_, i) => i).join(', ') }} 最小化
-            </p>
-            <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
+                  <!-- P集合输入 -->
+                  <div class="space-y-3 mt-4">
+                    <div v-for="(pItem, index) in localPSets" :key="pItem.id" class="space-y-1">
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model="pItem.text"
+                          :class="[
+                            'flex-1 px-3 py-2 border rounded text-sm',
+                            pItem.check === 'isCorrect'
+                              ? 'bg-green-50 border-green-300'
+                              : pItem.check === 'isError'
+                                ? 'bg-red-50 border-red-300'
+                                : pItem.check === 'empty'
+                                  ? 'bg-yellow-50 border-yellow-300'
+                                  : 'bg-white border-gray-300',
+                          ]"
+                          :disabled="pItem.category === 'onlyRead' || step6Open"
+                          @focus="handlePSetFocus(pItem)"
+                          @input="handlePSetInput(pItem)"
+                          placeholder="输入状态子集，如：123"
+                        />
+                        <button
+                          v-if="!step6Open && localPSets.length > 1"
+                          @click="removePSet(index)"
+                          class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Icon icon="lucide:x" class="w-4 h-4" />
+                        </button>
+                        <button
+                          v-if="!step6Open"
+                          @click="addPSet(index)"
+                          class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
+                        >
+                          <Icon icon="lucide:plus" class="w-4 h-4" />
+                        </button>
+                        <div v-if="step6Open" class="text-sm text-gray-500">=> {{ index }}</div>
+                      </div>
+                      <!-- P集合状态提示 -->
+                      <div v-if="pItem.check === 'empty'" class="text-xs text-yellow-600 ml-2">
+                        请输入状态子集
+                      </div>
+                      <div v-else-if="pItem.check === 'isError'" class="text-xs text-red-600 ml-2">
+                        答案不正确
+                      </div>
+                      <div
+                        v-else-if="pItem.check === 'isCorrect'"
+                        class="text-xs text-green-600 ml-2"
+                      >
+                        ✓ 正确
+                      </div>
+                    </div>
+                  </div>
 
-            <!-- P集合输入 -->
-            <div class="space-y-3 mt-4">
-              <div
-                v-for="(pItem, index) in localPSets"
-                :key="pItem.id"
-                class="flex items-center gap-2"
-              >
-                <input
-                  v-model="pItem.text"
-                  :class="[
-                    'flex-1 px-3 py-2 border rounded text-sm',
-                    pItem.check === 'isCorrect' ? 'bg-green-50 border-green-300' :
-                    pItem.check === 'isError' ? 'bg-red-50 border-red-300' :
-                    'bg-white border-gray-300'
-                  ]"
-                  :disabled="pItem.category === 'onlyRead' || step6Open"
-                  @focus="handlePSetFocus(pItem)"
-                  placeholder="输入状态子集，如：123"
-                />
-                <button
-                  v-if="!step6Open && localPSets.length > 1"
-                  @click="removePSet(index)"
-                  class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
-                >
-                  <Icon icon="lucide:x" class="w-4 h-4" />
-                </button>
-                <button
-                  v-if="!step6Open"
-                  @click="addPSet(index)"
-                  class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
-                >
-                  <Icon icon="lucide:plus" class="w-4 h-4" />
-                </button>
-                <div v-if="step6Open" class="text-sm text-gray-500">
-                  => {{ index }}
+                  <div class="mt-6">
+                    <button
+                      @click="validatePSets"
+                      :disabled="step6Open"
+                      :class="[
+                        'px-4 py-2 rounded-lg transition-colors',
+                        step6Open
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700',
+                      ]"
+                    >
+                      校验
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="mt-6">
-              <button
-                @click="validatePSets"
-                :disabled="step6Open"
-                :class="[
-                  'px-4 py-2 rounded-lg transition-colors',
-                  step6Open
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                ]"
-              >
-                校验
-              </button>
+            <!-- 右侧：答案区域 -->
+            <div class="answer-sets-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">标准答案</h3>
+                    <button
+                      @click="toggleSetsAnswer"
+                      :class="[
+                        'px-3 py-1 text-sm rounded-lg transition-colors',
+                        showSetsAnswer
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                      ]"
+                    >
+                      {{ showSetsAnswer ? '隐藏答案' : '查看答案' }}
+                    </button>
+                  </div>
+                </div>
+                <div class="p-6">
+                  <div v-if="showSetsAnswer && faStore.originalData?.P" class="space-y-3">
+                    <div
+                      v-for="(pSet, index) in faStore.originalData.P"
+                      :key="index"
+                      class="flex items-center gap-2"
+                    >
+                      <div
+                        class="flex-1 px-3 py-2 bg-green-50 border border-green-300 rounded text-sm"
+                      >
+                        {{ pSet.join('') }}
+                      </div>
+                      <div class="text-sm text-gray-500">=> {{ index }}</div>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>点击"查看答案"按钮显示标准答案</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 右侧：状态转换矩阵 -->
-        <div class="minimization-info">
-          <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">状态转换矩阵</h3>
+        <!-- B区域：状态转换矩阵 -->
+        <div class="transition-matrix-section relative">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左侧：用户填写 -->
+            <div class="user-matrix-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <h3 class="font-semibold text-gray-900">状态转换矩阵（用户填写）</h3>
+                </div>
+                <div class="p-6">
+                  <div v-if="step6Open && minimizedMatrix.length">
+                    <!-- 转换矩阵表格 -->
+                    <div class="overflow-x-auto">
+                      <table class="w-full border-collapse border border-gray-300 text-sm">
+                        <thead>
+                          <tr class="bg-red-50">
+                            <th class="border border-gray-300 px-3 py-2 font-semibold">S</th>
+                            <th
+                              v-for="symbol in alphabetSymbols"
+                              :key="symbol"
+                              class="border border-gray-300 px-3 py-2 font-semibold"
+                            >
+                              I{{ symbol }}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="(_, rowIndex) in Array(originalStateCount)"
+                            :key="rowIndex"
+                            :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-red-50'"
+                          >
+                            <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
+                              {{
+                                faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ||
+                                rowIndex
+                              }}
+                            </td>
+                            <td
+                              v-for="(symbol, colIndex) in alphabetSymbols"
+                              :key="symbol"
+                              :class="[
+                                'border border-gray-300 px-3 py-2 text-center',
+                                getMatrixCell(rowIndex, colIndex)?.check === 'isCorrect'
+                                  ? 'bg-green-50'
+                                  : getMatrixCell(rowIndex, colIndex)?.check === 'isError'
+                                    ? 'bg-red-50'
+                                    : getMatrixCell(rowIndex, colIndex)?.check === 'empty'
+                                      ? 'bg-yellow-50'
+                                      : '',
+                              ]"
+                            >
+                              <input
+                                v-if="getMatrixCell(rowIndex, colIndex)?.category !== 'onlyRead'"
+                                v-model="getMatrixCell(rowIndex, colIndex)!.value"
+                                :class="[
+                                  'w-full text-center border-none bg-transparent text-sm',
+                                  'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded',
+                                ]"
+                                :disabled="step7Open"
+                                @focus="handleMatrixCellFocus(getMatrixCell(rowIndex, colIndex)!)"
+                                @input="handleMatrixCellInput(getMatrixCell(rowIndex, colIndex)!)"
+                                placeholder="-"
+                              />
+                              <span v-else class="text-gray-600">{{
+                                getMatrixCell(rowIndex, colIndex)?.value
+                              }}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
 
-            <div v-if="step6Open && minimizedMatrix.length">
-              <!-- 转换矩阵表格 -->
-              <div class="overflow-x-auto">
-                <table class="w-full border-collapse border border-gray-300 text-sm">
-                  <thead>
-                    <tr class="bg-red-50">
-                      <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
-                      <th
-                        v-for="symbol in alphabetSymbols"
-                        :key="symbol"
-                        class="border border-gray-300 px-3 py-2 font-semibold"
-                      >
-                        {{ symbol }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="row in Math.max(...Object.values(faStore.originalData?.table_to_num_min || {}).map((arr: any) => Array.isArray(arr) ? arr.length : 0))"
-                      :key="row - 1"
-                      :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
-                    >
-                      <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
-                        {{ row - 1 }}
-                      </td>
-                      <td
-                        v-for="(symbol, colIndex) in alphabetSymbols"
-                        :key="symbol"
+                    <div class="mt-4">
+                      <button
+                        @click="validateMatrix"
+                        :disabled="step7Open"
                         :class="[
-                          'border border-gray-300 px-3 py-2 text-center',
-                          getMatrixCell(row - 1, colIndex)?.check === 'isCorrect' ? 'bg-green-50' :
-                          getMatrixCell(row - 1, colIndex)?.check === 'isError' ? 'bg-red-50' : ''
+                          'px-4 py-2 rounded-lg transition-colors',
+                          step7Open
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700',
                         ]"
                       >
-                        <input
-                          v-if="getMatrixCell(row - 1, colIndex)?.category !== 'onlyRead'"
-                          v-model="getMatrixCell(row - 1, colIndex)!.value"
-                          :class="[
-                            'w-full text-center border-none bg-transparent text-sm',
-                            'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded'
-                          ]"
-                          :disabled="step7Open"
-                          @focus="handleMatrixCellFocus(getMatrixCell(row - 1, colIndex)!)"
-                          placeholder="-"
-                        />
-                        <span v-else class="text-gray-600">{{ getMatrixCell(row - 1, colIndex)?.value }}</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                        校验
+                      </button>
+                    </div>
+                  </div>
 
-              <div class="mt-4">
-                <button
-                  @click="validateMatrix"
-                  :disabled="step7Open"
-                  :class="[
-                    'px-4 py-2 rounded-lg transition-colors',
-                    step7Open
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  ]"
-                >
-                  校验
-                </button>
+                  <div v-else class="text-center text-gray-500 py-8">
+                    <p>请先完成左侧化简DFA状态子集的填写</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div v-else class="text-center text-gray-500 py-8">
-              <p>请先完成左侧化简DFA状态子集的填写</p>
+            <!-- 右侧：答案区域 -->
+            <div class="answer-matrix-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">标准答案</h3>
+                    <button
+                      @click="toggleMatrixAnswerStep5"
+                      :class="[
+                        'px-3 py-1 text-sm rounded-lg transition-colors',
+                        showMatrixAnswerStep5
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                      ]"
+                    >
+                      {{ showMatrixAnswerStep5 ? '隐藏答案' : '查看答案' }}
+                    </button>
+                  </div>
+                </div>
+                <div class="p-6">
+                  <div
+                    v-if="
+                      showMatrixAnswerStep5 &&
+                      faStore.originalData?.table_to_num_min &&
+                      alphabetSymbols.length
+                    "
+                  >
+                    <!-- 答案矩阵表格 -->
+                    <div class="overflow-x-auto">
+                      <table class="w-full border-collapse border border-gray-300 text-sm">
+                        <thead>
+                          <tr class="bg-green-50">
+                            <th class="border border-gray-300 px-3 py-2 font-semibold">S</th>
+                            <th
+                              v-for="symbol in alphabetSymbols"
+                              :key="symbol"
+                              class="border border-gray-300 px-3 py-2 font-semibold"
+                            >
+                              I{{ symbol }}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="(_, rowIndex) in Array(originalStateCount)"
+                            :key="rowIndex"
+                            :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                          >
+                            <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
+                              {{
+                                faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ||
+                                rowIndex
+                              }}
+                            </td>
+                            <td
+                              v-for="symbol in alphabetSymbols"
+                              :key="symbol"
+                              class="border border-gray-300 px-3 py-2 text-center bg-green-50"
+                            >
+                              {{ faStore.originalData.table_to_num_min[symbol]?.[rowIndex] || '-' }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>点击"查看答案"按钮显示标准答案</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 最小化完成信息 -->
-          <div v-if="isComplete" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
-                <div class="text-sm text-green-700 mt-2 space-y-1">
-                  <p>• 原始状态数: {{ originalStateCount }}</p>
-                  <p>• 最小化状态数: {{ localPSets.length }}</p>
-                  <p>• 减少了 {{ reductionPercentage }}% 的状态</p>
-                </div>
+          <!-- 毛玻璃锁定层 -->
+          <div
+            v-if="isMatrixLocked"
+            class="absolute inset-0 z-50 backdrop-blur-xl backdrop-saturate-150 bg-gradient-to-br from-white/85 via-white/75 to-white/70 rounded-lg border border-white/50 flex items-center justify-center animate-in fade-in duration-300"
+          >
+            <div class="flex flex-col items-center justify-center h-full w-full px-8 py-12">
+              <div class="flex items-center justify-center mb-8 animate-pulse">
+                <Icon icon="lucide:lock" class="w-16 h-16 text-blue-100 drop-shadow-lg" />
+              </div>
+              <div class="text-center space-y-4 max-w-md">
+                <h3 class="text-xl font-bold text-gray-900 drop-shadow-md">
+                  需要先查看状态子集答案
+                </h3>
+                <p class="text-base text-gray-800 leading-relaxed drop-shadow-sm">
+                  请先查看上方化简DFA状态子集的标准答案后再填写状态转换矩阵
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最小化完成信息 -->
+        <div v-if="isComplete" class="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
+              <div class="text-sm text-green-700 mt-2 space-y-1">
+                <p>• 最小化状态数: {{ originalStateCount }}</p>
+                <p>• 状态分区数: {{ localPSets.length }}</p>
+                <p>• 状态转换矩阵已完成</p>
               </div>
             </div>
           </div>
@@ -186,7 +382,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -198,7 +397,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -213,12 +412,33 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useFAStore } from '@/stores'
+import { instance } from '@viz-js/viz'
 
-defineEmits<{
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
+
+// 检验状态枚举
+enum ValidationState {
+  EMPTY = 'empty', // 未键入内容
+  NORMAL = 'normal', // 正常状态（有内容但未检验）
+  CORRECT = 'isCorrect', // 答案正确
+  ERROR = 'isError', // 答案错误
+}
+
+// 防抖延迟时间
+const DEBOUNCE_DELAY = 800
+
+// 防抖函数
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: number
+  return (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(null, args), delay)
+  }
+}
 
 // 数据类型定义
 interface PSetItem {
@@ -244,20 +464,27 @@ const faStore = useFAStore()
 
 // 本地状态
 const alphabetSymbols = ref<string[]>([])
-const originalStateCount = ref(0)
+const originalStateCount = ref(0) // 最小化后的状态数量
+const dfaSvg = ref('')
 
 // 状态管理
 const step6Open = ref(false) // P集合校验完成
 const step7Open = ref(false) // 矩阵校验完成
 
+// 答案显示状态
+const showSetsAnswer = ref(false) // A区域答案显示
+const showMatrixAnswerStep5 = ref(false) // B区域答案显示
+
 // P集合相关
-const localPSets = ref<PSetItem[]>([{
-  id: "localp_list0",
-  category: "blank",
-  state: "normal",
-  check: "normal",
-  text: ""
-}])
+const localPSets = ref<PSetItem[]>([
+  {
+    id: 'localp_list0',
+    category: 'blank',
+    state: 'normal',
+    check: ValidationState.EMPTY,
+    text: '',
+  },
+])
 let localPSetsCnt = 1
 
 // 矩阵相关
@@ -265,7 +492,7 @@ const minimizedMatrix = ref<MatrixCell[]>([])
 const tableView = {
   cellWidth: 80,
   cellHeight: 40,
-  gap: 10
+  gap: 10,
 }
 
 // 计算属性
@@ -275,8 +502,39 @@ const isComplete = computed(() => {
 
 const reductionPercentage = computed(() => {
   if (originalStateCount.value === 0) return 0
-  return ((originalStateCount.value - localPSets.value.length) / originalStateCount.value * 100).toFixed(1)
+  return (
+    ((originalStateCount.value - localPSets.value.length) / originalStateCount.value) *
+    100
+  ).toFixed(1)
 })
+
+// 锁定逻辑：只有查看了A区域答案才能操作B区域
+const isMatrixLocked = computed(() => {
+  return !showSetsAnswer.value
+})
+
+// 答案显示控制函数
+const toggleSetsAnswer = () => {
+  showSetsAnswer.value = !showSetsAnswer.value
+}
+
+const toggleMatrixAnswerStep5 = () => {
+  showMatrixAnswerStep5.value = !showMatrixAnswerStep5.value
+}
+
+// DFA SVG渲染函数
+const renderDFASvg = async () => {
+  if (faStore.originalData?.DFA_dot_str) {
+    try {
+      const viz = await instance()
+      const svg = viz.renderSVGElement(faStore.originalData.DFA_dot_str)
+      dfaSvg.value = svg.outerHTML
+    } catch (error) {
+      console.error('渲染 DFA SVG 失败：', error)
+      dfaSvg.value = ''
+    }
+  }
+}
 
 // 从localStorage获取数据
 onMounted(() => {
@@ -290,22 +548,38 @@ onMounted(() => {
     const faResult = faStore.originalData
     if (faResult) {
       console.log('Step 5 loaded data from store')
+      console.log('Step 5 - P data structure:', faResult.P)
+      console.log('Step 5 - table_to_num_min:', faResult.table_to_num_min)
 
-      // 从后端数据中提取状态数量
-      if (faResult.table_to_num) {
-        const allStates = Object.keys(faResult.table_to_num)
-        originalStateCount.value = allStates.length
+      // 详细打印最小化转换表数据
+      if (faResult.table_to_num_min) {
+        console.log('=== 最小化转换表详细数据 ===')
+        Object.entries(faResult.table_to_num_min).forEach(([symbol, transitions]) => {
+          console.log(`Symbol ${symbol}:`, transitions)
+        })
       }
 
-      // 从后端数据中提取字母表符号
-      if (faResult.table) {
+      // 渲染DFA SVG
+      renderDFASvg()
+
+      // 统一使用最小化DFA数据
+      if (faResult.table_to_num_min) {
+        // 获取最小化后的状态数量
+        const sColumn = faResult.table_to_num_min['S']
+        if (Array.isArray(sColumn)) {
+          originalStateCount.value = sColumn.length
+          console.log('Step 5 - State count from table_to_num_min:', originalStateCount.value)
+        }
+
+        // 从最小化数据中提取字母表符号
         const symbols = new Set<string>()
-        Object.keys(faResult.table).forEach(symbol => {
-          if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
+        Object.keys(faResult.table_to_num_min).forEach((symbol) => {
+          if (symbol !== 'S') {
             symbols.add(symbol)
           }
         })
         alphabetSymbols.value = Array.from(symbols).sort()
+        console.log('Step 5 - Alphabet symbols:', alphabetSymbols.value)
       }
     }
   } catch (error) {
@@ -315,9 +589,41 @@ onMounted(() => {
 
 // P集合相关方法
 const handlePSetFocus = (pItem: PSetItem) => {
-  if (pItem.check === 'isCorrect') return
-  pItem.check = 'normal'
+  if (pItem.check === ValidationState.ERROR) {
+    pItem.check = pItem.text.trim() ? ValidationState.NORMAL : ValidationState.EMPTY
+  }
 }
+
+// P集合输入处理：实时状态更新 + 防抖检验
+const handlePSetInput = (pItem: PSetItem) => {
+  if (step6Open.value) return
+
+  const inputText = pItem.text.trim()
+  pItem.check = inputText ? ValidationState.NORMAL : ValidationState.EMPTY
+
+  // 防抖检验
+  debouncedValidateSinglePSet(pItem)
+}
+
+// 单个P集合检验逻辑
+const validateSinglePSet = (pItem: PSetItem) => {
+  if (!faStore.originalData?.P || step6Open.value) return
+
+  const inputText = pItem.text.trim()
+
+  if (!inputText) {
+    pItem.check = ValidationState.EMPTY
+    return
+  }
+
+  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
+  const answerItem = answerList.find((answer: string) => areCharacterSetsEqual(answer, inputText))
+
+  pItem.check = answerItem ? ValidationState.CORRECT : ValidationState.ERROR
+}
+
+// 创建防抖版本
+const debouncedValidateSinglePSet = debounce(validateSinglePSet, DEBOUNCE_DELAY)
 
 const removePSet = (index: number) => {
   if (step6Open.value || localPSets.value.length <= 1) return
@@ -327,11 +633,11 @@ const removePSet = (index: number) => {
 const addPSet = (index: number) => {
   if (step6Open.value) return
   localPSets.value.splice(index + 1, 0, {
-    id: "localp_list" + (++localPSetsCnt),
-    category: "blank",
-    state: "normal",
-    check: "normal",
-    text: ""
+    id: 'localp_list' + ++localPSetsCnt,
+    category: 'blank',
+    state: 'normal',
+    check: ValidationState.EMPTY,
+    text: '',
   })
 }
 
@@ -358,7 +664,7 @@ const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
 
   for (const item of inputList) {
     const itemText = item.text.replace(/\s+/g, '')
-    const answerItem = answerList.find(answer => areCharacterSetsEqual(answer, itemText))
+    const answerItem = answerList.find((answer) => areCharacterSetsEqual(answer, itemText))
 
     if (answerItem) {
       item.check = 'isCorrect'
@@ -368,34 +674,32 @@ const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
     }
   }
 
-  return answerSet.size === 0 && inputList.every(item => item.check === 'isCorrect')
+  return answerSet.size === 0 && inputList.every((item) => item.check === 'isCorrect')
 }
 
 // 校验P集合
 const validatePSets = () => {
   if (step6Open.value || !faStore.originalData?.P) return
 
-  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
+  let hasEmpty = false
+  let hasError = false
 
+  // 检验所有P集合项
+  localPSets.value.forEach((item) => {
+    validateSinglePSet(item)
+    if (item.check === ValidationState.EMPTY) hasEmpty = true
+    if (item.check === ValidationState.ERROR) hasError = true
+  })
+
+  // 如果有空项或错误项，不进入下一阶段
+  if (hasEmpty || hasError) return
+
+  // 检查是否所有答案都正确且完整匹配
+  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
   if (matchPSetsValue(answerList, localPSets.value)) {
     step6Open.value = true
     initMinimizedMatrix()
     // success message
-  } else {
-    // 显示错误或自动展示答案的逻辑
-    // 这里可以添加重试次数限制
-    localPSets.value = []
-    answerList.forEach((answer: string, index: number) => {
-      localPSets.value.push({
-        id: "localp_list" + (++localPSetsCnt),
-        category: "blank",
-        state: "normal",
-        check: "isCorrect",
-        text: answer
-      })
-    })
-    step6Open.value = true
-    initMinimizedMatrix()
   }
 }
 
@@ -404,28 +708,28 @@ const initMinimizedMatrix = () => {
   if (!faStore.originalData?.table_to_num_min) return
 
   const tableToNumMin = faStore.originalData.table_to_num_min
-  const symbols = alphabetSymbols.value
-  const rowCount = Math.max(...Object.values(tableToNumMin).map((arr: any) => Array.isArray(arr) ? arr.length : 0))
+  const symbols = alphabetSymbols.value // 已排除S列
+  const rowCount = originalStateCount.value
+
+  console.log('initMinimizedMatrix - rowCount:', rowCount)
+  console.log('initMinimizedMatrix - symbols:', symbols)
 
   minimizedMatrix.value = []
 
-  // 创建矩阵单元格
+  // 创建矩阵单元格（不包含S列）
   for (let row = 0; row < rowCount; row++) {
     for (let col = 0; col < symbols.length; col++) {
       const symbol = symbols[col]
       const cellId = `${row} ${symbol}`
 
-      // 获取第一列（S列）的正确答案
-      const sColumnAnswer = tableToNumMin['S']?.[row] || ''
-
       minimizedMatrix.value.push({
         id: cellId,
-        category: col === 0 ? "onlyRead" : "blank",
-        check: col === 0 ? "isCorrect" : "normal",
-        value: col === 0 ? sColumnAnswer : "",
+        category: 'blank', // 所有输入符号列都可以填写
+        check: ValidationState.EMPTY,
+        value: '',
         rowIndex: row,
         colIndex: col,
-        isRowHeader: false
+        isRowHeader: false,
       })
     }
   }
@@ -433,52 +737,69 @@ const initMinimizedMatrix = () => {
 
 // 矩阵单元格焦点处理
 const handleMatrixCellFocus = (cell: MatrixCell) => {
-  if (cell.check === 'isCorrect') return
-  cell.check = 'normal'
+  if (cell.check === ValidationState.ERROR) {
+    cell.check = cell.value.trim() ? ValidationState.NORMAL : ValidationState.EMPTY
+  }
 }
+
+// 矩阵单元格输入处理
+const handleMatrixCellInput = (cell: MatrixCell) => {
+  if (step7Open.value) return
+
+  const inputValue = cell.value.trim()
+  cell.check = inputValue ? ValidationState.NORMAL : ValidationState.EMPTY
+
+  debouncedValidateSingleMatrixCell(cell)
+}
+
+// 单个矩阵单元格检验
+const validateSingleMatrixCell = (cell: MatrixCell) => {
+  if (!faStore.originalData?.table_to_num_min || step7Open.value) return
+
+  const inputValue = cell.value.trim()
+
+  if (!inputValue) {
+    cell.check = ValidationState.EMPTY
+    return
+  }
+
+  const tableToNumMin = faStore.originalData.table_to_num_min
+  const symbol = alphabetSymbols.value[cell.colIndex]
+  const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
+
+  cell.check = inputValue === correctAnswer ? ValidationState.CORRECT : ValidationState.ERROR
+}
+
+// 创建防抖版本
+const debouncedValidateSingleMatrixCell = debounce(validateSingleMatrixCell, DEBOUNCE_DELAY)
 
 // 获取矩阵单元格
 const getMatrixCell = (row: number, col: number): MatrixCell | undefined => {
-  return minimizedMatrix.value.find(cell => cell.rowIndex === row && cell.colIndex === col)
+  return minimizedMatrix.value.find((cell) => cell.rowIndex === row && cell.colIndex === col)
 }
 
 // 校验矩阵
 const validateMatrix = () => {
   if (step7Open.value || !faStore.originalData?.table_to_num_min) return
 
-  let isAllCorrect = true
-  const tableToNumMin = faStore.originalData.table_to_num_min
+  let hasEmpty = false
+  let hasError = false
 
-  for (const cell of minimizedMatrix.value) {
-    if (cell.category === 'onlyRead' || cell.check === 'isCorrect') continue
+  // 检验所有矩阵单元格
+  minimizedMatrix.value.forEach((cell) => {
+    if (cell.category === 'onlyRead') return
 
-    const symbol = alphabetSymbols.value[cell.colIndex]
-    const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
+    validateSingleMatrixCell(cell)
+    if (cell.check === ValidationState.EMPTY) hasEmpty = true
+    if (cell.check === ValidationState.ERROR) hasError = true
+  })
 
-    if (cell.value.replace(/\s+/g, '') === correctAnswer) {
-      cell.check = 'isCorrect'
-    } else {
-      cell.check = 'isError'
-      isAllCorrect = false
-    }
-  }
+  // 如果有空项或错误项，不进入下一阶段
+  if (hasEmpty || hasError) return
 
-  if (isAllCorrect) {
-    step7Open.value = true
-    // success message
-  } else {
-    // 显示错误或自动展示答案
-    for (const cell of minimizedMatrix.value) {
-      if (cell.category === "onlyRead" || cell.check === 'isCorrect') continue
-
-      const symbol = alphabetSymbols.value[cell.colIndex]
-      const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
-
-      cell.value = correctAnswer
-      cell.check = 'isCorrect'
-    }
-    step7Open.value = true
-  }
+  // 所有答案都正确，进入下一阶段
+  step7Open.value = true
+  // success message
 }
 
 // 进入下一步
@@ -489,21 +810,38 @@ const proceedToNext = () => {
       minimizedMatrix: minimizedMatrix.value,
       step6Open: step6Open.value,
       step7Open: step7Open.value,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
 
     // 保存数据
     localStorage.setItem('fa-step5-data', JSON.stringify(stepData))
 
     // 触发下一步事件
-    document.dispatchEvent(new CustomEvent('next-step'))
+    emit('next-step')
   }
 }
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #fecaca; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #fecaca;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>

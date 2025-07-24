@@ -9,7 +9,9 @@
           </div>
           <div>
             <h2 class="text-2xl font-bold text-gray-900">构造 NFA (Thompson 构造法)</h2>
-            <p class="text-gray-600 mt-1">第二步：使用 Thompson 构造法将正则表达式转换为非确定有限自动机</p>
+            <p class="text-gray-600 mt-1">
+              第二步：使用 Thompson 构造法将正则表达式转换为非确定有限自动机
+            </p>
           </div>
         </div>
         <div class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded">
@@ -26,11 +28,7 @@
           <div class="bg-white border border-gray-200 rounded-lg">
             <!-- 用户画布 -->
             <div class="h-[700px] p-4">
-              <FACanvas
-                ref="userCanvasRef"
-                mode="nfa"
-                :readonly="false"
-              />
+              <FACanvas ref="userCanvasRef" mode="nfa" :readonly="false" />
             </div>
           </div>
 
@@ -64,7 +62,7 @@
                     'px-4 py-2 rounded-lg transition-colors',
                     showAnswer
                       ? 'bg-gray-600 text-white hover:bg-gray-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-green-600 text-white hover:bg-green-700',
                   ]"
                 >
                   <Icon
@@ -99,11 +97,17 @@
             <!-- 答案分析 -->
             <div v-if="showAnswer && hasNFAData" class="border-t border-gray-200 bg-green-50 p-4">
               <div class="flex items-start gap-3">
-                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Icon
+                  icon="lucide:check-circle"
+                  class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+                />
                 <div>
                   <h4 class="font-medium text-green-800">NFA 构造分析</h4>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
-                    <p>• 正则表达式: <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code></p>
+                    <p>
+                      • 正则表达式:
+                      <code class="font-mono bg-white px-1 rounded">{{ faStore.inputRegex }}</code>
+                    </p>
                     <p>• NFA 构造完成</p>
                     <p>• 使用 Thompson 构造法生成</p>
                     <p>• 可进行下一步 NFA → DFA 转换</p>
@@ -127,9 +131,7 @@
           上一步
         </button>
 
-        <div class="text-sm text-gray-500">
-          步骤 2 / 6
-        </div>
+        <div class="text-sm text-gray-500">步骤 2 / 6</div>
 
         <button
           @click="proceedToNext"
@@ -138,7 +140,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isConstructionComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -159,7 +161,7 @@ import { instance } from '@viz-js/viz'
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 使用 FA Store
@@ -177,7 +179,9 @@ const hasNFAData = computed(() => faStore.hasResult())
 
 // 是否构造完成（用户查看答案后就可以进行下一步）
 const isConstructionComplete = computed(() => {
-  return showAnswer.value || (userCanvasRef.value?.getNodes && userCanvasRef.value.getNodes().length > 0)
+  return (
+    showAnswer.value || (userCanvasRef.value?.getNodes && userCanvasRef.value.getNodes().length > 0)
+  )
 })
 
 // 组件初始化
@@ -227,10 +231,10 @@ const proceedToNext = () => {
     nfa: {
       userDraw: {
         nodes: userCanvasRef.value?.getNodes() || [],
-        edges: userCanvasRef.value?.getEdges() || []
+        edges: userCanvasRef.value?.getEdges() || [],
       },
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   }
 
   emit('complete', stepData)
