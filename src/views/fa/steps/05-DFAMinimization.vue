@@ -58,40 +58,54 @@
 
                   <!-- P集合输入 -->
                   <div class="space-y-3 mt-4">
-                    <div
-                      v-for="(pItem, index) in localPSets"
-                      :key="pItem.id"
-                      class="flex items-center gap-2"
-                    >
-                      <input
-                        v-model="pItem.text"
-                        :class="[
-                          'flex-1 px-3 py-2 border rounded text-sm',
-                          pItem.check === 'isCorrect'
-                            ? 'bg-green-50 border-green-300'
-                            : pItem.check === 'isError'
-                              ? 'bg-red-50 border-red-300'
-                              : 'bg-white border-gray-300',
-                        ]"
-                        :disabled="pItem.category === 'onlyRead' || step6Open"
-                        @focus="handlePSetFocus(pItem)"
-                        placeholder="输入状态子集，如：123"
-                      />
-                      <button
-                        v-if="!step6Open && localPSets.length > 1"
-                        @click="removePSet(index)"
-                        class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
+                    <div v-for="(pItem, index) in localPSets" :key="pItem.id" class="space-y-1">
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model="pItem.text"
+                          :class="[
+                            'flex-1 px-3 py-2 border rounded text-sm',
+                            pItem.check === 'isCorrect'
+                              ? 'bg-green-50 border-green-300'
+                              : pItem.check === 'isError'
+                                ? 'bg-red-50 border-red-300'
+                                : pItem.check === 'empty'
+                                  ? 'bg-yellow-50 border-yellow-300'
+                                  : 'bg-white border-gray-300',
+                          ]"
+                          :disabled="pItem.category === 'onlyRead' || step6Open"
+                          @focus="handlePSetFocus(pItem)"
+                          @input="handlePSetInput(pItem)"
+                          placeholder="输入状态子集，如：123"
+                        />
+                        <button
+                          v-if="!step6Open && localPSets.length > 1"
+                          @click="removePSet(index)"
+                          class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Icon icon="lucide:x" class="w-4 h-4" />
+                        </button>
+                        <button
+                          v-if="!step6Open"
+                          @click="addPSet(index)"
+                          class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
+                        >
+                          <Icon icon="lucide:plus" class="w-4 h-4" />
+                        </button>
+                        <div v-if="step6Open" class="text-sm text-gray-500">=> {{ index }}</div>
+                      </div>
+                      <!-- P集合状态提示 -->
+                      <div v-if="pItem.check === 'empty'" class="text-xs text-yellow-600 ml-2">
+                        请输入状态子集
+                      </div>
+                      <div v-else-if="pItem.check === 'isError'" class="text-xs text-red-600 ml-2">
+                        答案不正确
+                      </div>
+                      <div
+                        v-else-if="pItem.check === 'isCorrect'"
+                        class="text-xs text-green-600 ml-2"
                       >
-                        <Icon icon="lucide:x" class="w-4 h-4" />
-                      </button>
-                      <button
-                        v-if="!step6Open"
-                        @click="addPSet(index)"
-                        class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
-                      >
-                        <Icon icon="lucide:plus" class="w-4 h-4" />
-                      </button>
-                      <div v-if="step6Open" class="text-sm text-gray-500">=> {{ index }}</div>
+                        ✓ 正确
+                      </div>
                     </div>
                   </div>
 
@@ -204,7 +218,9 @@
                                   ? 'bg-green-50'
                                   : getMatrixCell(rowIndex, colIndex)?.check === 'isError'
                                     ? 'bg-red-50'
-                                    : '',
+                                    : getMatrixCell(rowIndex, colIndex)?.check === 'empty'
+                                      ? 'bg-yellow-50'
+                                      : '',
                               ]"
                             >
                               <input
@@ -216,6 +232,7 @@
                                 ]"
                                 :disabled="step7Open"
                                 @focus="handleMatrixCellFocus(getMatrixCell(rowIndex, colIndex)!)"
+                                @input="handleMatrixCellInput(getMatrixCell(rowIndex, colIndex)!)"
                                 placeholder="-"
                               />
                               <span v-else class="text-gray-600">{{
@@ -403,6 +420,26 @@ const emit = defineEmits<{
   complete: [data: any]
 }>()
 
+// 检验状态枚举
+enum ValidationState {
+  EMPTY = 'empty', // 未键入内容
+  NORMAL = 'normal', // 正常状态（有内容但未检验）
+  CORRECT = 'isCorrect', // 答案正确
+  ERROR = 'isError', // 答案错误
+}
+
+// 防抖延迟时间
+const DEBOUNCE_DELAY = 800
+
+// 防抖函数
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: number
+  return (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(null, args), delay)
+  }
+}
+
 // 数据类型定义
 interface PSetItem {
   id: string
@@ -444,7 +481,7 @@ const localPSets = ref<PSetItem[]>([
     id: 'localp_list0',
     category: 'blank',
     state: 'normal',
-    check: 'normal',
+    check: ValidationState.EMPTY,
     text: '',
   },
 ])
@@ -552,9 +589,41 @@ onMounted(() => {
 
 // P集合相关方法
 const handlePSetFocus = (pItem: PSetItem) => {
-  if (pItem.check === 'isCorrect') return
-  pItem.check = 'normal'
+  if (pItem.check === ValidationState.ERROR) {
+    pItem.check = pItem.text.trim() ? ValidationState.NORMAL : ValidationState.EMPTY
+  }
 }
+
+// P集合输入处理：实时状态更新 + 防抖检验
+const handlePSetInput = (pItem: PSetItem) => {
+  if (step6Open.value) return
+
+  const inputText = pItem.text.trim()
+  pItem.check = inputText ? ValidationState.NORMAL : ValidationState.EMPTY
+
+  // 防抖检验
+  debouncedValidateSinglePSet(pItem)
+}
+
+// 单个P集合检验逻辑
+const validateSinglePSet = (pItem: PSetItem) => {
+  if (!faStore.originalData?.P || step6Open.value) return
+
+  const inputText = pItem.text.trim()
+
+  if (!inputText) {
+    pItem.check = ValidationState.EMPTY
+    return
+  }
+
+  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
+  const answerItem = answerList.find((answer: string) => areCharacterSetsEqual(answer, inputText))
+
+  pItem.check = answerItem ? ValidationState.CORRECT : ValidationState.ERROR
+}
+
+// 创建防抖版本
+const debouncedValidateSinglePSet = debounce(validateSinglePSet, DEBOUNCE_DELAY)
 
 const removePSet = (index: number) => {
   if (step6Open.value || localPSets.value.length <= 1) return
@@ -567,7 +636,7 @@ const addPSet = (index: number) => {
     id: 'localp_list' + ++localPSetsCnt,
     category: 'blank',
     state: 'normal',
-    check: 'normal',
+    check: ValidationState.EMPTY,
     text: '',
   })
 }
@@ -612,27 +681,25 @@ const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
 const validatePSets = () => {
   if (step6Open.value || !faStore.originalData?.P) return
 
-  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
+  let hasEmpty = false
+  let hasError = false
 
+  // 检验所有P集合项
+  localPSets.value.forEach((item) => {
+    validateSinglePSet(item)
+    if (item.check === ValidationState.EMPTY) hasEmpty = true
+    if (item.check === ValidationState.ERROR) hasError = true
+  })
+
+  // 如果有空项或错误项，不进入下一阶段
+  if (hasEmpty || hasError) return
+
+  // 检查是否所有答案都正确且完整匹配
+  const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
   if (matchPSetsValue(answerList, localPSets.value)) {
     step6Open.value = true
     initMinimizedMatrix()
     // success message
-  } else {
-    // 显示错误或自动展示答案的逻辑
-    // 这里可以添加重试次数限制
-    localPSets.value = []
-    answerList.forEach((answer: string, index: number) => {
-      localPSets.value.push({
-        id: 'localp_list' + ++localPSetsCnt,
-        category: 'blank',
-        state: 'normal',
-        check: 'isCorrect',
-        text: answer,
-      })
-    })
-    step6Open.value = true
-    initMinimizedMatrix()
   }
 }
 
@@ -658,7 +725,7 @@ const initMinimizedMatrix = () => {
       minimizedMatrix.value.push({
         id: cellId,
         category: 'blank', // 所有输入符号列都可以填写
-        check: 'normal',
+        check: ValidationState.EMPTY,
         value: '',
         rowIndex: row,
         colIndex: col,
@@ -670,9 +737,41 @@ const initMinimizedMatrix = () => {
 
 // 矩阵单元格焦点处理
 const handleMatrixCellFocus = (cell: MatrixCell) => {
-  if (cell.check === 'isCorrect') return
-  cell.check = 'normal'
+  if (cell.check === ValidationState.ERROR) {
+    cell.check = cell.value.trim() ? ValidationState.NORMAL : ValidationState.EMPTY
+  }
 }
+
+// 矩阵单元格输入处理
+const handleMatrixCellInput = (cell: MatrixCell) => {
+  if (step7Open.value) return
+
+  const inputValue = cell.value.trim()
+  cell.check = inputValue ? ValidationState.NORMAL : ValidationState.EMPTY
+
+  debouncedValidateSingleMatrixCell(cell)
+}
+
+// 单个矩阵单元格检验
+const validateSingleMatrixCell = (cell: MatrixCell) => {
+  if (!faStore.originalData?.table_to_num_min || step7Open.value) return
+
+  const inputValue = cell.value.trim()
+
+  if (!inputValue) {
+    cell.check = ValidationState.EMPTY
+    return
+  }
+
+  const tableToNumMin = faStore.originalData.table_to_num_min
+  const symbol = alphabetSymbols.value[cell.colIndex]
+  const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
+
+  cell.check = inputValue === correctAnswer ? ValidationState.CORRECT : ValidationState.ERROR
+}
+
+// 创建防抖版本
+const debouncedValidateSingleMatrixCell = debounce(validateSingleMatrixCell, DEBOUNCE_DELAY)
 
 // 获取矩阵单元格
 const getMatrixCell = (row: number, col: number): MatrixCell | undefined => {
@@ -683,39 +782,24 @@ const getMatrixCell = (row: number, col: number): MatrixCell | undefined => {
 const validateMatrix = () => {
   if (step7Open.value || !faStore.originalData?.table_to_num_min) return
 
-  let isAllCorrect = true
-  const tableToNumMin = faStore.originalData.table_to_num_min
+  let hasEmpty = false
+  let hasError = false
 
-  for (const cell of minimizedMatrix.value) {
-    if (cell.category === 'onlyRead' || cell.check === 'isCorrect') continue
+  // 检验所有矩阵单元格
+  minimizedMatrix.value.forEach((cell) => {
+    if (cell.category === 'onlyRead') return
 
-    const symbol = alphabetSymbols.value[cell.colIndex]
-    const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
+    validateSingleMatrixCell(cell)
+    if (cell.check === ValidationState.EMPTY) hasEmpty = true
+    if (cell.check === ValidationState.ERROR) hasError = true
+  })
 
-    if (cell.value.replace(/\s+/g, '') === correctAnswer) {
-      cell.check = 'isCorrect'
-    } else {
-      cell.check = 'isError'
-      isAllCorrect = false
-    }
-  }
+  // 如果有空项或错误项，不进入下一阶段
+  if (hasEmpty || hasError) return
 
-  if (isAllCorrect) {
-    step7Open.value = true
-    // success message
-  } else {
-    // 显示错误或自动展示答案
-    for (const cell of minimizedMatrix.value) {
-      if (cell.category === 'onlyRead' || cell.check === 'isCorrect') continue
-
-      const symbol = alphabetSymbols.value[cell.colIndex]
-      const correctAnswer = tableToNumMin[symbol]?.[cell.rowIndex] || ''
-
-      cell.value = correctAnswer
-      cell.check = 'isCorrect'
-    }
-    step7Open.value = true
-  }
+  // 所有答案都正确，进入下一阶段
+  step7Open.value = true
+  // success message
 }
 
 // 进入下一步
