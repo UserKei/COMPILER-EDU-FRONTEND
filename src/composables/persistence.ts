@@ -388,6 +388,42 @@ export function useHistory<T extends StoreData>(options: {
   }
 
   /**
+   * 提取响应式对象的纯数据
+   */
+  const extractPlainData = (data: any): any => {
+    if (data === null || data === undefined) return data
+
+    // 如果是Vue响应式对象（ref），提取其值
+    if (data && typeof data === 'object' && 'value' in data) {
+      return extractPlainData(data.value)
+    }
+
+    // 如果是数组
+    if (Array.isArray(data)) {
+      return data.map((item) => extractPlainData(item))
+    }
+
+    // 如果是普通对象
+    if (typeof data === 'object') {
+      const plain: any = {}
+      for (const [key, value] of Object.entries(data)) {
+        // 跳过函数、Symbol和Vue内部属性
+        if (
+          !key.startsWith('_') &&
+          !key.startsWith('$') &&
+          typeof value !== 'function' &&
+          typeof value !== 'symbol'
+        ) {
+          plain[key] = extractPlainData(value)
+        }
+      }
+      return plain
+    }
+
+    return data
+  }
+
+  /**
    * 添加到历史记录
    */
   const addToHistory = (description?: string): void => {
@@ -396,10 +432,13 @@ export function useHistory<T extends StoreData>(options: {
     try {
       const history = persistenceManager.load<HistoryItem[]>(storageKey) || []
 
+      // 提取纯数据，避免循环引用
+      const plainData = extractPlainData(store)
+
       const newItem: HistoryItem = {
         id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         timestamp: Date.now(),
-        data: { ...store },
+        data: plainData,
         description,
       }
 

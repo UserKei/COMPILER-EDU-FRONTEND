@@ -83,10 +83,56 @@ export class PersistenceManager {
   }
 
   /**
+   * 清理数据中的循环引用和Vue响应式对象
+   */
+  private cleanDataForSerialization(data: any): any {
+    if (data === null || data === undefined) return data
+
+    // 如果是Vue响应式对象（ref, reactive等），提取其值
+    if (data && typeof data === 'object') {
+      // 处理ComputedRef对象
+      if ('_value' in data && 'dep' in data) {
+        return this.cleanDataForSerialization(data._value)
+      }
+
+      // 处理普通ref对象
+      if ('value' in data && Object.keys(data).length <= 3) {
+        return this.cleanDataForSerialization(data.value)
+      }
+    }
+
+    // 如果是数组
+    if (Array.isArray(data)) {
+      return data.map((item) => this.cleanDataForSerialization(item))
+    }
+
+    // 如果是普通对象
+    if (typeof data === 'object') {
+      const cleaned: any = {}
+      for (const [key, value] of Object.entries(data)) {
+        // 跳过Vue内部属性和函数
+        if (
+          !key.startsWith('_') &&
+          !key.startsWith('$') &&
+          key !== 'dep' &&
+          typeof value !== 'function' &&
+          typeof value !== 'symbol'
+        ) {
+          cleaned[key] = this.cleanDataForSerialization(value)
+        }
+      }
+      return cleaned
+    }
+
+    return data
+  }
+
+  /**
    * 生成数据校验和
    */
   private generateChecksum(data: any): string {
-    const str = JSON.stringify(data)
+    const cleanedData = this.cleanDataForSerialization(data)
+    const str = JSON.stringify(cleanedData)
     let hash = 0
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i)
@@ -121,10 +167,13 @@ export class PersistenceManager {
     }
 
     try {
-      const storageData: StorageData<T> = {
+      // 清理数据中的循环引用
+      const cleanedData = this.cleanDataForSerialization(data)
+
+      const storageData: StorageData<any> = {
         version: config.version || '1.0.0',
         timestamp: Date.now(),
-        data,
+        data: cleanedData,
       }
 
       // 设置过期时间
@@ -132,8 +181,8 @@ export class PersistenceManager {
         storageData.expiresAt = Date.now() + config.ttl
       }
 
-      // 生成校验和
-      storageData.checksum = this.generateChecksum(data)
+      // 生成校验和（使用清理后的数据）
+      storageData.checksum = this.generateChecksum(cleanedData)
 
       let serialized = JSON.stringify(storageData)
 
@@ -151,11 +200,14 @@ export class PersistenceManager {
       if (error instanceof Error && error.name === 'QuotaExceededError') {
         this.cleanExpiredData()
         try {
-          const storageData: StorageData<T> = {
+          // 清理数据中的循环引用
+          const cleanedData = this.cleanDataForSerialization(data)
+
+          const storageData: StorageData<any> = {
             version: config.version || '1.0.0',
             timestamp: Date.now(),
-            data,
-            checksum: this.generateChecksum(data),
+            data: cleanedData,
+            checksum: this.generateChecksum(cleanedData),
           }
 
           if (config.ttl) {
