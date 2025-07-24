@@ -35,175 +35,325 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-        <!-- 左侧：化简DFA状态子集 -->
-        <div class="minimization-process">
-          <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">化简DFA状态子集</h3>
+      <div class="grid grid-cols-1 gap-8 mt-6">
+        <!-- A区域：化简DFA状态子集 -->
+        <div class="minimization-sets-section">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左侧：用户填写 -->
+            <div class="user-sets-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <h3 class="font-semibold text-gray-900">化简DFA状态子集（用户填写）</h3>
+                </div>
+                <div class="p-6">
+                  <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
+                    请将状态集
+                    {{ Array.from({ length: originalStateCount }, (_, i) => i).join(', ') }} 最小化
+                  </p>
+                  <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
 
-            <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
-              请将状态集
-              {{ Array.from({ length: originalStateCount }, (_, i) => i).join(', ') }} 最小化
-            </p>
-            <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
+                  <!-- P集合输入 -->
+                  <div class="space-y-3 mt-4">
+                    <div
+                      v-for="(pItem, index) in localPSets"
+                      :key="pItem.id"
+                      class="flex items-center gap-2"
+                    >
+                      <input
+                        v-model="pItem.text"
+                        :class="[
+                          'flex-1 px-3 py-2 border rounded text-sm',
+                          pItem.check === 'isCorrect'
+                            ? 'bg-green-50 border-green-300'
+                            : pItem.check === 'isError'
+                              ? 'bg-red-50 border-red-300'
+                              : 'bg-white border-gray-300',
+                        ]"
+                        :disabled="pItem.category === 'onlyRead' || step6Open"
+                        @focus="handlePSetFocus(pItem)"
+                        placeholder="输入状态子集，如：123"
+                      />
+                      <button
+                        v-if="!step6Open && localPSets.length > 1"
+                        @click="removePSet(index)"
+                        class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <Icon icon="lucide:x" class="w-4 h-4" />
+                      </button>
+                      <button
+                        v-if="!step6Open"
+                        @click="addPSet(index)"
+                        class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
+                      >
+                        <Icon icon="lucide:plus" class="w-4 h-4" />
+                      </button>
+                      <div v-if="step6Open" class="text-sm text-gray-500">=> {{ index }}</div>
+                    </div>
+                  </div>
 
-            <!-- P集合输入 -->
-            <div class="space-y-3 mt-4">
-              <div
-                v-for="(pItem, index) in localPSets"
-                :key="pItem.id"
-                class="flex items-center gap-2"
-              >
-                <input
-                  v-model="pItem.text"
-                  :class="[
-                    'flex-1 px-3 py-2 border rounded text-sm',
-                    pItem.check === 'isCorrect'
-                      ? 'bg-green-50 border-green-300'
-                      : pItem.check === 'isError'
-                        ? 'bg-red-50 border-red-300'
-                        : 'bg-white border-gray-300',
-                  ]"
-                  :disabled="pItem.category === 'onlyRead' || step6Open"
-                  @focus="handlePSetFocus(pItem)"
-                  placeholder="输入状态子集，如：123"
-                />
-                <button
-                  v-if="!step6Open && localPSets.length > 1"
-                  @click="removePSet(index)"
-                  class="px-2 py-2 text-red-600 hover:bg-red-50 rounded"
-                >
-                  <Icon icon="lucide:x" class="w-4 h-4" />
-                </button>
-                <button
-                  v-if="!step6Open"
-                  @click="addPSet(index)"
-                  class="px-2 py-2 text-blue-600 hover:bg-blue-50 rounded"
-                >
-                  <Icon icon="lucide:plus" class="w-4 h-4" />
-                </button>
-                <div v-if="step6Open" class="text-sm text-gray-500">=> {{ index }}</div>
+                  <div class="mt-6">
+                    <button
+                      @click="validatePSets"
+                      :disabled="step6Open"
+                      :class="[
+                        'px-4 py-2 rounded-lg transition-colors',
+                        step6Open
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700',
+                      ]"
+                    >
+                      校验
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="mt-6">
-              <button
-                @click="validatePSets"
-                :disabled="step6Open"
-                :class="[
-                  'px-4 py-2 rounded-lg transition-colors',
-                  step6Open
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700',
-                ]"
-              >
-                校验
-              </button>
+            <!-- 右侧：答案区域 -->
+            <div class="answer-sets-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">标准答案</h3>
+                    <button
+                      @click="toggleSetsAnswer"
+                      :class="[
+                        'px-3 py-1 text-sm rounded-lg transition-colors',
+                        showSetsAnswer
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                      ]"
+                    >
+                      {{ showSetsAnswer ? '隐藏答案' : '查看答案' }}
+                    </button>
+                  </div>
+                </div>
+                <div class="p-6">
+                  <div v-if="showSetsAnswer && faStore.originalData?.P" class="space-y-3">
+                    <div
+                      v-for="(pSet, index) in faStore.originalData.P"
+                      :key="index"
+                      class="flex items-center gap-2"
+                    >
+                      <div
+                        class="flex-1 px-3 py-2 bg-green-50 border border-green-300 rounded text-sm"
+                      >
+                        {{ pSet.join('') }}
+                      </div>
+                      <div class="text-sm text-gray-500">=> {{ index }}</div>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>点击"查看答案"按钮显示标准答案</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- 右侧：状态转换矩阵 -->
-        <div class="minimization-info">
-          <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">状态转换矩阵</h3>
+        <!-- B区域：状态转换矩阵 -->
+        <div class="transition-matrix-section relative">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- 左侧：用户填写 -->
+            <div class="user-matrix-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <h3 class="font-semibold text-gray-900">状态转换矩阵（用户填写）</h3>
+                </div>
+                <div class="p-6">
+                  <div v-if="step6Open && minimizedMatrix.length">
+                    <!-- 转换矩阵表格 -->
+                    <div class="overflow-x-auto">
+                      <table class="w-full border-collapse border border-gray-300 text-sm">
+                        <thead>
+                          <tr class="bg-red-50">
+                            <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
+                            <th
+                              v-for="symbol in alphabetSymbols"
+                              :key="symbol"
+                              class="border border-gray-300 px-3 py-2 font-semibold"
+                            >
+                              {{ symbol }}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="row in Math.max(
+                              ...Object.values(faStore.originalData?.table_to_num_min || {}).map(
+                                (arr: any) => (Array.isArray(arr) ? arr.length : 0),
+                              ),
+                            )"
+                            :key="row - 1"
+                            :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
+                          >
+                            <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
+                              {{ row - 1 }}
+                            </td>
+                            <td
+                              v-for="(symbol, colIndex) in alphabetSymbols"
+                              :key="symbol"
+                              :class="[
+                                'border border-gray-300 px-3 py-2 text-center',
+                                getMatrixCell(row - 1, colIndex)?.check === 'isCorrect'
+                                  ? 'bg-green-50'
+                                  : getMatrixCell(row - 1, colIndex)?.check === 'isError'
+                                    ? 'bg-red-50'
+                                    : '',
+                              ]"
+                            >
+                              <input
+                                v-if="getMatrixCell(row - 1, colIndex)?.category !== 'onlyRead'"
+                                v-model="getMatrixCell(row - 1, colIndex)!.value"
+                                :class="[
+                                  'w-full text-center border-none bg-transparent text-sm',
+                                  'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded',
+                                ]"
+                                :disabled="step7Open"
+                                @focus="handleMatrixCellFocus(getMatrixCell(row - 1, colIndex)!)"
+                                placeholder="-"
+                              />
+                              <span v-else class="text-gray-600">{{
+                                getMatrixCell(row - 1, colIndex)?.value
+                              }}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
 
-            <div v-if="step6Open && minimizedMatrix.length">
-              <!-- 转换矩阵表格 -->
-              <div class="overflow-x-auto">
-                <table class="w-full border-collapse border border-gray-300 text-sm">
-                  <thead>
-                    <tr class="bg-red-50">
-                      <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
-                      <th
-                        v-for="symbol in alphabetSymbols"
-                        :key="symbol"
-                        class="border border-gray-300 px-3 py-2 font-semibold"
-                      >
-                        {{ symbol }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="row in Math.max(
-                        ...Object.values(faStore.originalData?.table_to_num_min || {}).map(
-                          (arr: any) => (Array.isArray(arr) ? arr.length : 0),
-                        ),
-                      )"
-                      :key="row - 1"
-                      :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
-                    >
-                      <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
-                        {{ row - 1 }}
-                      </td>
-                      <td
-                        v-for="(symbol, colIndex) in alphabetSymbols"
-                        :key="symbol"
+                    <div class="mt-4">
+                      <button
+                        @click="validateMatrix"
+                        :disabled="step7Open"
                         :class="[
-                          'border border-gray-300 px-3 py-2 text-center',
-                          getMatrixCell(row - 1, colIndex)?.check === 'isCorrect'
-                            ? 'bg-green-50'
-                            : getMatrixCell(row - 1, colIndex)?.check === 'isError'
-                              ? 'bg-red-50'
-                              : '',
+                          'px-4 py-2 rounded-lg transition-colors',
+                          step7Open
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700',
                         ]"
                       >
-                        <input
-                          v-if="getMatrixCell(row - 1, colIndex)?.category !== 'onlyRead'"
-                          v-model="getMatrixCell(row - 1, colIndex)!.value"
-                          :class="[
-                            'w-full text-center border-none bg-transparent text-sm',
-                            'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded',
-                          ]"
-                          :disabled="step7Open"
-                          @focus="handleMatrixCellFocus(getMatrixCell(row - 1, colIndex)!)"
-                          placeholder="-"
-                        />
-                        <span v-else class="text-gray-600">{{
-                          getMatrixCell(row - 1, colIndex)?.value
-                        }}</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                        校验
+                      </button>
+                    </div>
+                  </div>
 
-              <div class="mt-4">
-                <button
-                  @click="validateMatrix"
-                  :disabled="step7Open"
-                  :class="[
-                    'px-4 py-2 rounded-lg transition-colors',
-                    step7Open
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700',
-                  ]"
-                >
-                  校验
-                </button>
+                  <div v-else class="text-center text-gray-500 py-8">
+                    <p>请先完成左侧化简DFA状态子集的填写</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div v-else class="text-center text-gray-500 py-8">
-              <p>请先完成左侧化简DFA状态子集的填写</p>
+            <!-- 右侧：答案区域 -->
+            <div class="answer-matrix-section">
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="border-b border-gray-200 p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="font-semibold text-gray-900">标准答案</h3>
+                    <button
+                      @click="toggleMatrixAnswerStep5"
+                      :class="[
+                        'px-3 py-1 text-sm rounded-lg transition-colors',
+                        showMatrixAnswerStep5
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+                      ]"
+                    >
+                      {{ showMatrixAnswerStep5 ? '隐藏答案' : '查看答案' }}
+                    </button>
+                  </div>
+                </div>
+                <div class="p-6">
+                  <div
+                    v-if="
+                      showMatrixAnswerStep5 &&
+                      faStore.originalData?.table_to_num_min &&
+                      alphabetSymbols.length
+                    "
+                  >
+                    <!-- 答案矩阵表格 -->
+                    <div class="overflow-x-auto">
+                      <table class="w-full border-collapse border border-gray-300 text-sm">
+                        <thead>
+                          <tr class="bg-green-50">
+                            <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
+                            <th
+                              v-for="symbol in alphabetSymbols"
+                              :key="symbol"
+                              class="border border-gray-300 px-3 py-2 font-semibold"
+                            >
+                              {{ symbol }}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="row in Math.max(
+                              ...Object.values(faStore.originalData.table_to_num_min).map(
+                                (arr: any) => (Array.isArray(arr) ? arr.length : 0),
+                              ),
+                            )"
+                            :key="row - 1"
+                            :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                          >
+                            <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
+                              {{ row - 1 }}
+                            </td>
+                            <td
+                              v-for="symbol in alphabetSymbols"
+                              :key="symbol"
+                              class="border border-gray-300 px-3 py-2 text-center bg-green-50"
+                            >
+                              {{ faStore.originalData.table_to_num_min[symbol]?.[row - 1] || '-' }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-8 text-gray-500">
+                    <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>点击"查看答案"按钮显示标准答案</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 最小化完成信息 -->
-          <div v-if="isComplete" class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex items-start gap-3">
-              <Icon
-                icon="lucide:check-circle"
-                class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
-              />
-              <div>
-                <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
-                <div class="text-sm text-green-700 mt-2 space-y-1">
-                  <p>• 原始状态数: {{ originalStateCount }}</p>
-                  <p>• 最小化状态数: {{ localPSets.length }}</p>
-                  <p>• 减少了 {{ reductionPercentage }}% 的状态</p>
-                </div>
+          <!-- 毛玻璃锁定层 -->
+          <div
+            v-if="isMatrixLocked"
+            class="absolute inset-0 z-50 backdrop-blur-xl backdrop-saturate-150 bg-gradient-to-br from-white/85 via-white/75 to-white/70 rounded-lg border border-white/50 flex items-center justify-center animate-in fade-in duration-300"
+          >
+            <div class="flex flex-col items-center justify-center h-full w-full px-8 py-12">
+              <div class="flex items-center justify-center mb-8 animate-pulse">
+                <Icon icon="lucide:lock" class="w-16 h-16 text-blue-100 drop-shadow-lg" />
+              </div>
+              <div class="text-center space-y-4 max-w-md">
+                <h3 class="text-xl font-bold text-gray-900 drop-shadow-md">
+                  需要先查看状态子集答案
+                </h3>
+                <p class="text-base text-gray-800 leading-relaxed drop-shadow-sm">
+                  请先查看上方化简DFA状态子集的标准答案后再填写状态转换矩阵
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最小化完成信息 -->
+        <div v-if="isComplete" class="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div class="flex items-start gap-3">
+            <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
+              <div class="text-sm text-green-700 mt-2 space-y-1">
+                <p>• 原始状态数: {{ originalStateCount }}</p>
+                <p>• 最小化状态数: {{ localPSets.length }}</p>
+                <p>• 减少了 {{ reductionPercentage }}% 的状态</p>
               </div>
             </div>
           </div>
@@ -282,6 +432,10 @@ const dfaSvg = ref('')
 const step6Open = ref(false) // P集合校验完成
 const step7Open = ref(false) // 矩阵校验完成
 
+// 答案显示状态
+const showSetsAnswer = ref(false) // A区域答案显示
+const showMatrixAnswerStep5 = ref(false) // B区域答案显示
+
 // P集合相关
 const localPSets = ref<PSetItem[]>([
   {
@@ -314,6 +468,20 @@ const reductionPercentage = computed(() => {
     100
   ).toFixed(1)
 })
+
+// 锁定逻辑：只有查看了A区域答案才能操作B区域
+const isMatrixLocked = computed(() => {
+  return !showSetsAnswer.value
+})
+
+// 答案显示控制函数
+const toggleSetsAnswer = () => {
+  showSetsAnswer.value = !showSetsAnswer.value
+}
+
+const toggleMatrixAnswerStep5 = () => {
+  showMatrixAnswerStep5.value = !showMatrixAnswerStep5.value
+}
 
 // DFA SVG渲染函数
 const renderDFASvg = async () => {
