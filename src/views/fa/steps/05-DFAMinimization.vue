@@ -202,7 +202,7 @@
     <div class="step-actions">
       <div class="flex justify-between items-center">
         <button
-          @click="$emit('prev-step')"
+          @click="emit('prev-step')"
           class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
@@ -232,7 +232,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useFAStore } from '@/stores'
 
-defineEmits<{
+const emit = defineEmits<{
   'next-step': []
   'prev-step': []
   complete: [data: any]
@@ -521,7 +521,7 @@ const proceedToNext = () => {
     localStorage.setItem('fa-step5-data', JSON.stringify(stepData))
 
     // 触发下一步事件
-    document.dispatchEvent(new CustomEvent('next-step'))
+    emit('next-step')
   }
 }
 </script>
