@@ -13,13 +13,25 @@
     </div>
 
     <div class="step-content">
-      <div class="instruction">
-        <div class="info space-y-2 text-sm text-gray-600">
-          <p>
-            根据上述绘制的DFA，将其状态子集最小化，并重新命名状态子集序号，填写状态转换矩阵，可使用"空格"作为输入的间隔符（也可以不输入间隔符）
-          </p>
-          <p>化简DFA状态子集---参考输入：123、3 1（可乱序，可接受空格分隔符）</p>
-          <p>状态转换矩阵---参考输入：1、2、3</p>
+      <!-- DFA 参考图 -->
+      <div class="dfa-reference mb-6">
+        <div class="bg-white border border-gray-200 rounded-lg">
+          <div class="border-b border-gray-200 p-4">
+            <h3 class="font-semibold text-gray-900 flex items-center gap-2">
+              <Icon icon="lucide:share-2" class="w-5 h-5 text-orange-600" />
+              DFA 图（参考）
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">根据此 DFA 图进行最小化操作</p>
+          </div>
+          <div class="p-6">
+            <div v-if="dfaSvg" class="dfa-svg-container bg-gray-50 rounded-lg p-4 overflow-auto">
+              <div v-html="dfaSvg" class="flex justify-center"></div>
+            </div>
+            <div v-else class="text-center py-8 text-gray-500">
+              <Icon icon="lucide:image-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <p>暂无 DFA 图数据</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -231,6 +243,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useFAStore } from '@/stores'
+import { instance } from '@viz-js/viz'
 
 const emit = defineEmits<{
   'next-step': []
@@ -263,6 +276,7 @@ const faStore = useFAStore()
 // 本地状态
 const alphabetSymbols = ref<string[]>([])
 const originalStateCount = ref(0)
+const dfaSvg = ref('')
 
 // 状态管理
 const step6Open = ref(false) // P集合校验完成
@@ -301,6 +315,20 @@ const reductionPercentage = computed(() => {
   ).toFixed(1)
 })
 
+// DFA SVG渲染函数
+const renderDFASvg = async () => {
+  if (faStore.originalData?.DFA_dot_str) {
+    try {
+      const viz = await instance()
+      const svg = viz.renderSVGElement(faStore.originalData.DFA_dot_str)
+      dfaSvg.value = svg.outerHTML
+    } catch (error) {
+      console.error('渲染 DFA SVG 失败：', error)
+      dfaSvg.value = ''
+    }
+  }
+}
+
 // 从localStorage获取数据
 onMounted(() => {
   if (!faStore.hasResult()) {
@@ -313,6 +341,9 @@ onMounted(() => {
     const faResult = faStore.originalData
     if (faResult) {
       console.log('Step 5 loaded data from store')
+
+      // 渲染DFA SVG
+      renderDFASvg()
 
       // 从后端数据中提取状态数量
       if (faResult.table_to_num) {
