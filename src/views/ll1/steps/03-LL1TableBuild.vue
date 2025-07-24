@@ -13,7 +13,7 @@
     </div>
 
     <div class="step-content">
-      <div v-if="!grammarData" class="max-w-4xl mx-auto text-center py-12">
+      <div v-if="!originalData" class="max-w-4xl mx-auto text-center py-12">
         <div class="text-gray-500">
           <Icon icon="lucide:alert-circle" class="w-12 h-12 mx-auto mb-4" />
           <p class="text-lg">请先完成前面步骤的文法分析</p>
@@ -80,10 +80,12 @@
         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
           <h4 class="text-sm font-medium text-yellow-800 mb-2">调试信息</h4>
           <div class="text-xs text-yellow-700 space-y-1">
-            <div><strong>Table 数据类型:</strong> {{ typeof grammarData?.table }}</div>
-            <div><strong>Table 内容:</strong> {{ JSON.stringify(grammarData?.table) }}</div>
+            <div><strong>Table 数据类型:</strong> {{ typeof originalData?.table }}</div>
+            <div><strong>Table 内容:</strong> {{ JSON.stringify(originalData?.table) }}</div>
             <div><strong>所需填写项数量:</strong> {{ getRequiredTableEntries().length }}</div>
-            <div><strong>所需填写项:</strong> {{ getRequiredTableEntries().join(', ') || '无' }}</div>
+            <div>
+              <strong>所需填写项:</strong> {{ getRequiredTableEntries().join(', ') || '无' }}
+            </div>
             <div><strong>全部完成状态:</strong> {{ allCompleted }}</div>
           </div>
         </div>
@@ -99,11 +101,13 @@
               </h3>
               <div class="space-y-2">
                 <div
-                  v-for="(productions, nonTerminal) in grammarData.formulas_dict"
+                  v-for="(productions, nonTerminal) in originalData.formulas_dict"
                   :key="nonTerminal"
                   class="border border-gray-200 rounded-lg p-3"
                 >
-                  <div class="font-mono text-sm text-blue-600 font-medium mb-2">{{ nonTerminal }}</div>
+                  <div class="font-mono text-sm text-blue-600 font-medium mb-2">
+                    {{ nonTerminal }}
+                  </div>
                   <div class="space-y-1">
                     <div
                       v-for="(production, index) in productions"
@@ -141,7 +145,9 @@
                 <table class="min-w-full border border-gray-300">
                   <thead class="bg-green-50">
                     <tr>
-                      <th class="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase">
+                      <th
+                        class="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase"
+                      >
                         非终结符
                       </th>
                       <th
@@ -155,7 +161,9 @@
                   </thead>
                   <tbody class="bg-white">
                     <tr v-for="nonTerminal in nonTerminals" :key="nonTerminal">
-                      <td class="border border-gray-300 px-3 py-2 font-mono font-semibold text-green-700">
+                      <td
+                        class="border border-gray-300 px-3 py-2 font-mono font-semibold text-green-700"
+                      >
                         {{ nonTerminal }}
                       </td>
                       <td
@@ -169,7 +177,7 @@
                           placeholder=""
                           :class="[
                             'w-full px-2 py-1 text-xs text-center border-0 focus:ring-2 focus:ring-green-500 transition-colors',
-                            getTableCellClass(nonTerminal, terminal)
+                            getTableCellClass(nonTerminal, terminal),
                           ]"
                           @focus="clearTableValidation(nonTerminal, terminal)"
                         />
@@ -180,7 +188,10 @@
               </div>
 
               <!-- 校验结果提示 -->
-              <div v-if="tableValidated && !hasTableErrors" class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div
+                v-if="tableValidated && !hasTableErrors"
+                class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg"
+              >
                 <div class="flex items-center">
                   <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-500 mr-2" />
                   <p class="text-sm text-green-700 font-medium">
@@ -189,12 +200,13 @@
                 </div>
               </div>
 
-              <div v-if="tableValidated && hasTableErrors" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div
+                v-if="tableValidated && hasTableErrors"
+                class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg"
+              >
                 <div class="flex items-center mb-2">
                   <Icon icon="lucide:alert-triangle" class="w-5 h-5 text-red-500 mr-2" />
-                  <p class="text-sm text-red-700 font-medium">
-                    分析表校验失败，请检查错误项目
-                  </p>
+                  <p class="text-sm text-red-700 font-medium">分析表校验失败，请检查错误项目</p>
                 </div>
                 <p class="text-xs text-red-600">
                   剩余 {{ remainingAttempts }} 次尝试，超过限制将显示正确答案
@@ -208,7 +220,9 @@
                   <table class="min-w-full border border-blue-300 text-xs">
                     <thead class="bg-blue-100">
                       <tr>
-                        <th class="border border-blue-300 px-2 py-1 text-left font-medium text-blue-700">
+                        <th
+                          class="border border-blue-300 px-2 py-1 text-left font-medium text-blue-700"
+                        >
                           非终结符
                         </th>
                         <th
@@ -222,7 +236,9 @@
                     </thead>
                     <tbody>
                       <tr v-for="nonTerminal in nonTerminals" :key="nonTerminal">
-                        <td class="border border-blue-300 px-2 py-1 font-mono font-semibold text-blue-700">
+                        <td
+                          class="border border-blue-300 px-2 py-1 font-mono font-semibold text-blue-700"
+                        >
                           {{ nonTerminal }}
                         </td>
                         <td
@@ -245,16 +261,14 @@
         <div class="bg-yellow-50 rounded-lg p-6 mb-6">
           <h4 class="text-md font-semibold text-gray-900 mb-3">构建规则</h4>
           <div class="text-sm text-gray-600 space-y-2">
-            <div>
-              <strong>步骤 1：</strong>对于每个产生式 A → α，执行以下步骤：
-            </div>
+            <div><strong>步骤 1：</strong>对于每个产生式 A → α，执行以下步骤：</div>
             <div class="ml-4">
               <div>• 对于 First(α) 中的每个终结符 a，将 A → α 加入到 M[A, a]</div>
-              <div>• 如果 ε ∈ First(α)，对于 Follow(A) 中的每个终结符 b，将 A → α 加入到 M[A, b]</div>
+              <div>
+                • 如果 ε ∈ First(α)，对于 Follow(A) 中的每个终结符 b，将 A → α 加入到 M[A, b]
+              </div>
             </div>
-            <div>
-              <strong>步骤 2：</strong>将所有无定义的条目标记为错误
-            </div>
+            <div><strong>步骤 2：</strong>将所有无定义的条目标记为错误</div>
           </div>
         </div>
       </div>
@@ -277,7 +291,7 @@
             'px-6 py-2 rounded-lg transition-colors flex items-center gap-2',
             allCompleted
               ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -289,32 +303,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import type { LL1AnalysisResult } from '@/types'
+import { useLL1Store } from '@/stores/ll1'
+import { useCommonStore } from '@/stores/common'
 
-// Props
-const props = defineProps<{
-  data?: LL1AnalysisResult | null
-}>()
+// 获取 Store 实例
+const ll1Store = useLL1Store()
+const commonStore = useCommonStore()
 
+// 解构响应式状态（用于模板绑定）
+const { originalData, parseTable, firstSets, followSets } = storeToRefs(ll1Store)
+const { loading } = storeToRefs(commonStore)
+
+// 定义 emits
 defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
-// 数据引用
-const grammarData = computed(() => props.data)
-const firstSets = computed(() => grammarData.value?.first || {})
-const followSets = computed(() => grammarData.value?.follow || {})
-
 // 计算非终结符和终结符
-const nonTerminals = computed(() => grammarData.value?.Vn || [])
+const nonTerminals = computed(() => originalData.value?.Vn || [])
 const terminals = computed(() => {
-  if (!grammarData.value?.Vt) return []
+  if (!originalData.value?.Vt) return []
   // 添加 $ 符号
-  const terminalSet = new Set([...grammarData.value.Vt, '$'])
+  const terminalSet = new Set([...originalData.value.Vt, '$'])
   return Array.from(terminalSet).sort()
 })
 
@@ -331,13 +346,13 @@ const maxAttempts = 3
 
 // 计算属性
 const hasTableErrors = computed(() => {
-  return Object.values(tableValidation.value).some(status => status === 'incorrect')
+  return Object.values(tableValidation.value).some((status) => status === 'incorrect')
 })
 
 const remainingAttempts = computed(() => Math.max(0, maxAttempts - attempts.value))
 
 const allCompleted = computed(() => {
-  if (!grammarData.value) return false
+  if (!originalData.value) return false
 
   // 检查所有需要填写的表格项是否都正确
   const requiredEntries = getRequiredTableEntries()
@@ -348,23 +363,23 @@ const allCompleted = computed(() => {
   }
 
   // 检查是否所有需要填写的项都已正确校验
-  return requiredEntries.every(key => tableValidation.value[key] === 'correct')
+  return requiredEntries.every((key) => tableValidation.value[key] === 'correct')
 })
 
 // 工具函数
 const getRequiredTableEntries = (): string[] => {
-  if (!grammarData.value?.table) return []
+  if (!originalData.value?.table) return []
 
   // table 是 Record<string, string> 格式，键为 "Vn|Vt" 形式（后端用|分隔）
-  return Object.keys(grammarData.value.table)
+  return Object.keys(originalData.value.table)
 }
 
 const getCorrectTableEntry = (nonTerminal: string, terminal: string): string => {
-  if (!grammarData.value?.table) return ''
+  if (!originalData.value?.table) return ''
 
   // 后端使用 | 作为分隔符
   const key = `${nonTerminal}|${terminal}`
-  return grammarData.value.table[key] || ''
+  return originalData.value.table[key] || ''
 }
 
 const getTableCellClass = (nonTerminal: string, terminal: string): string => {
@@ -397,7 +412,7 @@ const clearTableValidation = (nonTerminal: string, terminal: string) => {
 
 // 校验函数
 const checkTable = async () => {
-  if (!grammarData.value?.table) return
+  if (!originalData.value?.table) return
 
   checking.value = true
   attempts.value++
@@ -440,10 +455,8 @@ const checkTable = async () => {
 
     if (isAllCorrect) {
       showAnswer.value = false
-      // 发出完成事件
-      setTimeout(() => {
-        // 可以进入下一步
-      }, 1000)
+      console.log('LL1 table validation completed successfully')
+      // 可以在这里添加成功提示
     } else {
       if (attempts.value >= maxAttempts) {
         // 显示正确答案
@@ -461,30 +474,61 @@ const checkTable = async () => {
   }
 }
 
-// 初始化
-onMounted(() => {
-  if (grammarData.value) {
-    console.log('Grammar data received:', grammarData.value)
-    console.log('Table data:', grammarData.value.table)
+// 初始化和重置函数
+const initializeState = () => {
+  if (originalData.value) {
+    console.log('Initializing LL1 table state with:', originalData.value)
+    console.log('Table data:', originalData.value.table)
     console.log('Required entries:', getRequiredTableEntries())
 
     // 初始化用户输入表格
-    nonTerminals.value.forEach(nt => {
-      terminals.value.forEach(t => {
-        const key = `${nt} ${t}`
+    nonTerminals.value.forEach((nt) => {
+      terminals.value.forEach((t) => {
+        const key = `${nt}|${t}` // 使用 | 分隔符匹配后端格式
         userTable.value[key] = ''
         tableValidation.value[key] = ''
       })
     })
-  } else {
-    console.log('No grammar data received')
   }
+}
+
+// 监听原始数据变化，重新初始化状态
+watch(
+  () => originalData.value,
+  (newData) => {
+    if (newData) {
+      initializeState()
+    }
+  },
+  { immediate: true },
+)
+
+// 组件挂载时初始化
+onMounted(() => {
+  initializeState()
 })
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #dcfce7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #dcfce7;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>

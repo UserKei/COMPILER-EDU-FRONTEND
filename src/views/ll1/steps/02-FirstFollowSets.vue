@@ -13,7 +13,7 @@
     </div>
 
     <div class="step-content">
-      <div v-if="!grammarData" class="max-w-4xl mx-auto text-center py-12">
+      <div v-if="!originalData" class="max-w-4xl mx-auto text-center py-12">
         <div class="text-gray-500">
           <Icon icon="lucide:alert-circle" class="w-12 h-12 mx-auto mb-4" />
           <p class="text-lg">请先完成第一步：输入文法</p>
@@ -62,7 +62,7 @@
             </h3>
             <div class="flex flex-wrap gap-2">
               <span
-                v-for="symbol in grammarData.Vn"
+                v-for="symbol in originalData.Vn"
                 :key="symbol"
                 class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-mono"
               >
@@ -79,7 +79,7 @@
             </h3>
             <div class="flex flex-wrap gap-2">
               <span
-                v-for="symbol in grammarData.Vt"
+                v-for="symbol in originalData.Vt"
                 :key="symbol"
                 class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-mono"
               >
@@ -96,7 +96,7 @@
             </h3>
             <div class="space-y-1">
               <div
-                v-for="(productions, nonTerminal) in grammarData.formulas_dict"
+                v-for="(productions, nonTerminal) in originalData.formulas_dict"
                 :key="nonTerminal"
                 class="text-sm"
               >
@@ -119,22 +119,27 @@
               </h3>
               <button
                 @click="checkFirstSets"
-                :disabled="loading.first"
+                :disabled="localLoading.first"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
               >
-                <Icon v-if="loading.first" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
+                <Icon
+                  v-if="localLoading.first"
+                  icon="lucide:loader-2"
+                  class="w-4 h-4 animate-spin mr-2"
+                />
                 校验First集
               </button>
             </div>
 
             <div class="space-y-3">
               <div
-                v-for="symbol in grammarData.Vn"
+                v-for="symbol in originalData.Vn"
                 :key="'first-' + symbol"
                 class="flex items-center gap-3"
               >
                 <span class="w-20 text-sm font-medium text-gray-700">
-                  first(<span class="font-mono text-blue-600">{{ symbol }}</span>) =
+                  first(<span class="font-mono text-blue-600">{{ symbol }}</span
+                  >) =
                 </span>
                 <div class="flex-1 relative">
                   <input
@@ -143,7 +148,7 @@
                     placeholder="输入First集，用空格分隔"
                     :class="[
                       'w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors',
-                      getInputClass('first', symbol)
+                      getInputClass('first', symbol),
                     ]"
                     @focus="clearValidation('first', symbol)"
                   />
@@ -164,16 +169,21 @@
             </div>
 
             <!-- First集答案提示 -->
-            <div v-if="showFirstAnswer && firstAttempts >= maxAttempts" class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <div
+              v-if="showFirstAnswer && firstAttempts >= maxAttempts"
+              class="mt-4 p-4 bg-blue-50 rounded-lg"
+            >
               <h4 class="text-sm font-medium text-blue-800 mb-2">正确答案：</h4>
               <div class="space-y-1">
                 <div
-                  v-for="symbol in grammarData.Vn"
+                  v-for="symbol in originalData.Vn"
                   :key="'answer-first-' + symbol"
                   class="text-sm"
                 >
                   <span class="font-mono text-blue-600">{{ symbol }}:</span>
-                  <span class="ml-2 text-blue-700">{{ correctFirstSets[symbol]?.join(' ') || 'ε' }}</span>
+                  <span class="ml-2 text-blue-700">{{
+                    correctFirstSets[symbol]?.join(' ') || 'ε'
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -188,22 +198,27 @@
               </h3>
               <button
                 @click="checkFollowSets"
-                :disabled="loading.follow || !firstStepCompleted"
+                :disabled="localLoading.follow || !firstStepCompleted"
                 class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
               >
-                <Icon v-if="loading.follow" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
+                <Icon
+                  v-if="localLoading.follow"
+                  icon="lucide:loader-2"
+                  class="w-4 h-4 animate-spin mr-2"
+                />
                 校验Follow集
               </button>
             </div>
 
             <div class="space-y-3">
               <div
-                v-for="symbol in grammarData.Vn"
+                v-for="symbol in originalData.Vn"
                 :key="'follow-' + symbol"
                 class="flex items-center gap-3"
               >
                 <span class="w-20 text-sm font-medium text-gray-700">
-                  follow(<span class="font-mono text-green-600">{{ symbol }}</span>) =
+                  follow(<span class="font-mono text-green-600">{{ symbol }}</span
+                  >) =
                 </span>
                 <div class="flex-1 relative">
                   <input
@@ -214,7 +229,7 @@
                     :class="[
                       'w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors',
                       getInputClass('follow', symbol),
-                      !firstStepCompleted && 'bg-gray-100 cursor-not-allowed'
+                      !firstStepCompleted && 'bg-gray-100 cursor-not-allowed',
                     ]"
                     @focus="clearValidation('follow', symbol)"
                   />
@@ -235,16 +250,21 @@
             </div>
 
             <!-- Follow集答案提示 -->
-            <div v-if="showFollowAnswer && followAttempts >= maxAttempts" class="mt-4 p-4 bg-green-50 rounded-lg">
+            <div
+              v-if="showFollowAnswer && followAttempts >= maxAttempts"
+              class="mt-4 p-4 bg-green-50 rounded-lg"
+            >
               <h4 class="text-sm font-medium text-green-800 mb-2">正确答案：</h4>
               <div class="space-y-1">
                 <div
-                  v-for="symbol in grammarData.Vn"
+                  v-for="symbol in originalData.Vn"
                   :key="'answer-follow-' + symbol"
                   class="text-sm"
                 >
                   <span class="font-mono text-green-600">{{ symbol }}:</span>
-                  <span class="ml-2 text-green-700">{{ correctFollowSets[symbol]?.join(' ') || '$' }}</span>
+                  <span class="ml-2 text-green-700">{{
+                    correctFollowSets[symbol]?.join(' ') || '$'
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -305,7 +325,7 @@
             'px-6 py-2 rounded-lg transition-colors flex items-center gap-2',
             allCompleted
               ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -317,24 +337,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
-import type { LL1AnalysisResult } from '@/types'
+import { useLL1Store } from '@/stores/ll1'
+import { useCommonStore } from '@/stores/common'
 
-// Props
-const props = defineProps<{
-  data?: LL1AnalysisResult | null
-}>()
+// 获取 Store 实例
+const ll1Store = useLL1Store()
+const commonStore = useCommonStore()
 
+// 解构响应式状态（用于模板绑定）
+const { originalData, validationData } = storeToRefs(ll1Store)
+const { loading } = storeToRefs(commonStore)
+
+// 定义 emits
 defineEmits<{
   'next-step': []
   'prev-step': []
 }>()
 
-// 数据引用
-const grammarData = computed(() => props.data)
-const correctFirstSets = computed(() => grammarData.value?.first || {})
-const correctFollowSets = computed(() => grammarData.value?.follow || {})
+// 从 Store 获取正确答案
+const correctFirstSets = computed(() => originalData.value?.first || {})
+const correctFollowSets = computed(() => originalData.value?.follow || {})
 
 // 用户输入的集合
 const userFirstSets = ref<Record<string, string>>({})
@@ -344,10 +369,10 @@ const userFollowSets = ref<Record<string, string>>({})
 const firstValidation = ref<Record<string, 'correct' | 'incorrect' | ''>>({})
 const followValidation = ref<Record<string, 'correct' | 'incorrect' | ''>>({})
 
-// 加载状态
-const loading = ref({
+// 本地加载状态（用于按钮）
+const localLoading = ref({
   first: false,
-  follow: false
+  follow: false,
 })
 
 // 显示答案
@@ -361,12 +386,18 @@ const maxAttempts = 3
 
 // 完成状态
 const firstStepCompleted = computed(() => {
-  return grammarData.value?.Vn.every(symbol => firstValidation.value[symbol] === 'correct') || false
+  if (!originalData.value?.Vn) return false
+  return originalData.value.Vn.every((symbol) => firstValidation.value[symbol] === 'correct')
 })
 
 const allCompleted = computed(() => {
-  const firstCompleted = grammarData.value?.Vn.every(symbol => firstValidation.value[symbol] === 'correct') || false
-  const followCompleted = grammarData.value?.Vn.every(symbol => followValidation.value[symbol] === 'correct') || false
+  if (!originalData.value?.Vn) return false
+  const firstCompleted = originalData.value.Vn.every(
+    (symbol) => firstValidation.value[symbol] === 'correct',
+  )
+  const followCompleted = originalData.value.Vn.every(
+    (symbol) => followValidation.value[symbol] === 'correct',
+  )
   return firstCompleted && followCompleted
 })
 
@@ -388,7 +419,8 @@ const areCharacterSetsEqual = (str1: string, str2: string): boolean => {
 }
 
 const getInputClass = (type: 'first' | 'follow', symbol: string): string => {
-  const validation = type === 'first' ? firstValidation.value[symbol] : followValidation.value[symbol]
+  const validation =
+    type === 'first' ? firstValidation.value[symbol] : followValidation.value[symbol]
 
   if (validation === 'correct') {
     return 'border-green-300 bg-green-50'
@@ -412,15 +444,15 @@ const clearValidation = (type: 'first' | 'follow', symbol: string) => {
 
 // 校验函数
 const checkFirstSets = async () => {
-  if (!grammarData.value) return
+  if (!originalData.value) return
 
-  loading.value.first = true
+  localLoading.value.first = true
   firstAttempts.value++
 
   try {
     let isAllCorrect = true
 
-    for (const symbol of grammarData.value.Vn) {
+    for (const symbol of originalData.value.Vn) {
       const userInput = userFirstSets.value[symbol] || ''
       const correctSet = correctFirstSets.value[symbol] || []
       const correctSetStr = correctSet.join(' ')
@@ -435,10 +467,12 @@ const checkFirstSets = async () => {
 
     if (isAllCorrect) {
       showFirstAnswer.value = false
+      // 可以在这里添加成功提示
+      console.log('First sets validation completed successfully')
     } else {
       if (firstAttempts.value >= maxAttempts) {
         // 显示正确答案
-        for (const symbol of grammarData.value.Vn) {
+        for (const symbol of originalData.value.Vn) {
           const correctSet = correctFirstSets.value[symbol] || []
           userFirstSets.value[symbol] = correctSet.join(' ')
           firstValidation.value[symbol] = 'correct'
@@ -447,20 +481,20 @@ const checkFirstSets = async () => {
       }
     }
   } finally {
-    loading.value.first = false
+    localLoading.value.first = false
   }
 }
 
 const checkFollowSets = async () => {
-  if (!grammarData.value) return
+  if (!originalData.value) return
 
-  loading.value.follow = true
+  localLoading.value.follow = true
   followAttempts.value++
 
   try {
     let isAllCorrect = true
 
-    for (const symbol of grammarData.value.Vn) {
+    for (const symbol of originalData.value.Vn) {
       const userInput = userFollowSets.value[symbol] || ''
       const correctSet = correctFollowSets.value[symbol] || []
       const correctSetStr = correctSet.join(' ')
@@ -475,10 +509,12 @@ const checkFollowSets = async () => {
 
     if (isAllCorrect) {
       showFollowAnswer.value = false
+      // 可以在这里添加成功提示
+      console.log('Follow sets validation completed successfully')
     } else {
       if (followAttempts.value >= maxAttempts) {
         // 显示正确答案
-        for (const symbol of grammarData.value.Vn) {
+        for (const symbol of originalData.value.Vn) {
           const correctSet = correctFollowSets.value[symbol] || []
           userFollowSets.value[symbol] = correctSet.join(' ')
           followValidation.value[symbol] = 'correct'
@@ -487,20 +523,36 @@ const checkFollowSets = async () => {
       }
     }
   } finally {
-    loading.value.follow = false
+    localLoading.value.follow = false
   }
 }
 
-// 初始化
-onMounted(() => {
-  if (grammarData.value?.Vn) {
-    grammarData.value.Vn.forEach(symbol => {
+// 初始化和重置函数
+const initializeState = () => {
+  if (originalData.value?.Vn) {
+    originalData.value.Vn.forEach((symbol) => {
       userFirstSets.value[symbol] = ''
       userFollowSets.value[symbol] = ''
       firstValidation.value[symbol] = ''
       followValidation.value[symbol] = ''
     })
   }
+}
+
+// 监听原始数据变化，重新初始化状态
+watch(
+  () => originalData.value,
+  (newData) => {
+    if (newData) {
+      initializeState()
+    }
+  },
+  { immediate: true },
+)
+
+// 组件挂载时初始化
+onMounted(() => {
+  initializeState()
 })
 </script>
 

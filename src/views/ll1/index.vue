@@ -5,16 +5,28 @@
       <div class="max-w-7xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <router-link to="/" class="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors">
+            <router-link
+              to="/"
+              class="text-2xl font-bold text-blue-600 hover:text-blue-800 transition-colors"
+            >
               编译原理可视化
             </router-link>
             <span class="text-gray-400">|</span>
             <h1 class="text-xl font-semibold text-gray-800">LL1 语法分析</h1>
           </div>
           <div class="flex items-center gap-2">
+            <!-- 持久化控制按钮 -->
+            <button
+              @click="saveProgress"
+              class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+              :disabled="loading"
+            >
+              保存进度
+            </button>
             <button
               @click="resetProgress"
               class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              :disabled="loading"
             >
               重置进度
             </button>
@@ -28,6 +40,33 @@
         </div>
       </div>
     </header>
+
+    <!-- 加载状态 -->
+    <div
+      v-if="loading"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg p-6 shadow-xl">
+        <div class="flex items-center gap-3">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span class="text-gray-700">正在处理中...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div
+      v-if="error"
+      class="fixed top-20 right-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg shadow-lg z-50"
+    >
+      <div class="flex items-center gap-2">
+        <Icon icon="lucide:alert-circle" class="w-5 h-5" />
+        <span>{{ error }}</span>
+        <button @click="clearError" class="ml-2 hover:bg-red-100 rounded p-1">
+          <Icon icon="lucide:x" class="w-4 h-4" />
+        </button>
+      </div>
+    </div>
 
     <!-- 主要内容区域 -->
     <main class="max-w-7xl mx-auto px-4 py-8">
@@ -46,7 +85,6 @@
           <component
             :is="currentStepComponent"
             :key="currentStep"
-            :data="ll1Data"
             @next-step="handleNextStep"
             @prev-step="prevStep"
             @complete="completeAnalysis"
@@ -58,10 +96,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { Icon } from '@iconify/vue'
 import StepFlowChart from '@/components/shared/StepFlowChart.vue'
-import type { LL1AnalysisResult } from '@/types'
+import { useLL1Store } from '@/stores/ll1'
+import { useCommonStore } from '@/stores/common'
 
 // 导入步骤组件
 import GrammarInput from './steps/01-GrammarInput.vue'
@@ -72,8 +113,13 @@ import StringAnalysis from './steps/04-StringAnalysis.vue'
 const router = useRouter()
 const route = useRoute()
 
-// LL1分析数据
-const ll1Data = ref<LL1AnalysisResult | null>(null)
+// 获取 Store 实例
+const ll1Store = useLL1Store()
+const commonStore = useCommonStore()
+
+// 解构响应式状态（用于模板绑定）
+const { productions, originalData, validationData, inputString } = storeToRefs(ll1Store)
+const { loading, error } = storeToRefs(commonStore)
 
 // LL1流程步骤定义
 const ll1Steps = [
@@ -83,7 +129,7 @@ const ll1Steps = [
     title: '输入文法',
     description: '定义上下文无关文法',
     color: '#10B981',
-    component: 'GrammarInput'
+    component: 'GrammarInput',
   },
   {
     id: 2,
@@ -91,7 +137,7 @@ const ll1Steps = [
     title: 'First集和Follow集',
     description: '集合提取',
     color: '#059669',
-    component: 'FirstFollowSets'
+    component: 'FirstFollowSets',
   },
   {
     id: 3,
@@ -99,7 +145,7 @@ const ll1Steps = [
     title: 'LL1分析表',
     description: '表格构建',
     color: '#047857',
-    component: 'LL1TableBuild'
+    component: 'LL1TableBuild',
   },
   {
     id: 4,
@@ -107,8 +153,8 @@ const ll1Steps = [
     title: '字符串分析结果',
     description: '语法分析',
     color: '#065f46',
-    component: 'StringAnalysis'
-  }
+    component: 'StringAnalysis',
+  },
 ]
 
 // 组件映射
@@ -116,7 +162,7 @@ const componentMap = {
   GrammarInput,
   FirstFollowSets,
   LL1TableBuild,
-  StringAnalysis
+  StringAnalysis,
 }
 
 // 当前步骤
@@ -124,7 +170,7 @@ const currentStep = ref(1)
 
 // 计算当前步骤组件
 const currentStepComponent = computed(() => {
-  const step = ll1Steps.find(s => s.id === currentStep.value)
+  const step = ll1Steps.find((s) => s.id === currentStep.value)
   return step ? componentMap[step.component as keyof typeof componentMap] : GrammarInput
 })
 
@@ -142,13 +188,9 @@ const nextStep = () => {
 }
 
 // 处理步骤完成和数据传递
-const handleNextStep = (data?: LL1AnalysisResult) => {
-  // 如果是第一步，保存文法分析数据
-  if (currentStep.value === 1 && data) {
-    ll1Data.value = data
-  }
-
-  // 进入下一步
+const handleNextStep = (data?: any) => {
+  // 第一步完成后，数据已经在 Store 中了，不需要手动传递
+  // 直接进入下一步
   nextStep()
 }
 
@@ -162,25 +204,83 @@ const prevStep = () => {
 // 步骤完成回调
 const completeAnalysis = (data: any) => {
   console.log('LL1 Step completed:', currentStep.value, data)
+  // 可以在这里添加完成分析后的逻辑，比如显示完成提示
 }
 
 // 处理步骤点击
 const handleStepClick = (stepId: number) => {
-  navigateToStep(stepId)
+  // 根据数据状态判断是否允许跳转
+  if (stepId === 1) {
+    navigateToStep(stepId)
+  } else if (stepId > 1 && originalData.value) {
+    // 只有在第一步完成（有分析数据）后才允许跳转到后续步骤
+    navigateToStep(stepId)
+  } else {
+    // 显示提示，需要先完成前面的步骤
+    commonStore.setError('请先完成文法输入步骤')
+  }
+}
+
+// 保存进度
+const saveProgress = () => {
+  try {
+    ll1Store.persistence.save()
+    commonStore.setError('') // 清除错误
+    // 可以显示保存成功提示
+    console.log('Progress saved successfully')
+  } catch (err) {
+    commonStore.setError('保存进度失败')
+  }
 }
 
 // 重置进度
 const resetProgress = () => {
+  ll1Store.resetAll()
   navigateToStep(1)
+  console.log('Progress reset')
 }
 
-// 组件挂载时从路由获取步骤
+// 清除错误
+const clearError = () => {
+  commonStore.clearError()
+}
+
+// 组件挂载时的初始化
 onMounted(() => {
+  // 从路由获取步骤
   const step = Number(route.query.step) || 1
   if (step >= 1 && step <= ll1Steps.length) {
     currentStep.value = step
   }
+
+  // 尝试加载持久化数据
+  try {
+    ll1Store.persistence.load()
+  } catch (err) {
+    console.warn('Failed to load persisted data:', err)
+  }
 })
+
+// 监听路由变化，同步步骤状态
+watch(
+  () => route.query.step,
+  (newStep) => {
+    const step = Number(newStep) || 1
+    if (step >= 1 && step <= ll1Steps.length && step !== currentStep.value) {
+      currentStep.value = step
+    }
+  },
+)
+
+// 监听数据变化，自动保存
+watch(
+  [productions, inputString],
+  () => {
+    // 防抖保存
+    ll1Store.persistence.save()
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>
