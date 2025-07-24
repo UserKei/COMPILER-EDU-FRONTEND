@@ -1,25 +1,15 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getLR0AnalyseAPI, LR0AnalyseInpStrAPI } from '@/api'
-import type { LRAnalysisResult, AnalysisStepInfo } from '@/types'
+import type { LR0AnalysisResult, LR0ValidationItem, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
-
-// LR0校验数据项接口
-interface LR0ValidationItem {
-  id: string
-  category: 'action' | 'goto' | 'dfa' | 'item'
-  state: string
-  check: boolean
-  coords?: { x: number; y: number }
-  data: any
-}
 
 export const useLR0Store = defineStore('lr0', () => {
   const commonStore = useCommonStore()
 
   // 基本状态
   const productions = ref<string[]>([])
-  const analysisResult = ref<LRAnalysisResult | null>(null)
+  const analysisResult = ref<LR0AnalysisResult | null>(null)
   const inputString = ref('')
   const inputAnalysisResult = ref<AnalysisStepInfo | null>(null)
 
@@ -76,7 +66,7 @@ export const useLR0Store = defineStore('lr0', () => {
   }
 
   // 将后端数据转换为校验数据
-  const transformToValidationData = (result: LRAnalysisResult): LR0ValidationItem[] => {
+  const transformToValidationData = (result: LR0AnalysisResult): LR0ValidationItem[] => {
     const items: LR0ValidationItem[] = []
     let itemId = 0
 
@@ -87,7 +77,7 @@ export const useLR0Store = defineStore('lr0', () => {
         category: 'action',
         state: key,
         check: !value.includes('conflict') && !value.includes('error'),
-        data: { key, value, type: 'action' }
+        data: { key, value, type: 'action' },
       })
     })
 
@@ -98,7 +88,7 @@ export const useLR0Store = defineStore('lr0', () => {
         category: 'goto',
         state: key,
         check: !!value,
-        data: { key, value, type: 'goto' }
+        data: { key, value, type: 'goto' },
       })
     })
 
@@ -110,7 +100,7 @@ export const useLR0Store = defineStore('lr0', () => {
         state: `I${index}`,
         check: true,
         coords: { x: index * 100, y: index * 80 },
-        data: dfa
+        data: dfa,
       })
     })
 
@@ -121,7 +111,7 @@ export const useLR0Store = defineStore('lr0', () => {
         category: 'item',
         state: item,
         check: true,
-        data: { item, index }
+        data: { item, index },
       })
     })
 
@@ -204,7 +194,7 @@ export const useLR0Store = defineStore('lr0', () => {
 
   // 更新校验项状态
   const updateValidationItem = (id: string, check: boolean) => {
-    const item = validationData.value.find(item => item.id === id)
+    const item = validationData.value.find((item) => item.id === id)
     if (item) {
       item.check = check
     }
@@ -212,7 +202,7 @@ export const useLR0Store = defineStore('lr0', () => {
 
   // 获取指定类别的校验数据
   const getValidationDataByCategory = (category: LR0ValidationItem['category']) => {
-    return validationData.value.filter(item => item.category === category)
+    return validationData.value.filter((item) => item.category === category)
   }
 
   // 重置所有状态
@@ -247,6 +237,6 @@ export const useLR0Store = defineStore('lr0', () => {
     analyzeInputString,
     updateValidationItem,
     getValidationDataByCategory,
-    resetAll
+    resetAll,
   }
 })

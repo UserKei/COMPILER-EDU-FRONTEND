@@ -1,26 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { getDFAM } from '@/api'
-import type { FAResult } from '@/types'
+import type { FAResult, DataFAType } from '@/types'
 import { useCommonStore } from './common'
-
-// 校验数据项的通用接口
-interface ValidationItem {
-  id: string
-  category: 'blank' | 'onlyRead' | 'writed'
-  state: 'normal' | 'waitWriteIn' | 'isCorrect' | 'isError'
-  check: 'normal' | 'isCorrect' | 'isError'
-  text: string
-  coords?: string[]
-}
-
-// FA校验数据结构（前端处理后的格式）
-interface DataFAType {
-  table: ValidationItem[] // NFA->DFA转换表
-  table_to_num: ValidationItem[] // DFA状态转换表
-  table_to_num_min: ValidationItem[] // 最小化DFA状态转换表
-  p_list: ValidationItem[] // 最小化结果集合
-}
 
 export const useFAStore = defineStore('fa', () => {
   const commonStore = useCommonStore()
@@ -46,7 +28,7 @@ export const useFAStore = defineStore('fa', () => {
       table: [],
       table_to_num: [],
       table_to_num_min: [],
-      p_list: []
+      p_list: [],
     }
 
     // 转换NFA->DFA转换表数据
@@ -60,7 +42,7 @@ export const useFAStore = defineStore('fa', () => {
               state: 'normal' as const,
               check: 'normal' as const,
               coords: [index.toString(), key],
-              text: Array.isArray(transition) ? transition.join('') : String(transition)
+              text: Array.isArray(transition) ? transition.join('') : String(transition),
             })
           })
         }
@@ -78,7 +60,7 @@ export const useFAStore = defineStore('fa', () => {
               state: 'normal' as const,
               check: 'normal' as const,
               coords: [index.toString(), key],
-              text: String(transition)
+              text: String(transition),
             })
           })
         }
@@ -96,7 +78,7 @@ export const useFAStore = defineStore('fa', () => {
               state: 'normal' as const,
               check: 'normal' as const,
               coords: [index.toString(), key],
-              text: String(transition)
+              text: String(transition),
             })
           })
         }
@@ -111,7 +93,7 @@ export const useFAStore = defineStore('fa', () => {
           category: 'onlyRead' as const,
           state: 'normal' as const,
           check: 'normal' as const,
-          text: '{' + partition.join(', ') + '}'
+          text: '{' + partition.join(', ') + '}',
         })
       })
     }
@@ -239,6 +221,6 @@ export const useFAStore = defineStore('fa', () => {
     getDotString,
     getTable,
     getValidationTable,
-    transformToValidationData
+    transformToValidationData,
   }
 })

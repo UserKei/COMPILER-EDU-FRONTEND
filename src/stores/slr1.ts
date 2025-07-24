@@ -1,25 +1,15 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getSLR1AnalyseAPI, SLR1AnalyseInpStrAPI } from '@/api'
-import type { LRAnalysisResult, AnalysisStepInfo } from '@/types'
+import type { SLR1AnalysisResult, SLR1ValidationItem, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
-
-// SLR1校验数据项接口 (与LR0共享类似结构但独立管理)
-interface SLR1ValidationItem {
-  id: string
-  category: 'action' | 'goto' | 'dfa' | 'item'
-  state: string
-  check: boolean
-  coords?: { x: number; y: number }
-  data: any
-}
 
 export const useSLR1Store = defineStore('slr1', () => {
   const commonStore = useCommonStore()
 
   // 基本状态
   const productions = ref<string[]>([])
-  const analysisResult = ref<LRAnalysisResult | null>(null)
+  const analysisResult = ref<SLR1AnalysisResult | null>(null)
   const inputString = ref('')
   const inputAnalysisResult = ref<AnalysisStepInfo | null>(null)
 
@@ -76,7 +66,7 @@ export const useSLR1Store = defineStore('slr1', () => {
   }
 
   // 将后端数据转换为校验数据
-  const transformToValidationData = (result: LRAnalysisResult): SLR1ValidationItem[] => {
+  const transformToValidationData = (result: SLR1AnalysisResult): SLR1ValidationItem[] => {
     const items: SLR1ValidationItem[] = []
     let itemId = 0
 
@@ -87,7 +77,7 @@ export const useSLR1Store = defineStore('slr1', () => {
         category: 'action',
         state: key,
         check: !value.includes('conflict') && !value.includes('error'),
-        data: { key, value, type: 'action' }
+        data: { key, value, type: 'action' },
       })
     })
 
@@ -98,7 +88,7 @@ export const useSLR1Store = defineStore('slr1', () => {
         category: 'goto',
         state: key,
         check: !!value,
-        data: { key, value, type: 'goto' }
+        data: { key, value, type: 'goto' },
       })
     })
 
@@ -110,7 +100,7 @@ export const useSLR1Store = defineStore('slr1', () => {
         state: `I${index}`,
         check: true,
         coords: { x: index * 100, y: index * 80 },
-        data: dfa
+        data: dfa,
       })
     })
 
@@ -121,7 +111,7 @@ export const useSLR1Store = defineStore('slr1', () => {
         category: 'item',
         state: item,
         check: true,
-        data: { item, index }
+        data: { item, index },
       })
     })
 
@@ -204,7 +194,7 @@ export const useSLR1Store = defineStore('slr1', () => {
 
   // 更新校验项状态
   const updateValidationItem = (id: string, check: boolean) => {
-    const item = validationData.value.find(item => item.id === id)
+    const item = validationData.value.find((item) => item.id === id)
     if (item) {
       item.check = check
     }
@@ -212,7 +202,7 @@ export const useSLR1Store = defineStore('slr1', () => {
 
   // 获取指定类别的校验数据
   const getValidationDataByCategory = (category: SLR1ValidationItem['category']) => {
-    return validationData.value.filter(item => item.category === category)
+    return validationData.value.filter((item) => item.category === category)
   }
 
   // 重置所有状态
@@ -247,6 +237,6 @@ export const useSLR1Store = defineStore('slr1', () => {
     analyzeInputString,
     updateValidationItem,
     getValidationDataByCategory,
-    resetAll
+    resetAll,
   }
 })

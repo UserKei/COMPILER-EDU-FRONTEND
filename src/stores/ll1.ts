@@ -1,30 +1,8 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { getLL1AnalyseAPI, LL1AnalyseInpStrAPI } from '@/api'
-import type { LL1AnalysisResult, AnalysisStepInfo } from '@/types'
+import type { LL1AnalysisResult, DataLL1Type, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
-
-// 校验数据项的通用接口
-interface ValidationItem {
-  id: string
-  category: 'blank' | 'onlyRead' | 'writed'
-  state: 'normal' | 'waitWriteIn' | 'isCorrect' | 'isError'
-  check: 'normal' | 'isCorrect' | 'isError'
-  text: string
-  coords?: string[]
-  symbol?: string
-}
-
-// LL1校验数据结构（前端处理后的格式）
-interface DataLL1Type {
-  S: string
-  Vn: ValidationItem[]
-  Vt: ValidationItem[]
-  first: ValidationItem[]
-  follow: ValidationItem[]
-  formulas_dict: ValidationItem[]
-  table: ValidationItem[]
-}
 
 export const useLL1Store = defineStore('ll1', () => {
   const commonStore = useCommonStore()
@@ -51,7 +29,7 @@ export const useLL1Store = defineStore('ll1', () => {
       first: [],
       follow: [],
       formulas_dict: [],
-      table: []
+      table: [],
     }
 
     // 转换Vn数据
@@ -60,7 +38,7 @@ export const useLL1Store = defineStore('ll1', () => {
       category: 'onlyRead' as const,
       state: 'normal' as const,
       check: 'normal' as const,
-      text: item
+      text: item,
     }))
 
     // 转换Vt数据
@@ -69,7 +47,7 @@ export const useLL1Store = defineStore('ll1', () => {
       category: 'onlyRead' as const,
       state: 'normal' as const,
       check: 'normal' as const,
-      text: item
+      text: item,
     }))
 
     // 转换First集合数据
@@ -81,7 +59,7 @@ export const useLL1Store = defineStore('ll1', () => {
           state: 'normal' as const,
           check: 'normal' as const,
           symbol: symbol,
-          text: item
+          text: item,
         })
       })
     }
@@ -95,7 +73,7 @@ export const useLL1Store = defineStore('ll1', () => {
           state: 'normal' as const,
           check: 'normal' as const,
           symbol: symbol,
-          text: item
+          text: item,
         })
       })
     }
@@ -109,7 +87,7 @@ export const useLL1Store = defineStore('ll1', () => {
           state: 'normal' as const,
           check: 'normal' as const,
           symbol: left,
-          text: `${left} -> ${right}`
+          text: `${left} -> ${right}`,
         })
       })
     }
@@ -122,7 +100,7 @@ export const useLL1Store = defineStore('ll1', () => {
         state: 'normal' as const,
         check: 'normal' as const,
         coords: key.split('|'), // "A|a" -> ["A", "a"]
-        text: value
+        text: value,
       })
     }
 
@@ -259,6 +237,6 @@ export const useLL1Store = defineStore('ll1', () => {
     resetAll,
 
     // 工具方法
-    transformToValidationData
+    transformToValidationData,
   }
 })

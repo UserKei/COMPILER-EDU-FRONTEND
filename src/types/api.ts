@@ -1,3 +1,15 @@
+/**
+ * @deprecated 此文件已拆分为更细粒度的类型文件
+ * 请使用以下文件替代：
+ * - @/types/common - 通用类型和接口
+ * - @/types/fa - 有限自动机相关类型
+ * - @/types/ll1 - LL1分析相关类型
+ * - @/types/lr0 - LR0分析相关类型
+ * - @/types/slr1 - SLR1分析相关类型
+ *
+ * 此文件保留用于向后兼容，将在后续版本中移除
+ */
+
 // 通用API响应格式
 export interface ApiResponse<T = any> {
   code: number
