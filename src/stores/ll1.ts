@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { getLL1AnalyseAPI, LL1AnalyseInpStrAPI } from '@/api'
 import type { LL1AnalysisResult, DataLL1Type, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
+import { usePersistence, useMultiConfig, useHistory } from '@/composables/persistence'
 
 export const useLL1Store = defineStore('ll1', () => {
   const commonStore = useCommonStore()
@@ -212,6 +213,54 @@ export const useLL1Store = defineStore('ll1', () => {
     commonStore.clearError()
   }
 
+  // 配置持久化
+  const persistenceConfig = {
+    key: 'll1_store',
+    version: '1.0.0',
+    include: ['productions', 'inputString'],
+    autoSave: true,
+    ttl: 7 * 24 * 60 * 60 * 1000, // 7天
+    saveDelay: 500,
+  }
+
+  // 应用持久化功能
+  const persistence = usePersistence({
+    store: {
+      productions,
+      inputString,
+    },
+    ...persistenceConfig,
+  })
+
+  // 多配置管理
+  const multiConfig = useMultiConfig({
+    store: {
+      productions,
+      inputString,
+    },
+    configKey: 'll1',
+  })
+
+  // 历史记录管理
+  const history = useHistory({
+    store: {
+      productions,
+      inputString,
+    },
+    historyKey: 'll1',
+    maxHistory: 20,
+    autoSave: true,
+  })
+
+  // 增强的Actions，添加历史记录功能
+  const enhancedPerformLL1Analysis = async () => {
+    const success = await performLL1Analysis()
+    if (success) {
+      history.addToHistory(`LL1分析: ${productions.value.join(', ')}`)
+    }
+    return success
+  }
+
   return {
     // 状态
     productions,
@@ -232,11 +281,36 @@ export const useLL1Store = defineStore('ll1', () => {
     removeProduction,
     clearProductions,
     setInputString,
-    performLL1Analysis,
+    performLL1Analysis: enhancedPerformLL1Analysis,
     analyzeInputString,
     resetAll,
 
     // 工具方法
     transformToValidationData,
+
+    // 持久化功能
+    persistence: {
+      save: persistence.save,
+      load: persistence.load,
+      clear: persistence.clear,
+      storageKey: persistence.storageKey,
+    },
+
+    // 多配置管理
+    configs: {
+      save: multiConfig.saveConfig,
+      load: multiConfig.loadConfig,
+      list: multiConfig.getConfigs,
+      delete: multiConfig.deleteConfig,
+      clear: multiConfig.clearConfigs,
+    },
+
+    // 历史记录
+    history: {
+      add: history.addToHistory,
+      list: history.getHistory,
+      restore: history.restoreFromHistory,
+      clear: history.clearHistory,
+    },
   }
 })

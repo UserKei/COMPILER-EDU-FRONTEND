@@ -3,6 +3,15 @@ import { defineStore } from 'pinia'
 import { getSLR1AnalyseAPI, SLR1AnalyseInpStrAPI } from '@/api'
 import type { SLR1AnalysisResult, SLR1ValidationItem, AnalysisStepInfo } from '@/types'
 import { useCommonStore } from './common'
+import { usePersistence, useMultiConfig, useHistory } from '@/composables/persistence'
+
+/**
+ * SLR1 Store 持久化数据类型
+ */
+export interface SLR1StoreData {
+  productions: string[]
+  inputString: string
+}
 
 export const useSLR1Store = defineStore('slr1', () => {
   const commonStore = useCommonStore()
@@ -213,6 +222,54 @@ export const useSLR1Store = defineStore('slr1', () => {
     commonStore.clearError()
   }
 
+  // 配置持久化
+  const persistenceConfig = {
+    key: 'slr1_store',
+    version: '1.0.0',
+    include: ['productions', 'inputString'],
+    autoSave: true,
+    ttl: 7 * 24 * 60 * 60 * 1000, // 7天
+    saveDelay: 500,
+  }
+
+  // 应用持久化功能
+  const persistence = usePersistence({
+    store: {
+      productions,
+      inputString,
+    },
+    ...persistenceConfig,
+  })
+
+  // 多配置管理
+  const multiConfig = useMultiConfig({
+    store: {
+      productions,
+      inputString,
+    },
+    configKey: 'slr1',
+  })
+
+  // 历史记录管理
+  const history = useHistory({
+    store: {
+      productions,
+      inputString,
+    },
+    historyKey: 'slr1',
+    maxHistory: 10,
+    autoSave: true,
+  })
+
+  // 增强的Actions，添加历史记录功能
+  const enhancedPerformSLR1Analysis = async () => {
+    const success = await performSLR1Analysis()
+    if (success) {
+      history.addToHistory(`SLR1分析: ${productions.value.join(', ')}`)
+    }
+    return success
+  }
+
   return {
     // 状态
     productions,
@@ -233,10 +290,35 @@ export const useSLR1Store = defineStore('slr1', () => {
     removeProduction,
     clearProductions,
     setInputString,
-    performSLR1Analysis,
+    performSLR1Analysis: enhancedPerformSLR1Analysis,
     analyzeInputString,
     updateValidationItem,
     getValidationDataByCategory,
     resetAll,
+
+    // 持久化功能
+    persistence: {
+      save: persistence.save,
+      load: persistence.load,
+      clear: persistence.clear,
+      storageKey: persistence.storageKey,
+    },
+
+    // 多配置管理
+    configs: {
+      save: multiConfig.saveConfig,
+      load: multiConfig.loadConfig,
+      list: multiConfig.getConfigs,
+      delete: multiConfig.deleteConfig,
+      clear: multiConfig.clearConfigs,
+    },
+
+    // 历史记录
+    history: {
+      add: history.addToHistory,
+      list: history.getHistory,
+      restore: history.restoreFromHistory,
+      clear: history.clearHistory,
+    },
   }
 })

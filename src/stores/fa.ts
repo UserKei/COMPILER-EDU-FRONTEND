@@ -3,6 +3,14 @@ import { defineStore } from 'pinia'
 import { getDFAM } from '@/api'
 import type { FAResult, DataFAType } from '@/types'
 import { useCommonStore } from './common'
+import { usePersistence, useMultiConfig, useHistory } from '@/composables/persistence'
+
+/**
+ * FA Store 持久化数据类型
+ */
+export interface FAStoreData {
+  inputRegex: string
+}
 
 export const useFAStore = defineStore('fa', () => {
   const commonStore = useCommonStore()
@@ -194,6 +202,51 @@ export const useFAStore = defineStore('fa', () => {
     return validationData.value[type]
   }
 
+  // 配置持久化
+  const persistenceConfig = {
+    key: 'fa_store',
+    version: '1.0.0',
+    include: ['inputRegex'],
+    autoSave: true,
+    ttl: 7 * 24 * 60 * 60 * 1000, // 7天
+    saveDelay: 500,
+  }
+
+  // 应用持久化功能
+  const persistence = usePersistence({
+    store: {
+      inputRegex,
+    },
+    ...persistenceConfig,
+  })
+
+  // 多配置管理
+  const multiConfig = useMultiConfig({
+    store: {
+      inputRegex,
+    },
+    configKey: 'fa',
+  })
+
+  // 历史记录管理
+  const history = useHistory({
+    store: {
+      inputRegex,
+    },
+    historyKey: 'fa',
+    maxHistory: 10,
+    autoSave: true,
+  })
+
+  // 增强的Actions，添加历史记录功能
+  const enhancedPerformFAAnalysis = async () => {
+    const success = await performFAAnalysis()
+    if (success) {
+      history.addToHistory(`FA分析: ${inputRegex.value}`)
+    }
+    return success
+  }
+
   return {
     // 状态
     inputRegex,
@@ -212,7 +265,7 @@ export const useFAStore = defineStore('fa', () => {
 
     // Actions
     setInputRegex,
-    performFAAnalysis,
+    performFAAnalysis: enhancedPerformFAAnalysis,
     clearAnalysis,
     resetAll,
 
@@ -222,5 +275,30 @@ export const useFAStore = defineStore('fa', () => {
     getTable,
     getValidationTable,
     transformToValidationData,
+
+    // 持久化功能
+    persistence: {
+      save: persistence.save,
+      load: persistence.load,
+      clear: persistence.clear,
+      storageKey: persistence.storageKey,
+    },
+
+    // 多配置管理
+    configs: {
+      save: multiConfig.saveConfig,
+      load: multiConfig.loadConfig,
+      list: multiConfig.getConfigs,
+      delete: multiConfig.deleteConfig,
+      clear: multiConfig.clearConfigs,
+    },
+
+    // 历史记录
+    history: {
+      add: history.addToHistory,
+      list: history.getHistory,
+      restore: history.restoreFromHistory,
+      clear: history.clearHistory,
+    },
   }
 })
