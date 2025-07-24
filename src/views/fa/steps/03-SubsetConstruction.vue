@@ -1117,7 +1117,6 @@ const proceedToNext = () => {
       timestamp: new Date().toISOString(),
     }
 
-    localStorage.setItem('fa-step3-data', JSON.stringify(stepData))
     emit('next-step')
   }
 }

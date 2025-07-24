@@ -368,7 +368,6 @@ const isComplete = computed(() => {
   return hasRenderedAnswer.value
 })
 
-// 从localStorage获取数据
 onMounted(() => {
   if (!faStore.hasResult()) {
     console.warn('No FA data found, please complete step 1 first')
@@ -659,9 +658,6 @@ const proceedToNext = () => {
       dfaDotString: faStore.dfaDotString,
       timestamp: new Date().toISOString(),
     }
-
-    // 保存数据
-    localStorage.setItem('fa-step4-data', JSON.stringify(stepData))
 
     // 触发下一步事件
     emit('next-step')

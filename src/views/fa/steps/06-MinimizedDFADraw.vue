@@ -125,7 +125,6 @@ const showAnswer = ref(false)
 const minimizedDFACanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
-// 从localStorage获取数据
 onMounted(() => {
   if (!faStore.hasResult()) {
     console.warn('No FA data found, please complete step 1 first')
@@ -210,13 +209,8 @@ const complete = () => {
     timestamp: new Date().toISOString(),
   }
 
-  // 保存最终数据
-  localStorage.setItem('fa-final-results', JSON.stringify(stepData))
-
   // 触发完成事件
   emit('complete', stepData)
-
-  alert('🎉 有限自动机构造流程已完成！')
 }
 </script>
 
