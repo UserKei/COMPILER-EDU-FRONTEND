@@ -48,7 +48,11 @@
                 <div class="p-6">
                   <p v-if="originalStateCount > 0" class="text-sm text-gray-600 mb-4">
                     请将状态集
-                    {{ Array.from({ length: originalStateCount }, (_, i) => i).join(', ') }} 最小化
+                    {{
+                      faStore.originalData?.table_to_num_min?.['S']?.join(', ') ||
+                      Array.from({ length: originalStateCount }, (_, i) => i).join(', ')
+                    }}
+                    最小化
                   </p>
                   <span class="text-xs text-gray-500">(每一行输入一个化简后的状态子集)</span>
 
@@ -169,54 +173,53 @@
                       <table class="w-full border-collapse border border-gray-300 text-sm">
                         <thead>
                           <tr class="bg-red-50">
-                            <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
+                            <th class="border border-gray-300 px-3 py-2 font-semibold">S</th>
                             <th
                               v-for="symbol in alphabetSymbols"
                               :key="symbol"
                               class="border border-gray-300 px-3 py-2 font-semibold"
                             >
-                              {{ symbol }}
+                              I{{ symbol }}
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr
-                            v-for="row in Math.max(
-                              ...Object.values(faStore.originalData?.table_to_num_min || {}).map(
-                                (arr: any) => (Array.isArray(arr) ? arr.length : 0),
-                              ),
-                            )"
-                            :key="row - 1"
-                            :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-red-50'"
+                            v-for="(_, rowIndex) in Array(originalStateCount)"
+                            :key="rowIndex"
+                            :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-red-50'"
                           >
                             <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
-                              {{ row - 1 }}
+                              {{
+                                faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ||
+                                rowIndex
+                              }}
                             </td>
                             <td
                               v-for="(symbol, colIndex) in alphabetSymbols"
                               :key="symbol"
                               :class="[
                                 'border border-gray-300 px-3 py-2 text-center',
-                                getMatrixCell(row - 1, colIndex)?.check === 'isCorrect'
+                                getMatrixCell(rowIndex, colIndex)?.check === 'isCorrect'
                                   ? 'bg-green-50'
-                                  : getMatrixCell(row - 1, colIndex)?.check === 'isError'
+                                  : getMatrixCell(rowIndex, colIndex)?.check === 'isError'
                                     ? 'bg-red-50'
                                     : '',
                               ]"
                             >
                               <input
-                                v-if="getMatrixCell(row - 1, colIndex)?.category !== 'onlyRead'"
-                                v-model="getMatrixCell(row - 1, colIndex)!.value"
+                                v-if="getMatrixCell(rowIndex, colIndex)?.category !== 'onlyRead'"
+                                v-model="getMatrixCell(rowIndex, colIndex)!.value"
                                 :class="[
                                   'w-full text-center border-none bg-transparent text-sm',
                                   'focus:outline-none focus:ring-1 focus:ring-blue-500 rounded',
                                 ]"
                                 :disabled="step7Open"
-                                @focus="handleMatrixCellFocus(getMatrixCell(row - 1, colIndex)!)"
+                                @focus="handleMatrixCellFocus(getMatrixCell(rowIndex, colIndex)!)"
                                 placeholder="-"
                               />
                               <span v-else class="text-gray-600">{{
-                                getMatrixCell(row - 1, colIndex)?.value
+                                getMatrixCell(rowIndex, colIndex)?.value
                               }}</span>
                             </td>
                           </tr>
@@ -279,35 +282,34 @@
                       <table class="w-full border-collapse border border-gray-300 text-sm">
                         <thead>
                           <tr class="bg-green-50">
-                            <th class="border border-gray-300 px-3 py-2 font-semibold">状态</th>
+                            <th class="border border-gray-300 px-3 py-2 font-semibold">S</th>
                             <th
                               v-for="symbol in alphabetSymbols"
                               :key="symbol"
                               class="border border-gray-300 px-3 py-2 font-semibold"
                             >
-                              {{ symbol }}
+                              I{{ symbol }}
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr
-                            v-for="row in Math.max(
-                              ...Object.values(faStore.originalData.table_to_num_min).map(
-                                (arr: any) => (Array.isArray(arr) ? arr.length : 0),
-                              ),
-                            )"
-                            :key="row - 1"
-                            :class="(row - 1) % 2 === 0 ? 'bg-white' : 'bg-green-50'"
+                            v-for="(_, rowIndex) in Array(originalStateCount)"
+                            :key="rowIndex"
+                            :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
                           >
                             <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
-                              {{ row - 1 }}
+                              {{
+                                faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ||
+                                rowIndex
+                              }}
                             </td>
                             <td
                               v-for="symbol in alphabetSymbols"
                               :key="symbol"
                               class="border border-gray-300 px-3 py-2 text-center bg-green-50"
                             >
-                              {{ faStore.originalData.table_to_num_min[symbol]?.[row - 1] || '-' }}
+                              {{ faStore.originalData.table_to_num_min[symbol]?.[rowIndex] || '-' }}
                             </td>
                           </tr>
                         </tbody>
@@ -351,9 +353,9 @@
             <div>
               <h4 class="font-medium text-green-800">DFA 最小化完成</h4>
               <div class="text-sm text-green-700 mt-2 space-y-1">
-                <p>• 原始状态数: {{ originalStateCount }}</p>
-                <p>• 最小化状态数: {{ localPSets.length }}</p>
-                <p>• 减少了 {{ reductionPercentage }}% 的状态</p>
+                <p>• 最小化状态数: {{ originalStateCount }}</p>
+                <p>• 状态分区数: {{ localPSets.length }}</p>
+                <p>• 状态转换矩阵已完成</p>
               </div>
             </div>
           </div>
@@ -425,7 +427,7 @@ const faStore = useFAStore()
 
 // 本地状态
 const alphabetSymbols = ref<string[]>([])
-const originalStateCount = ref(0)
+const originalStateCount = ref(0) // 最小化后的状态数量
 const dfaSvg = ref('')
 
 // 状态管理
@@ -509,25 +511,38 @@ onMounted(() => {
     const faResult = faStore.originalData
     if (faResult) {
       console.log('Step 5 loaded data from store')
+      console.log('Step 5 - P data structure:', faResult.P)
+      console.log('Step 5 - table_to_num_min:', faResult.table_to_num_min)
+
+      // 详细打印最小化转换表数据
+      if (faResult.table_to_num_min) {
+        console.log('=== 最小化转换表详细数据 ===')
+        Object.entries(faResult.table_to_num_min).forEach(([symbol, transitions]) => {
+          console.log(`Symbol ${symbol}:`, transitions)
+        })
+      }
 
       // 渲染DFA SVG
       renderDFASvg()
 
-      // 从后端数据中提取状态数量
-      if (faResult.table_to_num) {
-        const allStates = Object.keys(faResult.table_to_num)
-        originalStateCount.value = allStates.length
-      }
+      // 统一使用最小化DFA数据
+      if (faResult.table_to_num_min) {
+        // 获取最小化后的状态数量
+        const sColumn = faResult.table_to_num_min['S']
+        if (Array.isArray(sColumn)) {
+          originalStateCount.value = sColumn.length
+          console.log('Step 5 - State count from table_to_num_min:', originalStateCount.value)
+        }
 
-      // 从后端数据中提取字母表符号
-      if (faResult.table) {
+        // 从最小化数据中提取字母表符号
         const symbols = new Set<string>()
-        Object.keys(faResult.table).forEach((symbol) => {
-          if (symbol !== 'I' && symbol !== 'ε' && symbol !== 'epsilon') {
+        Object.keys(faResult.table_to_num_min).forEach((symbol) => {
+          if (symbol !== 'S') {
             symbols.add(symbol)
           }
         })
         alphabetSymbols.value = Array.from(symbols).sort()
+        console.log('Step 5 - Alphabet symbols:', alphabetSymbols.value)
       }
     }
   } catch (error) {
@@ -626,27 +641,25 @@ const initMinimizedMatrix = () => {
   if (!faStore.originalData?.table_to_num_min) return
 
   const tableToNumMin = faStore.originalData.table_to_num_min
-  const symbols = alphabetSymbols.value
-  const rowCount = Math.max(
-    ...Object.values(tableToNumMin).map((arr: any) => (Array.isArray(arr) ? arr.length : 0)),
-  )
+  const symbols = alphabetSymbols.value // 已排除S列
+  const rowCount = originalStateCount.value
+
+  console.log('initMinimizedMatrix - rowCount:', rowCount)
+  console.log('initMinimizedMatrix - symbols:', symbols)
 
   minimizedMatrix.value = []
 
-  // 创建矩阵单元格
+  // 创建矩阵单元格（不包含S列）
   for (let row = 0; row < rowCount; row++) {
     for (let col = 0; col < symbols.length; col++) {
       const symbol = symbols[col]
       const cellId = `${row} ${symbol}`
 
-      // 获取第一列（S列）的正确答案
-      const sColumnAnswer = tableToNumMin['S']?.[row] || ''
-
       minimizedMatrix.value.push({
         id: cellId,
-        category: col === 0 ? 'onlyRead' : 'blank',
-        check: col === 0 ? 'isCorrect' : 'normal',
-        value: col === 0 ? sColumnAnswer : '',
+        category: 'blank', // 所有输入符号列都可以填写
+        check: 'normal',
+        value: '',
         rowIndex: row,
         colIndex: col,
         isRowHeader: false,
