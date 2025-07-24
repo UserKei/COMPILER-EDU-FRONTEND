@@ -1,5 +1,5 @@
 import request from '@/lib/request'
-import type { ApiResponse, LRAnalysisResult, AnalysisStepInfo } from '@/types'
+import type { ApiResponse, LR0AnalysisResult, AnalysisStepInfo } from '@/types'
 
 /**
  * LR0语法分析
@@ -7,7 +7,7 @@ import type { ApiResponse, LRAnalysisResult, AnalysisStepInfo } from '@/types'
  * @returns LR0分析结果
  */
 export const getLR0AnalyseAPI = (inpProductions: string[]) => {
-  return request.post<ApiResponse<LRAnalysisResult>>('/api/LR0Analyse', { inpProductions })
+  return request.post<ApiResponse<LR0AnalysisResult>>('/api/LR0Analyse', { inpProductions })
 }
 
 /**

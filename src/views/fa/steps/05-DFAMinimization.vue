@@ -433,7 +433,7 @@ const DEBOUNCE_DELAY = 800
 
 // 防抖函数
 const debounce = (func: Function, delay: number) => {
-  let timeoutId: number
+  let timeoutId: ReturnType<typeof setTimeout>
   return (...args: any[]) => {
     clearTimeout(timeoutId)
     timeoutId = setTimeout(() => func.apply(null, args), delay)

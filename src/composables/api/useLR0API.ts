@@ -1,11 +1,11 @@
 import { ref } from 'vue'
 import { getLR0AnalyseAPI, LR0AnalyseInpStrAPI } from '@/api'
-import type { LRAnalysisResult, AnalysisStepInfo } from '@/types'
+import type { LR0AnalysisResult, AnalysisStepInfo } from '@/types'
 
 export function useLR0API() {
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const analysisResult = ref<LRAnalysisResult | null>(null)
+  const analysisResult = ref<LR0AnalysisResult | null>(null)
   const stepInfo = ref<AnalysisStepInfo | null>(null)
 
   const analyseGrammar = async (productions: string[]) => {

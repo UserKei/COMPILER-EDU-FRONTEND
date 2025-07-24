@@ -257,9 +257,9 @@ const analyzeString = async () => {
       const steps = []
       for (let i = 0; i < result.data.info_step.length; i++) {
         steps.push({
-          stateStack: result.data.info_state[i]?.text || '',
-          symbolStack: result.data.info_symbol[i]?.text || '',
-          inputString: result.data.info_str[i]?.text || '',
+          stateStack: result.data.info_state[i] || '',
+          symbolStack: result.data.info_symbol[i] || '',
+          inputString: result.data.info_str[i] || '',
           action: result.data.info_msg[i] || '',
           isError: result.data.info_msg[i]?.includes('错误') || false,
           isAccept: result.data.info_msg[i]?.includes('acc') || result.data.info_msg[i]?.includes('接受') || false

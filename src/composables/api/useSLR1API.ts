@@ -1,11 +1,11 @@
 import { ref } from 'vue'
 import { getSLR1AnalyseAPI, SLR1AnalyseInpStrAPI } from '@/api'
-import type { LRAnalysisResult, AnalysisStepInfo } from '@/types'
+import type { SLR1AnalysisResult, AnalysisStepInfo } from '@/types'
 
 export function useSLR1API() {
   const loading = ref(false)
   const error = ref<string | null>(null)
-  const analysisResult = ref<LRAnalysisResult | null>(null)
+  const analysisResult = ref<SLR1AnalysisResult | null>(null)
   const stepInfo = ref<AnalysisStepInfo | null>(null)
 
   const analyseGrammar = async (productions: string[]) => {

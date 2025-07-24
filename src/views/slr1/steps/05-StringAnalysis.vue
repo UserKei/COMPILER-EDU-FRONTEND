@@ -311,9 +311,9 @@ const analyzeString = async () => {
       const steps: AnalysisStep[] = []
       for (let i = 0; i < response.data.info_step.length; i++) {
         steps.push({
-          stateStack: response.data.info_state[i]?.text || '',
-          symbolStack: response.data.info_symbol[i]?.text || '',
-          inputString: response.data.info_str[i]?.text || '',
+          stateStack: response.data.info_state[i] || '',
+          symbolStack: response.data.info_symbol[i] || '',
+          inputString: response.data.info_str[i] || '',
           action: response.data.info_msg[i] || ''
         })
       }

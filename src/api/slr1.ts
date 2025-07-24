@@ -1,5 +1,5 @@
 import request from '@/lib/request'
-import type { ApiResponse, LRAnalysisResult, AnalysisStepInfo } from '@/types'
+import type { ApiResponse, SLR1AnalysisResult, AnalysisStepInfo } from '@/types'
 
 /**
  * SLR1语法分析
@@ -7,7 +7,7 @@ import type { ApiResponse, LRAnalysisResult, AnalysisStepInfo } from '@/types'
  * @returns SLR1分析结果
  */
 export const getSLR1AnalyseAPI = (inpProductions: string[]) => {
-  return request.post<ApiResponse<LRAnalysisResult>>('/api/SLR1Analyse', { inpProductions })
+  return request.post<ApiResponse<SLR1AnalysisResult>>('/api/SLR1Analyse', { inpProductions })
 }
 
 /**
