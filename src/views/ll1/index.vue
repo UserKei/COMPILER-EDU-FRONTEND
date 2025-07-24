@@ -19,14 +19,12 @@
             <button
               @click="saveProgress"
               class="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-              :disabled="loading"
             >
               保存进度
             </button>
             <button
               @click="resetProgress"
               class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-              :disabled="loading"
             >
               重置进度
             </button>
@@ -40,19 +38,6 @@
         </div>
       </div>
     </header>
-
-    <!-- 加载状态 -->
-    <div
-      v-if="loading"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    >
-      <div class="bg-white rounded-lg p-6 shadow-xl">
-        <div class="flex items-center gap-3">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-          <span class="text-gray-700">正在处理中...</span>
-        </div>
-      </div>
-    </div>
 
     <!-- 错误提示 -->
     <div
@@ -119,7 +104,7 @@ const commonStore = useCommonStore()
 
 // 解构响应式状态（用于模板绑定）
 const { productions, originalData, validationData, inputString } = storeToRefs(ll1Store)
-const { loading, error } = storeToRefs(commonStore)
+const { error } = storeToRefs(commonStore)
 
 // LL1流程步骤定义
 const ll1Steps = [
