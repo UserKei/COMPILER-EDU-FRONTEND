@@ -150,7 +150,8 @@ export const useLL1Store = defineStore('ll1', () => {
 
       const response = await getLL1AnalyseAPI(productions.value)
 
-      if (response.data.code === 200 && response.data.data) {
+      // 修复：后端返回的成功码是 0，不是 200
+      if (response.data.code === 0 && response.data.data) {
         const rawData = response.data.data
         originalData.value = rawData
 
@@ -188,7 +189,7 @@ export const useLL1Store = defineStore('ll1', () => {
 
       const response = await LL1AnalyseInpStrAPI(productions.value, inputString.value.trim())
 
-      if (response.data.code === 200 && response.data.data) {
+      if (response.data.code === 0 && response.data.data) {
         inputAnalysisResult.value = response.data.data
         return true
       } else {

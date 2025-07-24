@@ -29,7 +29,7 @@ export const useCommonStore = defineStore('common', () => {
 
       const response = await testAPI()
 
-      if (response.data.code === 200) {
+      if (response.data.code === 0) {
         apiConnected.value = true
         return true
       } else {
@@ -56,6 +56,6 @@ export const useCommonStore = defineStore('common', () => {
     setLoading,
     setError,
     clearError,
-    testConnection
+    testConnection,
   }
 })

@@ -291,16 +291,19 @@ const canProceed = computed(() => {
 // 处理文法输入变化（现在直接使用 computed setter）
 const handleGrammarInput = () => {
   // 输入处理逻辑已经在 computed setter 中处理
-  // 这里只需要触发重新分析
-  if (productions.value.length > 0) {
-    performAnalysisWithDebounce()
-  }
+  // 移除这里的重复触发，因为 watch 已经会监听 productions 变化
 }
 
 // 防抖分析
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+let isAnalyzing = false // 添加标志防止重复分析
 
 const performAnalysisWithDebounce = () => {
+  // 如果正在分析，跳过
+  if (isAnalyzing) {
+    return
+  }
+
   // 清除之前的定时器
   if (debounceTimer) {
     clearTimeout(debounceTimer)
@@ -312,7 +315,15 @@ const performAnalysisWithDebounce = () => {
   if (productions.value.length > 0) {
     // 设置新的防抖定时器
     debounceTimer = setTimeout(async () => {
-      await ll1Store.performLL1Analysis()
+      isAnalyzing = true
+      try {
+        await ll1Store.performLL1Analysis()
+      } catch (error) {
+        console.error('Analysis failed:', error)
+      } finally {
+        isAnalyzing = false
+        debounceTimer = null
+      }
     }, 800) // 800ms防抖
   }
 }
@@ -320,8 +331,7 @@ const performAnalysisWithDebounce = () => {
 // 使用示例文法
 const useExample = (example: any) => {
   grammarInput.value = example.grammar
-  // 触发分析
-  performAnalysisWithDebounce()
+  // 不需要手动触发分析，watch 会自动处理
 }
 
 // 处理下一步
@@ -341,6 +351,11 @@ watch(
     } else {
       // 清空相关状态
       commonStore.clearError()
+      isAnalyzing = false // 重置分析状态
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+        debounceTimer = null
+      }
     }
   },
   { deep: true },
