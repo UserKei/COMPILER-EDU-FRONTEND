@@ -368,6 +368,7 @@ const isComplete = computed(() => {
   return hasRenderedAnswer.value
 })
 
+// 从localStorage获取数据
 onMounted(() => {
   if (!faStore.hasResult()) {
     console.warn('No FA data found, please complete step 1 first')
@@ -542,13 +543,13 @@ const buildConversionTable = () => {
   console.log('Conversion table columns:', conversionTableColumns.value)
 }
 
-// 切换答案显示/隐藏
+// 切换答案显示/隐藏 - 采用06的正确方式
 const toggleAnswer = async () => {
   console.log('Toggling answer display')
 
-  // 如果是要显示答案且还没有渲染过，则进行首次渲染
-  if (!showAnswer.value && !hasRenderedAnswer.value) {
-    console.log('First time viewing answer, rendering...')
+  // 如果是要显示答案
+  if (!showAnswer.value) {
+    console.log('Showing answer...')
 
     // 重新从后端数据构建转换表和矩阵（如果还没有构建过）
     if (faStore.hasResult() && conversionTableColumns.value.length === 0) {
@@ -559,60 +560,36 @@ const toggleAnswer = async () => {
     // 切换显示状态
     showAnswer.value = true
 
-    // 渲染SVG
+    // 渲染SVG（每次显示都重新渲染）
     if (faStore.dfaDotString) {
-      // 等待DOM更新
       await nextTick()
-      console.log('Rendering SVG for first time')
-
-      if (answerSvgContainer.value) {
-        // 使用 viz.js 渲染 DOT 图
-        await renderDotToSvg()
-        hasRenderedAnswer.value = true // 标记已经渲染过
-      } else {
-        console.error('answerSvgContainer ref is null after nextTick')
-      }
+      console.log('Rendering SVG...')
+      await renderDotToSvg()
+      hasRenderedAnswer.value = true // 标记已经渲染过（用于完成状态判断）
     }
   } else {
-    // 后续点击只切换显示状态
-    showAnswer.value = !showAnswer.value
+    // 隐藏答案
+    showAnswer.value = false
     console.log('Answer visibility toggled to:', showAnswer.value)
   }
 }
 
-// 渲染DOT字符串为SVG
+// 渲染DOT字符串为SVG - 简化版本，参考06的实现
 const renderDotToSvg = async () => {
   if (!answerSvgContainer.value || !faStore.dfaDotString) {
-    console.warn('renderDotToSvg: 缺少必要条件', {
-      hasContainer: !!answerSvgContainer.value,
-      hasDotString: !!faStore.dfaDotString,
-    })
+    console.warn('renderDotToSvg: 缺少必要条件')
     return
   }
 
   try {
     console.log('开始渲染DFA DOT...')
-    console.log('Container:', answerSvgContainer.value)
-    console.log('DOT String:', faStore.dfaDotString)
 
-    // 清除之前的内容
+    // 清空容器
     answerSvgContainer.value.innerHTML = ''
-
-    // 显示加载状态
-    answerSvgContainer.value.innerHTML =
-      '<div class="text-center text-blue-600">正在渲染图形...</div>'
 
     // 使用 viz.js 渲染 DOT 字符串
-    console.log('正在初始化 viz.js...')
     const viz = await instance()
-    console.log('viz.js 初始化成功:', viz)
-
-    console.log('正在渲染 SVG...')
     const svg = viz.renderSVGElement(faStore.dfaDotString)
-    console.log('SVG 渲染成功:', svg)
-
-    // 清除加载状态
-    answerSvgContainer.value.innerHTML = ''
 
     // 添加样式使 SVG 适应容器
     svg.style.maxWidth = '100%'
@@ -623,19 +600,22 @@ const renderDotToSvg = async () => {
     // 将 SVG 添加到容器
     answerSvgContainer.value.appendChild(svg)
 
-    console.log('DFA DOT rendered successfully, SVG added to container')
-    console.log('Container children count:', answerSvgContainer.value.children.length)
+    console.log('DFA DOT rendered successfully')
   } catch (error) {
     console.error('渲染DOT图失败：', error)
     const errorMessage = error instanceof Error ? error.message : String(error)
-    answerSvgContainer.value.innerHTML = `
-      <div class="text-center text-red-500">
-        <p>渲染失败: ${errorMessage}</p>
-        <div class="mt-4 text-xs bg-gray-100 p-2 rounded text-left">
-          <pre class="whitespace-pre-wrap">${faStore.dfaDotString}</pre>
+
+    if (answerSvgContainer.value) {
+      answerSvgContainer.value.innerHTML = `
+        <div class="flex items-center justify-center h-full text-red-500">
+          <div class="text-center">
+            <Icon icon="lucide:alert-circle" class="w-8 h-8 mx-auto mb-2" />
+            <p>渲染失败</p>
+            <p class="text-sm mt-1">${errorMessage}</p>
+          </div>
         </div>
-      </div>
-    `
+      `
+    }
   }
 }
 
@@ -658,6 +638,9 @@ const proceedToNext = () => {
       dfaDotString: faStore.dfaDotString,
       timestamp: new Date().toISOString(),
     }
+
+    // 保存数据
+    localStorage.setItem('fa-step4-data', JSON.stringify(stepData))
 
     // 触发下一步事件
     emit('next-step')
