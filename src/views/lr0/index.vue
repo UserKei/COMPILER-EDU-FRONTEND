@@ -21,6 +21,13 @@
             >
               重置进度
             </button>
+            <button
+              v-if="lr0Store.persistence"
+              @click="lr0Store.persistence.save"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              保存进度
+            </button>
             <router-link
               to="/slr1"
               class="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
@@ -69,6 +76,9 @@ import { ref, computed, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import StepFlowChart from '@/components/shared/StepFlowChart.vue'
+import { useLR0Store } from '@/stores/lr0'
+
+const lr0Store = useLR0Store()
 
 // 动态导入所有步骤组件
 const stepComponents = {
@@ -188,6 +198,7 @@ const completeAnalysis = (data: any) => {
 // 重置进度
 const resetProgress = () => {
   if (confirm('确定要重置所有进度吗？')) {
+    lr0Store.resetAll()
     handleStepClick(1)
   }
 }

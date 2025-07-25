@@ -205,15 +205,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useLR0Store } from '@/stores/lr0'
 
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
 }>()
 
-const stepData = ref<any>(null)
+const lr0Store = useLR0Store()
+
+// 从store获取分析结果
+const stepData = computed(() => {
+  if (lr0Store.analysisResult) {
+    return {
+      analysisResult: lr0Store.analysisResult,
+    }
+  }
+  return null
+})
 
 // 增广产生式列表
 const augmentedProductions = computed(() => {
@@ -226,24 +237,8 @@ const augmentedProductions = computed(() => {
   return productions
 })
 
-onMounted(() => {
-  // 从localStorage获取第一步的数据
-  const step1Data = localStorage.getItem('lr0-step1-data')
-  if (step1Data) {
-    stepData.value = JSON.parse(step1Data)
-  }
-})
-
 const nextStep = () => {
   if (stepData.value) {
-    const step2Data = {
-      originalGrammar: stepData.value.analysisResult,
-      augmentedProductions: augmentedProductions.value,
-      newStartSymbol: "S'",
-      timestamp: new Date().toISOString(),
-    }
-
-    localStorage.setItem('lr0-step2-data', JSON.stringify(step2Data))
     emit('next-step')
   }
 }

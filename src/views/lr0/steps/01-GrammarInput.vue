@@ -177,30 +177,57 @@ A -> ε</pre
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useLR0API } from '@/composables/api/useLR0API'
+import { useLR0Store } from '@/stores/lr0'
+import { useCommonStore } from '@/stores/common'
 
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
 }>()
 
-const lr0API = useLR0API()
+const lr0Store = useLR0Store()
+const commonStore = useCommonStore()
 
 // 组件状态
 const grammarInput = ref('')
-const isAnalyzing = ref(false)
-const analysisResult = ref<any>(null)
+
+// 从store获取状态
+const isAnalyzing = computed(() => commonStore.loading)
+const analysisResult = computed(() => {
+  if (lr0Store.analysisResult) {
+    return {
+      success: true,
+      message: lr0Store.isLR0Grammar ? '文法分析完成，符合LR0文法！' : '文法存在冲突，不是LR0文法',
+      data: lr0Store.analysisResult,
+    }
+  }
+  if (commonStore.error) {
+    return {
+      success: false,
+      message: commonStore.error,
+      data: null,
+    }
+  }
+  return null
+})
 
 // 步骤完成状态
-const isStepComplete = computed(() => analysisResult.value?.success && analysisResult.value?.data)
+const isStepComplete = computed(() => lr0Store.analysisResult && lr0Store.isLR0Grammar === true)
+
+// 组件挂载时加载持久化数据
+onMounted(() => {
+  // 从store加载持久化的产生式
+  if (lr0Store.productions.length > 0) {
+    grammarInput.value = lr0Store.productions.join('\n')
+  }
+})
 
 // 输入变化处理
 const onInputChange = () => {
-  if (analysisResult.value) {
-    analysisResult.value = null
-  }
+  // 清除错误状态
+  commonStore.clearError()
 }
 
 // 加载示例文法
@@ -219,15 +246,12 @@ A -> ε`,
   }
 
   grammarInput.value = examples[exampleId as keyof typeof examples] || ''
-  analysisResult.value = null
+  commonStore.clearError()
 }
 
 // 分析文法
 const analyzeGrammar = async () => {
   if (!grammarInput.value.trim()) return
-
-  isAnalyzing.value = true
-  analysisResult.value = null
 
   try {
     // 处理输入的产生式
@@ -236,31 +260,18 @@ const analyzeGrammar = async () => {
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
 
-    const result = await lr0API.analyseGrammar(productions)
+    // 更新store中的产生式
+    lr0Store.setProductions(productions)
 
-    analysisResult.value = {
-      success: true,
-      message: '文法分析完成，可以进行下一步',
-      data: result.data,
-    }
+    // 执行LR0分析
+    const success = await lr0Store.performLR0Analysis()
 
-    // 保存分析结果供其他步骤使用
-    const step1Data = {
-      analysisResult: result.data,
-      originalProductions: productions, // 保存原始产生式数组
-      grammarInput: grammarInput.value, // 保存原始输入文本
-      timestamp: new Date().toISOString(),
+    if (!success) {
+      console.error('LR0 analysis failed')
     }
-    localStorage.setItem('lr0-step1-data', JSON.stringify(step1Data))
   } catch (error: any) {
-    analysisResult.value = {
-      success: false,
-      message: error.message || '文法分析失败，请检查输入格式',
-      data: null,
-    }
     console.error('Grammar analysis error:', error)
-  } finally {
-    isAnalyzing.value = false
+    commonStore.setError(error.message || '文法分析失败，请检查输入格式')
   }
 }
 

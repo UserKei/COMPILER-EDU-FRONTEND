@@ -208,9 +208,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
+import { useLR0Store } from '@/stores/lr0'
 
 const emit = defineEmits<{
   'next-step': []
@@ -218,11 +219,24 @@ const emit = defineEmits<{
   complete: [data: any]
 }>()
 
-// 从上一步获取数据
-const grammarInfo = ref<{
-  startSymbol: string
-  productions: string[]
-} | null>(null)
+const lr0Store = useLR0Store()
+
+// 从store获取文法数据
+const grammarInfo = computed(() => {
+  if (lr0Store.analysisResult) {
+    // 构造增广产生式
+    const augmentedProductions = [
+      `S' -> ${lr0Store.analysisResult.S}`,
+      ...lr0Store.analysisResult.formulas_list,
+    ]
+
+    return {
+      startSymbol: "S'",
+      productions: augmentedProductions,
+    }
+  }
+  return null
+})
 
 // 答案显示控制
 const showAnswerFlag = ref(false)
@@ -231,25 +245,15 @@ const showAnswerFlag = ref(false)
 const canvasRef = ref<InstanceType<typeof LRCanvas>>()
 const answerCanvasContainer = ref<HTMLElement>()
 
-// 答案数据
-const answerData = ref<any>(null)
-
-// 从localStorage获取上一步的数据
-onMounted(() => {
-  try {
-    const savedData = localStorage.getItem('lr0-step2-data')
-    if (savedData) {
-      const stepData = JSON.parse(savedData)
-      grammarInfo.value = {
-        startSymbol: stepData.newStartSymbol || "S'",
-        productions: stepData.augmentedProductions || [],
-      }
-
-      console.log('Step 3 loaded data:', stepData)
+// 答案数据 - 从store获取
+const answerData = computed(() => {
+  if (lr0Store.dfaStates && lr0Store.dfaStates.length > 0) {
+    return {
+      itemSets: lr0Store.dfaStates,
+      transitions: [], // 可以从dfaStates中提取转移关系
     }
-  } catch (error) {
-    console.error('读取上一步数据失败：', error)
   }
+  return null
 })
 
 // 答案控制
@@ -259,29 +263,21 @@ const toggleAnswer = () => {
 
 // 是否构造完成 - 简化逻辑，允许用户直接进入下一步
 const isConstructionComplete = computed(() => {
-  return true // 允许用户随时进入下一步
+  return lr0Store.analysisResult !== null
 })
 
 // 进入下一步
 const proceedToNext = () => {
-  // 从画布获取用户绘制的数据
-  const nodes = canvasRef.value?.getNodes() || []
-  const edges = canvasRef.value?.getEdges() || []
+  if (isConstructionComplete.value) {
+    // 从画布获取用户绘制的数据
+    const nodes = canvasRef.value?.getNodes() || []
+    const edges = canvasRef.value?.getEdges() || []
 
-  const stepData = {
-    userNodes: nodes,
-    userEdges: edges,
-    itemSetsCount: nodes.length,
-    transitionsCount: edges.length,
-    timestamp: new Date().toISOString(),
+    console.log('Step 3 user data:', { nodes, edges })
+
+    // 触发下一步事件
+    emit('next-step')
   }
-
-  // 保存数据
-  localStorage.setItem('lr0-step3-data', JSON.stringify(stepData))
-  console.log('Step 3 saved data:', stepData)
-
-  // 触发下一步事件 - 使用正确的Vue emit
-  emit('next-step')
 }
 </script>
 
