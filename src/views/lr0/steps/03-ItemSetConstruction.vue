@@ -46,11 +46,19 @@
                       v-for="(production, index) in grammarInfo.productions"
                       :key="index"
                       class="flex items-center space-x-2 p-2 rounded"
-                      :class="index === 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50 border border-gray-200'"
+                      :class="
+                        index === 0
+                          ? 'bg-yellow-50 border border-yellow-200'
+                          : 'bg-gray-50 border border-gray-200'
+                      "
                     >
                       <span
                         class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                        :class="index === 0 ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-700'"
+                        :class="
+                          index === 0
+                            ? 'bg-yellow-200 text-yellow-800'
+                            : 'bg-gray-200 text-gray-700'
+                        "
                       >
                         {{ index }}
                       </span>
@@ -109,7 +117,7 @@
                     'px-4 py-2 rounded-lg transition-colors',
                     showAnswerFlag
                       ? 'bg-gray-600 text-white hover:bg-gray-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-green-600 text-white hover:bg-green-700',
                   ]"
                 >
                   <Icon
@@ -139,7 +147,10 @@
                     class="h-full w-full flex items-center justify-center bg-gray-50 rounded"
                   >
                     <div class="text-center text-gray-600">
-                      <Icon icon="lucide:diagram-project" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                      <Icon
+                        icon="lucide:diagram-project"
+                        class="w-12 h-12 mx-auto mb-3 text-gray-400"
+                      />
                       <p>LR0项目集规范族DFA</p>
                       <p class="text-sm mt-2">标准答案将在这里显示</p>
                     </div>
@@ -151,7 +162,10 @@
             <!-- 答案分析 -->
             <div v-if="showAnswerFlag" class="border-t border-gray-200 bg-green-50 p-4">
               <div class="flex items-start gap-3">
-                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Icon
+                  icon="lucide:check-circle"
+                  class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+                />
                 <div>
                   <h4 class="font-medium text-green-800">LR0项目集规范族构造分析</h4>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
@@ -179,9 +193,7 @@
           上一步
         </button>
 
-        <div class="text-sm text-gray-500">
-          步骤 3 / 5
-        </div>
+        <div class="text-sm text-gray-500">步骤 3 / 5</div>
 
         <button
           @click="proceedToNext"
@@ -203,7 +215,7 @@ import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 // 从上一步获取数据
@@ -230,7 +242,7 @@ onMounted(() => {
       const stepData = JSON.parse(savedData)
       grammarInfo.value = {
         startSymbol: stepData.newStartSymbol || "S'",
-        productions: stepData.augmentedProductions || []
+        productions: stepData.augmentedProductions || [],
       }
 
       console.log('Step 3 loaded data:', stepData)
@@ -261,7 +273,7 @@ const proceedToNext = () => {
     userEdges: edges,
     itemSetsCount: nodes.length,
     transitionsCount: edges.length,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
 
   // 保存数据

@@ -5,7 +5,10 @@
       <div class="max-w-7xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <router-link to="/" class="text-2xl font-bold text-purple-600 hover:text-purple-800 transition-colors">
+            <router-link
+              to="/"
+              class="text-2xl font-bold text-purple-600 hover:text-purple-800 transition-colors"
+            >
               编译原理可视化
             </router-link>
             <span class="text-gray-400">|</span>
@@ -69,19 +72,59 @@ import StepFlowChart from '@/components/shared/StepFlowChart.vue'
 
 // 动态导入所有步骤组件
 const stepComponents = {
-  'GrammarInput': defineAsyncComponent(() => import('./steps/01-GrammarInput.vue')),
-  'AugmentedGrammar': defineAsyncComponent(() => import('./steps/02-AugmentedGrammar.vue')),
-  'ItemSetConstruction': defineAsyncComponent(() => import('./steps/03-ItemSetConstruction.vue')),
-  'LR0TableBuild': defineAsyncComponent(() => import('./steps/04-LR0TableBuild.vue')),
-  'StringAnalysis': defineAsyncComponent(() => import('./steps/05-StringAnalysis.vue'))
+  GrammarInput: defineAsyncComponent(() => import('./steps/01-GrammarInput.vue')),
+  AugmentedGrammar: defineAsyncComponent(() => import('./steps/02-AugmentedGrammar.vue')),
+  ItemSetConstruction: defineAsyncComponent(() => import('./steps/03-ItemSetConstruction.vue')),
+  LR0TableBuild: defineAsyncComponent(() => import('./steps/04-LR0TableBuild.vue')),
+  StringAnalysis: defineAsyncComponent(() => import('./steps/05-StringAnalysis.vue')),
 }
 
 const lr0Steps = [
-  { id: 1, name: '文法输入', title: '文法输入', key: 'GrammarInput', description: '输入LR0文法并进行预处理', color: '#3b82f6', component: 'GrammarInput' },
-  { id: 2, name: '增广文法', title: '增广文法', key: 'AugmentedGrammar', description: '写出增广文法和产生式编号', color: '#8b5cf6', component: 'AugmentedGrammar' },
-  { id: 3, name: '画DFA', title: '画DFA', key: 'ItemSetConstruction', description: '构造LR0项目集规范族DFA', color: '#10b981', component: 'ItemSetConstruction' },
-  { id: 4, name: 'LR0分析表', title: 'LR0分析表', key: 'LR0TableBuild', description: '构建LR0分析表', color: '#f59e0b', component: 'LR0TableBuild' },
-  { id: 5, name: '分析输入串', title: '分析输入串', key: 'StringAnalysis', description: '使用LR0分析表分析输入串', color: '#ef4444', component: 'StringAnalysis' }
+  {
+    id: 1,
+    name: '文法输入',
+    title: '文法输入',
+    key: 'GrammarInput',
+    description: '输入LR0文法并进行预处理',
+    color: '#3b82f6',
+    component: 'GrammarInput',
+  },
+  {
+    id: 2,
+    name: '增广文法',
+    title: '增广文法',
+    key: 'AugmentedGrammar',
+    description: '写出增广文法和产生式编号',
+    color: '#8b5cf6',
+    component: 'AugmentedGrammar',
+  },
+  {
+    id: 3,
+    name: '画DFA',
+    title: '画DFA',
+    key: 'ItemSetConstruction',
+    description: '构造LR0项目集规范族DFA',
+    color: '#10b981',
+    component: 'ItemSetConstruction',
+  },
+  {
+    id: 4,
+    name: 'LR0分析表',
+    title: 'LR0分析表',
+    key: 'LR0TableBuild',
+    description: '构建LR0分析表',
+    color: '#f59e0b',
+    component: 'LR0TableBuild',
+  },
+  {
+    id: 5,
+    name: '分析输入串',
+    title: '分析输入串',
+    key: 'StringAnalysis',
+    description: '使用LR0分析表分析输入串',
+    color: '#ef4444',
+    component: 'StringAnalysis',
+  },
 ]
 
 const route = useRoute()
@@ -102,17 +145,20 @@ const initializeCurrentStep = () => {
 const currentStep = ref(initializeCurrentStep())
 
 // 监听路由变化
-watch(() => route.params.step, (newStep) => {
-  if (newStep) {
-    const stepNumber = parseInt(newStep as string)
-    if (stepNumber >= 1 && stepNumber <= lr0Steps.length) {
-      currentStep.value = stepNumber
+watch(
+  () => route.params.step,
+  (newStep) => {
+    if (newStep) {
+      const stepNumber = parseInt(newStep as string)
+      if (stepNumber >= 1 && stepNumber <= lr0Steps.length) {
+        currentStep.value = stepNumber
+      }
     }
-  }
-})
+  },
+)
 
 const currentStepComponent = computed(() => {
-  const step = lr0Steps.find(s => s.id === currentStep.value)
+  const step = lr0Steps.find((s) => s.id === currentStep.value)
   return step ? stepComponents[step.key as keyof typeof stepComponents] : null
 })
 

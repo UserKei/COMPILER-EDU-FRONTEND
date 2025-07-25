@@ -22,8 +22,13 @@
             <ul class="space-y-1 text-sm text-indigo-800">
               <li>• <strong>ACTION表：</strong>根据项目集中的项目填写移进和规约动作</li>
               <li>• <strong>GOTO表：</strong>根据DFA的转移关系填写状态转移</li>
-              <li>• <strong>移进动作：</strong>A → α·aβ，则ACTION[i,a] = Sj（状态j包含A → αa·β）</li>
-              <li>• <strong>规约动作：</strong>A → α·，则对所有终结符a，ACTION[i,a] = rk（第k个产生式）</li>
+              <li>
+                • <strong>移进动作：</strong>A → α·aβ，则ACTION[i,a] = Sj（状态j包含A → αa·β）
+              </li>
+              <li>
+                • <strong>规约动作：</strong>A → α·，则对所有终结符a，ACTION[i,a] =
+                rk（第k个产生式）
+              </li>
               <li>• <strong>接受动作：</strong>S' → S·，则ACTION[i,$] = acc</li>
             </ul>
           </div>
@@ -68,15 +73,23 @@
                 <!-- 表头 -->
                 <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900">状态</th>
+                    <th class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900">
+                      状态
+                    </th>
                     <!-- ACTION列 -->
-                    <th v-for="terminal in tableHeaders.Vt" :key="terminal"
-                        class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50">
+                    <th
+                      v-for="terminal in tableHeaders.Vt"
+                      :key="terminal"
+                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50"
+                    >
                       {{ terminal }}
                     </th>
                     <!-- GOTO列 -->
-                    <th v-for="nonterminal in tableHeaders.Vn" :key="nonterminal"
-                        class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-green-50">
+                    <th
+                      v-for="nonterminal in tableHeaders.Vn"
+                      :key="nonterminal"
+                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-green-50"
+                    >
                       {{ nonterminal }}
                     </th>
                   </tr>
@@ -84,14 +97,23 @@
 
                 <!-- 表体 -->
                 <tbody>
-                  <tr v-for="(row, stateIndex) in parseTable" :key="stateIndex" class="hover:bg-gray-50">
-                    <td class="px-3 py-2 border border-gray-300 text-xs font-medium text-center bg-gray-50">
+                  <tr
+                    v-for="(row, stateIndex) in parseTable"
+                    :key="stateIndex"
+                    class="hover:bg-gray-50"
+                  >
+                    <td
+                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-center bg-gray-50"
+                    >
                       {{ row.state }}
                     </td>
 
                     <!-- ACTION列 -->
-                    <td v-for="terminal in tableHeaders.Vt" :key="terminal"
-                        class="px-2 py-1 border border-gray-300 text-xs text-center">
+                    <td
+                      v-for="terminal in tableHeaders.Vt"
+                      :key="terminal"
+                      class="px-2 py-1 border border-gray-300 text-xs text-center"
+                    >
                       <input
                         v-model="row.actions[terminal]"
                         class="w-full px-1 py-0.5 text-xs border-0 focus:ring-1 focus:ring-blue-500 rounded"
@@ -100,8 +122,11 @@
                     </td>
 
                     <!-- GOTO列 -->
-                    <td v-for="nonterminal in tableHeaders.Vn" :key="nonterminal"
-                        class="px-2 py-1 border border-gray-300 text-xs text-center">
+                    <td
+                      v-for="nonterminal in tableHeaders.Vn"
+                      :key="nonterminal"
+                      class="px-2 py-1 border border-gray-300 text-xs text-center"
+                    >
                       <input
                         v-model="row.gotos[nonterminal]"
                         class="w-full px-1 py-0.5 text-xs border-0 focus:ring-1 focus:ring-blue-500 rounded"
@@ -156,7 +181,7 @@
               'p-4 rounded-lg border',
               validationSuccess
                 ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-red-50 border-red-200 text-red-800',
             ]"
           >
             <div class="flex items-start gap-2">
@@ -176,7 +201,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -188,7 +216,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isStepComplete
               ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -221,14 +249,14 @@ const checkTableCount = ref(4)
 const dynamicHeaders = ref({
   Vt: [] as string[],
   Vn: [] as string[],
-  State: [] as string[]
+  State: [] as string[],
 })
 
 // 表格布局配置
 const tableView = {
   cellWidth: 80,
   cellHeight: 40,
-  gap: 2
+  gap: 2,
 }
 
 // 计算属性
@@ -265,7 +293,7 @@ const tableHeaders = computed(() => {
   const headers = {
     Vt: [...Vt, '$'], // 终结符 + $
     Vn: Vn.filter((vn: string) => !vn.includes("'")), // 非终结符（除了增广开始符）
-    State: (dfaData.value?.userNodes || []).map((_: any, index: number) => `I${index}`) // 状态
+    State: (dfaData.value?.userNodes || []).map((_: any, index: number) => `I${index}`), // 状态
   }
 
   console.log('tableHeaders final:', headers)
@@ -324,7 +352,7 @@ const initializeTable = () => {
     const row = {
       state: `I${i}`,
       actions: {} as Record<string, string>,
-      gotos: {} as Record<string, string>
+      gotos: {} as Record<string, string>,
     }
 
     // 初始化ACTION列
@@ -457,11 +485,11 @@ const showAnswer = async () => {
 
       // 从actions和gotos中推断状态数量
       const stateSet = new Set<number>()
-      Object.keys(apiData.actions).forEach(key => {
+      Object.keys(apiData.actions).forEach((key) => {
         const stateIndex = parseInt(key.split('|')[0])
         if (!isNaN(stateIndex)) stateSet.add(stateIndex)
       })
-      Object.keys(apiData.gotos).forEach(key => {
+      Object.keys(apiData.gotos).forEach((key) => {
         const stateIndex = parseInt(key.split('|')[0])
         if (!isNaN(stateIndex)) stateSet.add(stateIndex)
       })
@@ -480,7 +508,7 @@ const showAnswer = async () => {
         const row = {
           state: `I${i}`,
           actions: {} as Record<string, string>,
-          gotos: {} as Record<string, string>
+          gotos: {} as Record<string, string>,
         }
 
         // 初始化ACTION列
@@ -518,7 +546,10 @@ const showAnswer = async () => {
               row.actions[symbol] = value as string
               console.log(`Set ACTION[${stateIndex}][${symbol}] = ${value}`)
             } else {
-              console.log(`Symbol ${symbol} not found in row actions, available symbols:`, Object.keys(row.actions))
+              console.log(
+                `Symbol ${symbol} not found in row actions, available symbols:`,
+                Object.keys(row.actions),
+              )
             }
           } else {
             console.log(`Invalid stateIndex: ${stateIndex}`)
@@ -553,7 +584,7 @@ const showAnswer = async () => {
       dynamicHeaders.value = {
         Vt: backendVt,
         Vn: backendVn,
-        State: parseTable.value.map((_, index) => `I${index}`)
+        State: parseTable.value.map((_, index) => `I${index}`),
       }
 
       console.log('Updated dynamicHeaders:', dynamicHeaders.value)
@@ -577,7 +608,7 @@ const nextStep = () => {
     // 保存表格数据
     const tableData = {
       parseTable: parseTable.value,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
     localStorage.setItem('lr0-step4-data', JSON.stringify(tableData))
 
@@ -612,8 +643,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #e0e7ff; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #e0e7ff;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>

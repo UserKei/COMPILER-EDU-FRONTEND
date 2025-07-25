@@ -81,7 +81,10 @@
         </div>
 
         <!-- 分析过程表 -->
-        <div v-if="analysisSteps.length > 0" class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div
+          v-if="analysisSteps.length > 0"
+          class="bg-white border border-gray-200 rounded-lg overflow-hidden"
+        >
           <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
             <h3 class="text-lg font-semibold text-gray-900">分析过程</h3>
             <p class="text-sm text-gray-600 mt-1">LR0移进-规约分析表</p>
@@ -91,11 +94,21 @@
             <table class="min-w-full">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">步骤</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">状态栈</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">符号栈</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">输入串</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">动作</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">
+                    步骤
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">
+                    状态栈
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">
+                    符号栈
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">
+                    输入串
+                  </th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-900 border-b">
+                    动作
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -105,7 +118,7 @@
                   :class="[
                     'hover:bg-gray-50',
                     step.isError ? 'bg-red-50' : '',
-                    step.isAccept ? 'bg-green-50' : ''
+                    step.isAccept ? 'bg-green-50' : '',
                   ]"
                 >
                   <td class="px-4 py-3 text-sm border-b">{{ index + 1 }}</td>
@@ -116,11 +129,15 @@
                     <span
                       :class="[
                         'px-2 py-1 rounded text-xs font-medium',
-                        step.isError ? 'bg-red-100 text-red-800' :
-                        step.isAccept ? 'bg-green-100 text-green-800' :
-                        step.action.startsWith('S') ? 'bg-blue-100 text-blue-800' :
-                        step.action.startsWith('r') ? 'bg-purple-100 text-purple-800' :
-                        'bg-gray-100 text-gray-800'
+                        step.isError
+                          ? 'bg-red-100 text-red-800'
+                          : step.isAccept
+                            ? 'bg-green-100 text-green-800'
+                            : step.action.startsWith('S')
+                              ? 'bg-blue-100 text-blue-800'
+                              : step.action.startsWith('r')
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-gray-100 text-gray-800',
                       ]"
                     >
                       {{ step.action }}
@@ -139,7 +156,7 @@
               'p-4 rounded-lg border',
               analysisResult.success
                 ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-red-50 border-red-200 text-red-800',
             ]"
           >
             <div class="flex items-start gap-2">
@@ -162,9 +179,18 @@
 
           <div class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
-              <input placeholder="状态栈" class="px-3 py-2 border border-gray-300 rounded text-sm" />
-              <input placeholder="符号栈" class="px-3 py-2 border border-gray-300 rounded text-sm" />
-              <input placeholder="输入串" class="px-3 py-2 border border-gray-300 rounded text-sm" />
+              <input
+                placeholder="状态栈"
+                class="px-3 py-2 border border-gray-300 rounded text-sm"
+              />
+              <input
+                placeholder="符号栈"
+                class="px-3 py-2 border border-gray-300 rounded text-sm"
+              />
+              <input
+                placeholder="输入串"
+                class="px-3 py-2 border border-gray-300 rounded text-sm"
+              />
               <input placeholder="动作" class="px-3 py-2 border border-gray-300 rounded text-sm" />
               <button class="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">
                 添加步骤
@@ -177,7 +203,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -189,7 +218,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isStepComplete
               ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           完成
@@ -208,7 +237,7 @@ import { useLR0API } from '@/composables/api/useLR0API'
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
 const lr0API = useLR0API()
@@ -221,17 +250,11 @@ const analysisResult = ref<any>(null)
 const analysisSteps = ref<any[]>([])
 
 // 示例字符串
-const exampleStrings = [
-  'id + id $',
-  'id * id $',
-  'id + id * id $',
-  '( id + id ) $',
-  'id $'
-]
+const exampleStrings = ['id + id $', 'id * id $', 'id + id * id $', '( id + id ) $', 'id $']
 
 // 步骤完成状态
-const isStepComplete = computed(() =>
-  analysisResult.value?.success || analysisSteps.value.length > 0
+const isStepComplete = computed(
+  () => analysisResult.value?.success || analysisSteps.value.length > 0,
 )
 
 // 分析字符串
@@ -249,7 +272,7 @@ const analyzeString = async () => {
     // 调用API进行字符串分析
     const result = await lr0API.analyseInputString(
       analysisData.value.formulas_list || [],
-      inputString.value.trim()
+      inputString.value.trim(),
     )
 
     if (result.data) {
@@ -262,14 +285,20 @@ const analyzeString = async () => {
           inputString: result.data.info_str[i] || '',
           action: result.data.info_msg[i] || '',
           isError: result.data.info_msg[i]?.includes('错误') || false,
-          isAccept: result.data.info_msg[i]?.includes('acc') || result.data.info_msg[i]?.includes('接受') || false
+          isAccept:
+            result.data.info_msg[i]?.includes('acc') ||
+            result.data.info_msg[i]?.includes('接受') ||
+            false,
         })
       }
 
       analysisSteps.value = steps
       analysisResult.value = {
         success: result.data.info_res === '接受' || result.data.info_res === 'accept',
-        message: result.data.info_res === '接受' ? '字符串分析成功，输入串被接受' : '字符串分析完成，但输入串被拒绝'
+        message:
+          result.data.info_res === '接受'
+            ? '字符串分析成功，输入串被接受'
+            : '字符串分析完成，但输入串被拒绝',
       }
     } else {
       throw new Error('分析结果格式错误')
@@ -281,7 +310,7 @@ const analyzeString = async () => {
 
     analysisResult.value = {
       success: mockSteps[mockSteps.length - 1]?.isAccept || false,
-      message: error.message || '分析完成（模拟结果）'
+      message: error.message || '分析完成（模拟结果）',
     }
   } finally {
     isAnalyzing.value = false
@@ -299,7 +328,7 @@ const generateMockAnalysis = (input: string) => {
     inputString: input,
     action: '开始分析',
     isError: false,
-    isAccept: false
+    isAccept: false,
   })
 
   // 简单的模拟移进规约过程
@@ -316,7 +345,7 @@ const generateMockAnalysis = (input: string) => {
         inputString: '$',
         action: 'acc',
         isError: false,
-        isAccept: true
+        isAccept: true,
       })
       break
     } else {
@@ -330,7 +359,7 @@ const generateMockAnalysis = (input: string) => {
         inputString: remaining,
         action: `S${i + 2}`,
         isError: false,
-        isAccept: false
+        isAccept: false,
       })
     }
   }
@@ -343,7 +372,7 @@ const complete = () => {
     analysisSteps: analysisSteps.value,
     analysisResult: analysisResult.value,
     inputString: inputString.value,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   }
 
   localStorage.setItem('lr0-analysis-complete', JSON.stringify(completionData))
@@ -365,8 +394,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #dcfce7; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #dcfce7;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>

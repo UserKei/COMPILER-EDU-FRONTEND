@@ -33,9 +33,7 @@
       <!-- 文法输入区域 -->
       <div class="space-y-6">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            输入LR0文法产生式
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-2"> 输入LR0文法产生式 </label>
           <textarea
             v-model="grammarInput"
             placeholder="请输入文法产生式，例如：&#10;S -> aAb&#10;A -> c&#10;A -> ε"
@@ -49,13 +47,15 @@
           <div>
             <h4 class="font-medium text-gray-900 mb-2">示例文法1</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <pre class="text-xs font-mono text-gray-700">S -> E
+              <pre class="text-xs font-mono text-gray-700">
+S -> E
 E -> E + T
 E -> T
 T -> T * F
 T -> F
 F -> ( E )
-F -> id</pre>
+F -> id</pre
+              >
               <button
                 @click="loadExample(1)"
                 class="mt-2 text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -68,9 +68,11 @@ F -> id</pre>
           <div>
             <h4 class="font-medium text-gray-900 mb-2">示例文法2</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <pre class="text-xs font-mono text-gray-700">S -> aAb
+              <pre class="text-xs font-mono text-gray-700">
+S -> aAb
 A -> c
-A -> ε</pre>
+A -> ε</pre
+              >
               <button
                 @click="loadExample(2)"
                 class="mt-2 text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -103,7 +105,7 @@ A -> ε</pre>
               'p-4 rounded-lg border',
               analysisResult.success
                 ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-red-50 border-red-200 text-red-800',
             ]"
           >
             <div class="flex items-start gap-2">
@@ -112,7 +114,9 @@ A -> ε</pre>
                 class="w-5 h-5 mt-0.5 flex-shrink-0"
               />
               <div class="flex-1">
-                <p class="font-medium">{{ analysisResult.success ? '文法分析成功' : '文法分析失败' }}</p>
+                <p class="font-medium">
+                  {{ analysisResult.success ? '文法分析成功' : '文法分析失败' }}
+                </p>
                 <p class="text-sm mt-1">{{ analysisResult.message }}</p>
 
                 <!-- 成功时显示文法信息 -->
@@ -122,10 +126,12 @@ A -> ε</pre>
                       <span class="font-medium">开始符号：</span>{{ analysisResult.data.S }}
                     </div>
                     <div>
-                      <span class="font-medium">非终结符：</span>{{ analysisResult.data.Vn?.join(', ') }}
+                      <span class="font-medium">非终结符：</span
+                      >{{ analysisResult.data.Vn?.join(', ') }}
                     </div>
                     <div>
-                      <span class="font-medium">终结符：</span>{{ analysisResult.data.Vt?.join(', ') }}
+                      <span class="font-medium">终结符：</span
+                      >{{ analysisResult.data.Vt?.join(', ') }}
                     </div>
                   </div>
 
@@ -159,7 +165,7 @@ A -> ε</pre>
             'px-6 py-2 rounded-lg transition-colors',
             isStepComplete
               ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -188,9 +194,7 @@ const isAnalyzing = ref(false)
 const analysisResult = ref<any>(null)
 
 // 步骤完成状态
-const isStepComplete = computed(() =>
-  analysisResult.value?.success && analysisResult.value?.data
-)
+const isStepComplete = computed(() => analysisResult.value?.success && analysisResult.value?.data)
 
 // 输入变化处理
 const onInputChange = () => {
@@ -211,7 +215,7 @@ F -> ( E )
 F -> id`,
     2: `S -> aAb
 A -> c
-A -> ε`
+A -> ε`,
   }
 
   grammarInput.value = examples[exampleId as keyof typeof examples] || ''
@@ -229,15 +233,15 @@ const analyzeGrammar = async () => {
     // 处理输入的产生式
     const productions = grammarInput.value
       .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
 
     const result = await lr0API.analyseGrammar(productions)
 
     analysisResult.value = {
       success: true,
       message: '文法分析完成，可以进行下一步',
-      data: result.data
+      data: result.data,
     }
 
     // 保存分析结果供其他步骤使用
@@ -245,15 +249,14 @@ const analyzeGrammar = async () => {
       analysisResult: result.data,
       originalProductions: productions, // 保存原始产生式数组
       grammarInput: grammarInput.value, // 保存原始输入文本
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
     localStorage.setItem('lr0-step1-data', JSON.stringify(step1Data))
-
   } catch (error: any) {
     analysisResult.value = {
       success: false,
       message: error.message || '文法分析失败，请检查输入格式',
-      data: null
+      data: null,
     }
     console.error('Grammar analysis error:', error)
   } finally {
@@ -269,8 +272,25 @@ const nextStep = () => {
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #dbeafe; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #dbeafe;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>
