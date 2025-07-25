@@ -48,13 +48,10 @@
             <h4 class="font-medium text-gray-900 mb-2">示例文法1</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <pre class="text-xs font-mono text-gray-700">
-S -> E
-E -> E + T
-E -> T
-T -> T * F
-T -> F
-F -> ( E )
-F -> id</pre
+S -> A a
+A -> B D
+B -> b
+D -> d</pre
               >
               <button
                 @click="loadExample(1)"
@@ -69,9 +66,10 @@ F -> id</pre
             <h4 class="font-medium text-gray-900 mb-2">示例文法2</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <pre class="text-xs font-mono text-gray-700">
-S -> aAb
-A -> c
-A -> ε</pre
+S -> a A
+A -> B c
+B -> b
+B -> ε</pre
               >
               <button
                 @click="loadExample(2)"
@@ -87,14 +85,11 @@ A -> ε</pre
         <div class="flex justify-center">
           <button
             @click="analyzeGrammar"
-            :disabled="!grammarInput.trim() || isAnalyzing"
+            :disabled="!grammarInput.trim()"
             class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
-            <Icon
-              :icon="isAnalyzing ? 'lucide:loader-2' : 'lucide:play'"
-              :class="['w-4 h-4 inline mr-2', isAnalyzing ? 'animate-spin' : '']"
-            />
-            {{ isAnalyzing ? '分析中...' : '分析文法' }}
+            <Icon icon="lucide:play" class="w-4 h-4 inline mr-2" />
+            分析文法
           </button>
         </div>
 
@@ -194,7 +189,6 @@ const commonStore = useCommonStore()
 const grammarInput = ref('')
 
 // 从store获取状态
-const isAnalyzing = computed(() => commonStore.loading)
 const analysisResult = computed(() => {
   if (lr0Store.analysisResult) {
     return {
@@ -233,16 +227,14 @@ const onInputChange = () => {
 // 加载示例文法
 const loadExample = (exampleId: number) => {
   const examples = {
-    1: `S -> E
-E -> E + T
-E -> T
-T -> T * F
-T -> F
-F -> ( E )
-F -> id`,
-    2: `S -> aAb
-A -> c
-A -> ε`,
+    1: `S -> Aa
+A -> BD
+B -> b
+D -> d`,
+    2: `S -> aA
+A -> Bc
+B -> b
+B -> ε`,
   }
 
   grammarInput.value = examples[exampleId as keyof typeof examples] || ''

@@ -142,25 +142,16 @@
               <div v-else class="h-full">
                 <!-- 答案DFA -->
                 <div class="h-full">
-                  <div
-                    ref="answerCanvasContainer"
-                    class="h-full w-full flex items-center justify-center bg-gray-50 rounded"
-                  >
-                    <div class="text-center text-gray-600">
-                      <Icon
-                        icon="lucide:diagram-project"
-                        class="w-12 h-12 mx-auto mb-3 text-gray-400"
-                      />
-                      <p>LR0项目集规范族DFA</p>
-                      <p class="text-sm mt-2">标准答案将在这里显示</p>
-                    </div>
-                  </div>
+                  <div ref="answerCanvasContainer" class="h-full w-full bg-gray-50 rounded"></div>
                 </div>
               </div>
             </div>
 
             <!-- 答案分析 -->
-            <div v-if="showAnswerFlag" class="border-t border-gray-200 bg-green-50 p-4">
+            <div
+              v-if="showAnswerFlag && hasDFAData"
+              class="border-t border-gray-200 bg-green-50 p-4"
+            >
               <div class="flex items-start gap-3">
                 <Icon
                   icon="lucide:check-circle"
@@ -208,10 +199,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
 import { useLR0Store } from '@/stores/lr0'
+import { instance } from '@viz-js/viz'
 
 const emit = defineEmits<{
   'next-step': []
@@ -220,6 +212,18 @@ const emit = defineEmits<{
 }>()
 
 const lr0Store = useLR0Store()
+
+// 本地状态
+const showAnswerFlag = ref(false)
+const hasRendered = ref(false) // 防重复渲染
+
+// 画布相关
+const canvasRef = ref<InstanceType<typeof LRCanvas>>()
+const answerCanvasContainer = ref<HTMLElement>()
+
+// 计算属性
+const lr0DotString = computed(() => lr0Store.dotString)
+const hasDFAData = computed(() => lr0Store.analysisResult !== null && lr0Store.dotString !== '')
 
 // 从store获取文法数据
 const grammarInfo = computed(() => {
@@ -238,13 +242,6 @@ const grammarInfo = computed(() => {
   return null
 })
 
-// 答案显示控制
-const showAnswerFlag = ref(false)
-
-// 画布相关
-const canvasRef = ref<InstanceType<typeof LRCanvas>>()
-const answerCanvasContainer = ref<HTMLElement>()
-
 // 答案数据 - 从store获取
 const answerData = computed(() => {
   if (lr0Store.dfaStates && lr0Store.dfaStates.length > 0) {
@@ -256,9 +253,36 @@ const answerData = computed(() => {
   return null
 })
 
-// 答案控制
-const toggleAnswer = () => {
+// 答案控制 - 参考FA组件的SVG渲染实现
+const toggleAnswer = async () => {
   showAnswerFlag.value = !showAnswerFlag.value
+
+  if (showAnswerFlag.value && !hasRendered.value && lr0DotString.value) {
+    await nextTick()
+
+    // 直接渲染，不要复杂的状态管理
+    if (answerCanvasContainer.value) {
+      try {
+        const viz = await instance()
+        const svg = viz.renderSVGElement(lr0DotString.value)
+
+        // 模仿FA组件：直接添加SVG，添加样式类
+        svg.classList.add('lr0-dfa-svg')
+        answerCanvasContainer.value.appendChild(svg)
+        hasRendered.value = true // 防重复渲染
+      } catch (error) {
+        console.error('LR0 DFA render failed:', error)
+        // 简单错误处理：在容器中显示错误信息
+        if (answerCanvasContainer.value) {
+          answerCanvasContainer.value.innerHTML = `
+            <div class="text-center text-red-500 p-4">
+              <p>渲染失败: ${error instanceof Error ? error.message : String(error)}</p>
+            </div>
+          `
+        }
+      }
+    }
+  }
 }
 
 // 是否构造完成 - 简化逻辑，允许用户直接进入下一步
@@ -320,5 +344,13 @@ const proceedToNext = () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* LR0 DFA SVG 样式 */
+:deep(.lr0-dfa-svg) {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  width: auto;
 }
 </style>
