@@ -94,7 +94,7 @@
                       @input="clearValidation(`${stateIndex - 1},${terminal}`, 'action')"
                       :class="getCellStyle(`${stateIndex - 1},${terminal}`, 'action')"
                       class="w-full px-1 py-0.5 text-xs text-center border-0 focus:ring-1 focus:ring-cyan-500 rounded transition-colors"
-                      placeholder="--"
+                      placeholder="-"
                     />
                   </td>
 
@@ -110,7 +110,7 @@
                       @input="clearValidation(`${stateIndex - 1},${nonterminal}`, 'goto')"
                       :class="getCellStyle(`${stateIndex - 1},${nonterminal}`, 'goto')"
                       class="w-full px-1 py-0.5 text-xs text-center border-0 focus:ring-1 focus:ring-cyan-500 rounded transition-colors"
-                      placeholder="--"
+                      placeholder="-"
                     />
                   </td>
                 </tr>
@@ -224,7 +224,7 @@
                       :key="`ans-action-${stateIndex - 1}-${terminal}`"
                       class="px-3 py-2 border border-gray-300 text-center"
                     >
-                      {{ getCorrectAnswer(`${stateIndex - 1},${terminal}`, 'action') || '--' }}
+                      {{ getCorrectAnswer(`${stateIndex - 1},${terminal}`, 'action') || '-' }}
                     </td>
                     <!-- GOTO答案 -->
                     <td
@@ -232,7 +232,7 @@
                       :key="`ans-goto-${stateIndex - 1}-${nonterminal}`"
                       class="px-3 py-2 border border-gray-300 text-center"
                     >
-                      {{ getCorrectAnswer(`${stateIndex - 1},${nonterminal}`, 'goto') || '--' }}
+                      {{ getCorrectAnswer(`${stateIndex - 1},${nonterminal}`, 'goto') || '-' }}
                     </td>
                   </tr>
                 </tbody>
