@@ -47,9 +47,9 @@
               </div>
             </div>
             <!-- 集成ThompsonRules可视化 -->
-            <div class="mt-6">
+            <!-- <div class="mt-6">
               <ThompsonRules />
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -159,7 +159,6 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
-import ThompsonRules from '@/components/flow/ThompsonRules.vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
 
