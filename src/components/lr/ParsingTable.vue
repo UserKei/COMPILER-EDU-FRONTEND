@@ -355,9 +355,21 @@ const validationStats = computed(() => {
 })
 
 const isTableComplete = computed(() => {
+  const allResults = [
+    ...Object.values(validationResults.actions),
+    ...Object.values(validationResults.gotos),
+  ]
+
+  if (allResults.length === 0) return false
+
+  // 计算总单元格数量（ACTION + GOTO）
   const totalCells = stateCount.value * (props.terminals.length + 1 + props.nonterminals.length)
 
-  return totalCells > 0 && validationStats.value.correct === totalCells
+  // 检查是否所有单元格都已验证且正确
+  const correctResults = allResults.filter((r) => r.type === 'correct').length
+  const hasErrors = allResults.some((result) => result.type === 'incorrect')
+
+  return allResults.length === totalCells && correctResults === totalCells && !hasErrors
 })
 
 // 方法
@@ -365,26 +377,27 @@ const validateCell = (key: string, type: 'action' | 'goto') => {
   const userInput = (type === 'action' ? userInputs.actions[key] : userInputs.gotos[key]) || ''
   const correctAnswer = getCorrectAnswer(key, type)
 
-  // 添加详细的调试信息
-  console.log('=== validateCell 调试 ===')
-  console.log('键值:', key)
-  console.log('类型:', type)
-  console.log('用户输入:', `"${userInput}"`)
-  console.log('正确答案:', `"${correctAnswer}"`)
-  console.log('用户输入(trim):', `"${userInput.trim()}"`)
-  console.log('比较结果:', userInput.trim() === correctAnswer)
-
   let result: { type: 'empty' | 'incorrect' | 'correct'; correctAnswer?: string }
 
-  if (!userInput.trim()) {
-    result = { type: 'empty', correctAnswer }
-    console.log('结果: 空值')
-  } else if (userInput.trim() !== correctAnswer) {
-    result = { type: 'incorrect', correctAnswer }
-    console.log('结果: 错误')
+  // 空白位置的验证逻辑
+  if (!correctAnswer) {
+    // 这是应该为空的位置
+    if (!userInput.trim()) {
+      // 用户没有填写，验证成功
+      result = { type: 'correct' }
+    } else {
+      // 用户填写了内容，验证失败
+      result = { type: 'incorrect', correctAnswer: '' }
+    }
   } else {
-    result = { type: 'correct' }
-    console.log('结果: 正确')
+    // 这是应该有内容的位置
+    if (!userInput.trim()) {
+      result = { type: 'empty', correctAnswer }
+    } else if (userInput.trim() !== correctAnswer) {
+      result = { type: 'incorrect', correctAnswer }
+    } else {
+      result = { type: 'correct' }
+    }
   }
 
   if (type === 'action') {
@@ -481,36 +494,34 @@ const toggleAnswerDisplay = () => {
 
 // 初始化用户输入数据结构
 const initializeUserInputs = () => {
-  console.log('=== 初始化用户输入数据结构 ===')
-  console.log('状态数量:', stateCount.value)
-  console.log('终结符:', props.terminals)
-  console.log('非终结符:', props.nonterminals)
+  // 清空验证结果，避免初始化时显示验证状态
+  Object.keys(validationResults.actions).forEach((key) => {
+    delete validationResults.actions[key]
+  })
+  Object.keys(validationResults.gotos).forEach((key) => {
+    delete validationResults.gotos[key]
+  })
+  hasValidationResults.value = false
 
   // 初始化 ACTION 输入
-  const actionKeys: string[] = []
   for (let stateIndex = 0; stateIndex < stateCount.value; stateIndex++) {
     for (const terminal of [...props.terminals, '#']) {
       const key = `${stateIndex},${terminal}`
-      actionKeys.push(key)
       if (!(key in userInputs.actions)) {
         userInputs.actions[key] = ''
       }
     }
   }
-  console.log('生成的 ACTION 键值:', actionKeys)
 
   // 初始化 GOTO 输入
-  const gotoKeys: string[] = []
   for (let stateIndex = 0; stateIndex < stateCount.value; stateIndex++) {
     for (const nonterminal of props.nonterminals) {
       const key = `${stateIndex},${nonterminal}`
-      gotoKeys.push(key)
       if (!(key in userInputs.gotos)) {
         userInputs.gotos[key] = ''
       }
     }
   }
-  console.log('生成的 GOTO 键值:', gotoKeys)
 }
 
 // 监听数据变化
@@ -531,31 +542,6 @@ watch(
 
 // 组件挂载
 onMounted(() => {
-  console.log('=== ParsingTable 组件挂载调试 ===')
-  console.log('tableType:', props.tableType)
-  console.log('terminals:', props.terminals)
-  console.log('nonterminals:', props.nonterminals)
-  console.log('analysisData:', props.analysisData)
-
-  console.log('=== correctAnswers 详细调试 ===')
-  console.log('actions 对象:', props.correctAnswers.actions)
-  console.log('gotos 对象:', props.correctAnswers.gotos)
-
-  console.log('=== actions 所有键值对 ===')
-  Object.entries(props.correctAnswers.actions).forEach(([key, value]) => {
-    console.log(`  "${key}" => "${value}"`)
-  })
-
-  console.log('=== gotos 所有键值对 ===')
-  Object.entries(props.correctAnswers.gotos).forEach(([key, value]) => {
-    console.log(`  "${key}" => "${value}"`)
-  })
-
-  console.log('=== 状态和符号信息 ===')
-  console.log('状态数量:', stateCount.value)
-  console.log('终结符列表:', [...props.terminals, '#'])
-  console.log('非终结符列表:', props.nonterminals)
-
   initializeUserInputs()
 })
 </script>
