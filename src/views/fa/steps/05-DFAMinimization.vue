@@ -75,6 +75,7 @@
                           :disabled="pItem.category === 'onlyRead' || step6Open"
                           @focus="handlePSetFocus(pItem)"
                           @input="handlePSetInput(pItem)"
+                          @blur="handlePSetBlur(pItem)"
                           placeholder="输入状态子集，如：123"
                         />
                         <button
@@ -588,9 +589,16 @@ onMounted(() => {
 
 // P集合相关方法
 const handlePSetFocus = (pItem: PSetItem) => {
-  if (pItem.check === ValidationState.ERROR) {
-    pItem.check = pItem.text.trim() ? ValidationState.NORMAL : ValidationState.EMPTY
-  }
+  // 焦点时不清除错误状态，让用户看到错误信息
+  // 只有在用户开始输入时才清除错误状态
+}
+
+// 添加失焦处理函数
+const handlePSetBlur = (pItem: PSetItem) => {
+  if (step6Open.value) return
+
+  // 失焦时进行验证
+  validateSinglePSet(pItem)
 }
 
 // P集合输入处理：实时状态更新 + 防抖检验
@@ -598,7 +606,13 @@ const handlePSetInput = (pItem: PSetItem) => {
   if (step6Open.value) return
 
   const inputText = pItem.text.trim()
-  pItem.check = inputText ? ValidationState.NORMAL : ValidationState.EMPTY
+
+  // 用户开始输入时，清除错误状态，设置为正常状态
+  if (pItem.check === ValidationState.ERROR) {
+    pItem.check = inputText ? ValidationState.NORMAL : ValidationState.EMPTY
+  } else {
+    pItem.check = inputText ? ValidationState.NORMAL : ValidationState.EMPTY
+  }
 
   // 防抖检验
   debouncedValidateSinglePSet(pItem)
