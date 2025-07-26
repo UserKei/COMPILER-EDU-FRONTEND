@@ -28,44 +28,26 @@
               <!-- 矩阵显示区域 -->
               <div v-if="matrixStateColumns.length && originalStateCount > 0" class="minimized-matrix">
                 <h4 class="font-medium text-gray-800 mb-3">最小化状态转换矩阵</h4>
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse border border-gray-300 text-sm">
-                    <thead>
-                      <tr class="bg-green-50">
-                        <!-- 🟢 修改：与第四步保持一致的列标题和颜色 -->
-                        <th
-                          v-for="state in matrixStateColumns"
-                          :key="state"
-                          class="border border-gray-300 px-3 py-2 text-center font-semibold"
-                        >
-                          {{ state }}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <!-- 🟢 修改：与第四步保持一致的行结构和颜色 -->
-                      <tr
-                        v-for="(rowIndex, index) in matrixStateIndices"
-                        :key="rowIndex"
-                        :class="index % 2 === 0 ? 'bg-white' : 'bg-green-50'"
-                      >
-                        <td
-                          v-for="(state, colIndex) in matrixStateColumns"
-                          :key="state"
-                          :class="[
-                            'border border-gray-300 px-3 py-2 text-center',
-                            // 🟢 修复：使用与第四步一致的终态高亮逻辑
-                            getMatrixCellClass(rowIndex, state, colIndex)
-                          ]"
-                        >
-                          {{ matrixData[rowIndex]?.[colIndex] || '-' }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <TransitionTable
+                  :data="{
+                    headers: matrixStateColumns,
+                    rows: matrixData
+                  }"
+                  type="minimized"
+                  :columns="matrixStateColumns.map(state => ({
+                    key: state,
+                    title: state,
+                    type: state === 'S' ? 'state' : 'transition',
+                    editable: false
+                  }))"
+                  :editable="false"
+                  :show-answer="true"
+                  :final-state-config="{
+                    isFinalState: (row, col, value) => minimizedAcceptingStates.has(String(value))
+                  }"
+                />
               </div>
-              
+
               <!-- 无数据状态 -->
               <div v-else class="text-center py-8 text-gray-500">
                 <Icon icon="lucide:table-2" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
@@ -199,6 +181,7 @@ import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
+import { TransitionTable } from '@/components/fa'
 
 const emit = defineEmits<{
   'next-step': []
@@ -216,9 +199,7 @@ const minimizedStateCount = ref(0)
 // 🟢 新增：与第四步保持一致的矩阵相关状态
 const originalStateCount = ref(0)
 const matrixStateColumns = ref<string[]>([]) // 矩阵列标题 ['S', 'a', 'b']
-const matrixStateIndices = ref<number[]>([]) // 矩阵行索引 [0, 1, 2...]
 const matrixData = ref<string[][]>([]) // 矩阵数据
-const acceptingStatesSet = ref<Set<string>>(new Set()) // 🟢 新增：接受状态集合
 
 // 🟢 新增：最小化DFA的接受状态映射
 const minimizedAcceptingStates = ref<Set<string>>(new Set())
@@ -230,21 +211,7 @@ const showAnswer = ref(false)
 const minimizedDFACanvasRef = ref<InstanceType<typeof FACanvas>>()
 const answerSvgContainer = ref<HTMLElement>()
 
-// 🟢 修改：获取矩阵单元格样式类（支持所有列的终态高亮）
-const getMatrixCellClass = (rowIndex: number, columnName: string, colIndex: number): string => {
-  const cellValue = matrixData.value[rowIndex]?.[colIndex]
-  if (!cellValue || cellValue === '-') return ''
-  
-  console.log(`检查单元格 [${rowIndex}][${columnName}]: 值=${cellValue}, 是否为终态=${minimizedAcceptingStates.value.has(cellValue)}`)
-  
-  // 🟢 修改：检查任何列的单元格值是否在最小化DFA的接受状态集合中
-  if (minimizedAcceptingStates.value.has(cellValue) || minimizedAcceptingStates.value.has(String(cellValue))) {
-    console.log(`高亮终态单元格: [${rowIndex}][${columnName}] = ${cellValue}`)
-    return 'final-state-cell text-green-800 font-semibold'
-  }
 
-  return ''
-}
 
 onMounted(() => {
   if (!faStore.hasResult()) {
@@ -275,7 +242,7 @@ onMounted(() => {
 
       // 🟢 修改：先构建矩阵数据，再构建接受状态集合
       buildMinimizedTransitionMatrix()
-      
+
       // 🟢 修改：基于最小化数据构建接受状态集合
       buildMinimizedAcceptingStatesSet(faResult)
     }
@@ -310,7 +277,7 @@ const buildMinimizedAcceptingStatesSet = (faData: any) => {
       faData.table_to_num_min.S.forEach((state: any, index: number) => {
         const stateStr = String(state)
         console.log(`检查最小化状态 ${index}: ${stateStr}`)
-        
+
         // 如果这个最小化状态对应的原始状态是接受状态，则它也是接受状态
         if (originalAcceptingStates.has(stateStr)) {
           minimizedStates.add(stateStr)
@@ -329,7 +296,7 @@ const buildMinimizedAcceptingStatesSet = (faData: any) => {
     const dotString = faStore.minDfaDotString
     const doubleCircleRegex = /(\w+)\s*\[.*shape\s*=\s*doublecircle.*\]/gi
     const matches = [...dotString.matchAll(doubleCircleRegex)]
-    
+
     if (matches.length > 0) {
       const statesFromDot = matches.map(match => match[1])
       minimizedAcceptingStates.value = new Set(statesFromDot)
@@ -344,25 +311,7 @@ const buildMinimizedAcceptingStatesSet = (faData: any) => {
   console.log('可用的数据字段:', Object.keys(faData))
 }
 
-// 🟢 保持原有的构建接受状态集合函数（用于备用）
-const buildAcceptingStatesSet = () => {
-  const faData = faStore.originalData as any
-  if (!faData) return
 
-  const acceptingStates: string[] = []
-  
-  // 尝试多种可能的接受状态数据结构
-  if (faData.accepting_states && Array.isArray(faData.accepting_states)) {
-    acceptingStates.push(...faData.accepting_states)
-  } else if (faData.final_states && Array.isArray(faData.final_states)) {
-    acceptingStates.push(...faData.final_states)
-  } else if (faData.F && Array.isArray(faData.F)) {
-    acceptingStates.push(...faData.F)
-  }
-  
-  acceptingStatesSet.value = new Set(acceptingStates.map(String))
-  console.log('原始接受状态集合:', acceptingStatesSet.value)
-}
 
 // 🟢 新增：构建最小化状态转换矩阵（与第四步保持一致的结构）
 const buildMinimizedTransitionMatrix = () => {
@@ -387,9 +336,7 @@ const buildMinimizedTransitionMatrix = () => {
   const matrixRowCount = tableToNumMin['S'] ? tableToNumMin['S'].length : 0
   console.log('矩阵行数（状态数量）:', matrixRowCount)
 
-  // 生成状态索引（与第四步保持一致）
-  matrixStateIndices.value = Array.from({ length: matrixRowCount }, (_, i) => i)
-  console.log('状态索引数组:', matrixStateIndices.value)
+
 
   // 构建矩阵数据（与第四步保持一致的结构）
   matrixData.value = []
@@ -491,20 +438,5 @@ const complete = () => {
   background: #f9fafb;
 }
 
-/* 🟢 新增：终态单元格高亮动画（与第四步保持一致） */
-@keyframes finalStateGlow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(34, 197, 94, 0.3), 0 0 10px rgba(34, 197, 94, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
-  }
-}
 
-/* 🟢 新增：终态单元格样式（与第四步保持一致） */
-.final-state-cell {
-  animation: finalStateGlow 2s ease-in-out infinite;
-  border: 2px solid #22c55e !important;
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-}
 </style>

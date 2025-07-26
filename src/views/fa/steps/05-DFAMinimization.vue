@@ -324,46 +324,22 @@
                     "
                   >
                     <!-- 答案矩阵表格 -->
-                    <div class="overflow-x-auto">
-                      <table class="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr class="bg-green-50">
-                            <th class="border border-gray-300 px-3 py-2 font-semibold">S</th>
-                            <th
-                              v-for="symbol in alphabetSymbols"
-                              :key="symbol"
-                              class="border border-gray-300 px-3 py-2 font-semibold"
-                            >
-                              {{ symbol }}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr
-                            v-for="(_, rowIndex) in Array(originalStateCount)"
-                            :key="rowIndex"
-                            :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
-                          >
-                            <td class="border border-gray-300 px-3 py-2 font-medium bg-gray-50">
-                              {{
-                                faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ||
-                                rowIndex
-                              }}
-                            </td>
-                            <td
-                              v-for="symbol in alphabetSymbols"
-                              :key="symbol"
-                              :class="[
-                                'border border-gray-300 px-3 py-2 text-center',
-                                isMatrixFinalStateCell(rowIndex, symbol)
-                              ]"
-                            >
-                              {{ faStore.originalData.table_to_num_min[symbol]?.[rowIndex] || '-' }}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                    <TransitionTable
+                      :data="{
+                        headers: ['S', ...alphabetSymbols],
+                        rows: Array.from({ length: originalStateCount }, (_, rowIndex) => [
+                          faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ?? rowIndex,
+                          ...alphabetSymbols.map(symbol => faStore.originalData?.table_to_num_min[symbol]?.[rowIndex] ?? '-')
+                        ])
+                      }"
+                      type="minimized"
+                      :columns="[{ key: 'S', title: 'S', type: 'state' as const, editable: false }, ...alphabetSymbols.map(symbol => ({ key: symbol, title: symbol, type: 'transition' as const, editable: false }))]"
+                      :editable="false"
+                      :show-answer="true"
+                      :final-state-config="{
+                        isFinalState: (row, col, value) => minimizedAcceptingStates.has(String(value))
+                      }"
+                    />
                   </div>
                   <div v-else class="text-center py-8 text-gray-500">
                     <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
@@ -445,6 +421,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
+import { TransitionTable } from '@/components/fa'
 
 const emit = defineEmits<{
   'next-step': []
@@ -834,8 +811,8 @@ const validateMatrix = () => {
   // 检查是否所有答案都正确
   const hasErrors = Object.keys(matrixValidationErrors.value).length > 0
   if (!hasErrors) {
-    step7Open.value = true
-    // success message
+  step7Open.value = true
+  // success message
   }
 }
 
@@ -1006,21 +983,6 @@ const formatFieldKey = (fieldKey: string, fieldType: 'pset' | 'matrix') => {
   return fieldKey
 }
 
-// 判断矩阵单元格是否为终态（根据行列索引判断）
-const isMatrixFinalStateCell = (rowIndex: number, columnName: string): string => {
-  if (!faStore.originalData?.table_to_num_min) return ''
-
-  const cellValue = faStore.originalData.table_to_num_min[columnName]?.[rowIndex]
-  if (!cellValue || cellValue === '-') return ''
-
-  // 检查单元格值是否在最小化DFA的接受状态集合中
-  if (minimizedAcceptingStates.value.has(String(cellValue))) {
-    return 'final-state-cell text-green-800 font-semibold'
-  }
-
-  return ''
-}
-
 // 构建最小化DFA的接受状态集合
 const buildMinimizedAcceptingStatesSet = (faData: any) => {
   console.log('开始构建最小化DFA接受状态集合')
@@ -1106,20 +1068,5 @@ const buildMinimizedAcceptingStatesSet = (faData: any) => {
   background: #f9fafb;
 }
 
-/* 终态单元格高亮动画 */
-@keyframes finalStateGlow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(34, 197, 94, 0.3), 0 0 10px rgba(34, 197, 94, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
-  }
-}
 
-/* 终态单元格样式 */
-.final-state-cell {
-  animation: finalStateGlow 2s ease-in-out infinite;
-  border: 2px solid #22c55e !important;
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-}
 </style>

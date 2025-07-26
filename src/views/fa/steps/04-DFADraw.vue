@@ -33,85 +33,57 @@
                 <!-- 转换表 -->
                 <div v-if="conversionTableColumns.length" class="conversion-table">
                   <h4 class="font-medium text-gray-800 mb-3">NFA → DFA 转换表</h4>
-                  <div class="overflow-x-auto">
-                    <table class="w-full border-collapse border border-gray-300 text-sm">
-                      <thead>
-                        <tr class="bg-green-50">
-                          <!-- 转换表：列标题为 I, Ia, Ib 等输入符号 -->
-                          <th
-                            v-for="column in conversionTableColumns"
-                            :key="column"
-                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
-                          >
-                            {{ column }}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <!-- 每行代表一个状态集合 -->
-                        <tr
-                          v-for="(_, rowIndex) in Math.max(
-                            ...conversionTableColumns.map(
-                              (col) => conversionTable[col]?.length || 0,
-                            ),
-                          )"
-                          :key="rowIndex"
-                          :class="rowIndex % 2 === 0 ? 'bg-white' : 'bg-green-50'"
-                        >
-                          <td
-                            v-for="column in conversionTableColumns"
-                            :key="column"
-                            :class="[
-                              'border border-gray-300 px-3 py-2 text-center',
-                              isFinalStateCell(conversionTable[column]?.[rowIndex])
-                            ]"
-                          >
-                            {{ conversionTable[column]?.[rowIndex] || '-' }}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <TransitionTable
+                    :data="{
+                      headers: conversionTableColumns,
+                      rows: Array.from({ length: Math.max(...conversionTableColumns.map(col => conversionTable[col]?.length || 0)) }, (_, rowIndex) =>
+                        conversionTableColumns.map(col => conversionTable[col]?.[rowIndex] || '-')
+                      )
+                    }"
+                    type="conversion"
+                    :columns="conversionTableColumns.map(col => ({
+                      key: col,
+                      title: col,
+                      type: col === 'I' ? 'state' as const : 'transition' as const,
+                      editable: false
+                    }))"
+                    :editable="false"
+                    :show-answer="true"
+                    :final-state-config="{
+                      isFinalState: (row: number, col: string, value: any) => value && value.includes('Y')
+                    }"
+                  />
                 </div>
 
                 <!-- 状态转换矩阵 -->
                 <div v-if="Object.keys(answerTransitionMatrix).length > 0" class="transition-matrix">
                   <h4 class="font-medium text-gray-800 mb-3">状态转换矩阵</h4>
-                  <div class="overflow-x-auto">
-                    <table class="w-full border-collapse border border-gray-300 text-sm">
-                      <thead>
-                        <tr class="bg-green-50">
-                          <!-- 列标题为状态名 S, a, b 等 -->
-                          <th
-                            v-for="state in matrixStateColumns"
-                            :key="state"
-                            class="border border-gray-300 px-3 py-2 text-center font-semibold"
-                          >
-                            {{ state }}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <!-- 每行代表一个状态转换 -->
-                        <tr
-                          v-for="(rowData, rowKey) in answerTransitionMatrix"
-                          :key="String(rowKey)"
-                          :class="parseInt(String(rowKey)) % 2 === 0 ? 'bg-white' : 'bg-green-50'"
-                        >
-                          <td
-                            v-for="state in matrixStateColumns"
-                            :key="state"
-                            :class="[
-                              'border border-gray-300 px-3 py-2 text-center',
-                              isMatrixFinalStateCell(parseInt(String(rowKey)), state)
-                            ]"
-                          >
-                            {{ answerTransitionMatrix[rowKey]?.[state] || '-' }}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <TransitionTable
+                    :data="{
+                      headers: matrixStateColumns,
+                      rows: Object.keys(answerTransitionMatrix).map(rowKey =>
+                        matrixStateColumns.map(state => answerTransitionMatrix[rowKey]?.[state] || '-')
+                      )
+                    }"
+                    type="matrix"
+                    :columns="matrixStateColumns.map(state => ({
+                      key: state,
+                      title: state,
+                      type: state === 'S' ? 'state' as const : 'transition' as const,
+                      editable: false
+                    }))"
+                    :editable="false"
+                    :show-answer="true"
+                    :final-state-config="{
+                      isFinalState: (row: number, col: string, value: any) => {
+                        const columnMapping: Record<string, string> = {
+                          'S': 'I', 'a': 'Ia', 'b': 'Ib', 'c': 'Ic'
+                        }
+                        const mappedColumn = columnMapping[col] || col
+                        return finalStatePositions.some((pos: {row: number, col: string}) => pos.row === row && pos.col === mappedColumn)
+                      }
+                    }"
+                  />
                 </div>
               </div>
               <div v-else class="text-center py-8 text-gray-500">
@@ -119,6 +91,8 @@
                 <p>暂无转换表数据</p>
                 <p class="text-sm mt-1">请先完成第三步的子集构造</p>
               </div>
+
+
 
               <!-- 高亮说明 -->
               <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -347,6 +321,7 @@ import { Icon } from '@iconify/vue'
 import FACanvas from '@/components/flow/canvas/FACanvas.vue'
 import { useFAStore } from '@/stores'
 import { instance } from '@viz-js/viz'
+import { TransitionTable } from '@/components/fa'
 
 // 转换表数据结构 - 按列组织（每个输入符号对应一列）
 interface ConversionTableData {
@@ -369,7 +344,7 @@ const totalTransitions = ref(0)
 const conversionTable = ref<ConversionTableData>({}) // 转换表：列布局
 const conversionTableColumns = ref<string[]>([]) // 转换表列标题 ['I', 'Ia', 'Ib']
 const matrixStateColumns = ref<string[]>([]) // 矩阵状态列 ['S', 'a', 'b']
-const answerTransitionMatrix = ref<any[]>([]) // 标准答案的状态转换矩阵
+const answerTransitionMatrix = ref<Record<string, Record<string, any>>>({}) // 标准答案的状态转换矩阵
 
 // 终态位置列表（从转换表中提取的含Y单元格的位置）
 const finalStatePositions = ref<Array<{row: number, col: string}>>([])
@@ -389,45 +364,7 @@ const isComplete = computed(() => {
   return hasRenderedAnswer.value
 })
 
-// 判断是否为终态单元格（包含Y的单元格）
-const isFinalStateCell = (cellValue: string | undefined): string => {
-  if (!cellValue || cellValue === '-') return ''
 
-  // 检查单元格值是否包含Y（终态）
-  if (cellValue.includes('Y')) {
-    return 'final-state-cell text-green-800 font-semibold'
-  }
-
-  return ''
-}
-
-// 判断矩阵单元格是否为终态（根据行列索引判断）
-const isMatrixFinalStateCell = (rowIndex: number, columnName: string): string => {
-  // 将矩阵列名映射到转换表列名
-  const columnMapping: Record<string, string> = {
-    'S': 'I',
-    'a': 'Ia',
-    'b': 'Ib',
-    'c': 'Ic'
-  }
-
-  const mappedColumn = columnMapping[columnName] || columnName
-
-  console.log(`检查矩阵单元格: 行${rowIndex}, 列${columnName} (映射到${mappedColumn})`)
-  console.log('当前终态位置列表:', finalStatePositions.value)
-
-  // 检查当前单元格位置是否在终态位置列表中
-  const isFinalPosition = finalStatePositions.value.some(
-    pos => pos.row === rowIndex && pos.col === mappedColumn
-  )
-
-  if (isFinalPosition) {
-    console.log(`矩阵单元格高亮: 行${rowIndex}, 列${columnName} (映射到${mappedColumn})`)
-    return 'final-state-cell text-green-800 font-semibold'
-  }
-
-  return ''
-}
 
 // 提取终态位置（从转换表中含Y的单元格位置）
 const extractFinalStatePositions = (conversionTable: ConversionTableData) => {
@@ -791,20 +728,5 @@ const proceedToNext = () => {
   background: #f9fafb;
 }
 
-/* 终态单元格高亮动画 */
-@keyframes finalStateGlow {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(34, 197, 94, 0.3), 0 0 10px rgba(34, 197, 94, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
-  }
-}
 
-/* 终态单元格样式 - 动画无法用Tailwind实现 */
-.final-state-cell {
-  animation: finalStateGlow 2s ease-in-out infinite;
-  border: 2px solid #22c55e !important;
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-}
 </style>
