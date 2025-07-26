@@ -66,173 +66,20 @@
           </div>
         </div>
 
-        <!-- 分析表构建区域 -->
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">SLR1分析表</h3>
-            <p class="text-sm text-gray-600 mt-1">ACTION表和GOTO表的组合</p>
-          </div>
-
-          <div class="p-6">
-            <!-- 表格头部信息 -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
-              <div class="bg-blue-50 p-3 rounded">
-                <span class="font-medium text-blue-900">状态数量：</span>
-                <span class="text-blue-700">{{ stateCount }}</span>
-              </div>
-              <div class="bg-green-50 p-3 rounded">
-                <span class="font-medium text-green-900">终结符：</span>
-                <span class="text-green-700">{{ terminals.join(', ') }}</span>
-              </div>
-              <div class="bg-purple-50 p-3 rounded">
-                <span class="font-medium text-purple-900">非终结符：</span>
-                <span class="text-purple-700">{{ nonterminals.join(', ') }}</span>
-              </div>
-            </div>
-
-            <!-- 分析表 -->
-            <div class="overflow-x-auto">
-              <table class="min-w-full border border-gray-300">
-                <!-- 表头 -->
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900">
-                      状态
-                    </th>
-                    <!-- ACTION列 -->
-                    <th
-                      v-for="terminal in terminals"
-                      :key="terminal"
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50"
-                    >
-                      {{ terminal }}
-                    </th>
-                    <th
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50"
-                    >
-                      $
-                    </th>
-                    <!-- GOTO列 -->
-                    <th
-                      v-for="nonterminal in nonterminals"
-                      :key="nonterminal"
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-green-50"
-                    >
-                      {{ nonterminal }}
-                    </th>
-                  </tr>
-                </thead>
-
-                <!-- 表体 -->
-                <tbody>
-                  <tr
-                    v-for="(row, stateIndex) in parseTable"
-                    :key="stateIndex"
-                    class="hover:bg-gray-50"
-                  >
-                    <td
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-center bg-gray-50"
-                    >
-                      {{ stateIndex }}
-                    </td>
-
-                    <!-- ACTION列 -->
-                    <td
-                      v-for="terminal in terminals"
-                      :key="terminal"
-                      class="px-2 py-1 border border-gray-300 text-xs text-center"
-                    >
-                      <input
-                        v-model="row.actions[terminal]"
-                        @input="checkTableCompletion"
-                        class="w-full px-1 py-0.5 text-xs border-0 focus:ring-1 focus:ring-cyan-500 rounded"
-                        placeholder="--"
-                      />
-                    </td>
-                    <td class="px-2 py-1 border border-gray-300 text-xs text-center">
-                      <input
-                        v-model="row.actions['$']"
-                        @input="checkTableCompletion"
-                        class="w-full px-1 py-0.5 text-xs border-0 focus:ring-1 focus:ring-cyan-500 rounded"
-                        placeholder="--"
-                      />
-                    </td>
-
-                    <!-- GOTO列 -->
-                    <td
-                      v-for="nonterminal in nonterminals"
-                      :key="nonterminal"
-                      class="px-2 py-1 border border-gray-300 text-xs text-center"
-                    >
-                      <input
-                        v-model="row.gotos[nonterminal]"
-                        @input="checkTableCompletion"
-                        class="w-full px-1 py-0.5 text-xs border-0 focus:ring-1 focus:ring-cyan-500 rounded"
-                        placeholder="--"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- 填表提示 -->
-            <div class="mt-4 text-xs text-gray-600">
-              <p><strong>填表说明：</strong></p>
-              <ul class="mt-1 space-y-1">
-                <li>• 移进动作：Sn（移进到状态n）</li>
-                <li>• 规约动作：rn（用第n个产生式规约，仅对FOLLOW集中的符号）</li>
-                <li>• 接受动作：acc（接受输入串）</li>
-                <li>• 状态转移：直接填写目标状态号</li>
-              </ul>
-            </div>
-          </div>
+        <!-- 替换原有分析表区域为ParsingTable组件 -->
+        <div v-if="tableProps" class="mt-6">
+          <ParsingTable
+            v-bind="tableProps"
+            @validation-complete="handleValidation"
+            @step-complete="handleStepComplete"
+          />
         </div>
 
-        <!-- 验证按钮 -->
-        <div class="flex justify-center gap-4">
-          <button
-            @click="validateTable"
-            :disabled="isValidating"
-            class="px-6 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 disabled:bg-gray-400 transition-colors"
-          >
-            <Icon
-              :icon="isValidating ? 'lucide:loader-2' : 'lucide:check-circle'"
-              :class="['w-4 h-4 inline mr-2', isValidating ? 'animate-spin' : '']"
-            />
-            {{ isValidating ? '验证中...' : '验证分析表' }}
-          </button>
-
-          <button
-            @click="showAnswer"
-            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Icon icon="lucide:eye" class="w-4 h-4 inline mr-2" />
-            显示答案
-          </button>
-        </div>
-
-        <!-- 验证结果 -->
-        <div v-if="validationMessage" class="mt-4">
-          <div
-            :class="[
-              'p-4 rounded-lg border',
-              validationSuccess
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800',
-            ]"
-          >
-            <div class="flex items-start gap-2">
-              <Icon
-                :icon="validationSuccess ? 'lucide:check-circle' : 'lucide:alert-circle'"
-                class="w-5 h-5 mt-0.5 flex-shrink-0"
-              />
-              <div>
-                <p class="font-medium">{{ validationSuccess ? '验证成功' : '验证失败' }}</p>
-                <p class="text-sm mt-1">{{ validationMessage }}</p>
-              </div>
-            </div>
-          </div>
+        <!-- 数据格式异常的后备显示 -->
+        <div v-else-if="!tableProps" class="text-center py-12">
+          <Icon icon="lucide:alert-triangle" class="w-12 h-12 mx-auto mb-3 text-yellow-500" />
+          <p class="text-lg font-medium text-gray-600">数据加载异常</p>
+          <p class="text-sm text-gray-500 mt-1">请检查前面的步骤是否正确完成</p>
         </div>
       </div>
     </div>
@@ -266,14 +113,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSLR1Store } from '@/stores/slr1'
-
-interface ParseTableRow {
-  actions: Record<string, string>
-  gotos: Record<string, string>
-}
+import ParsingTable from '@/components/lr/ParsingTable.vue'
 
 const emit = defineEmits<{
   'next-step': []
@@ -282,11 +125,8 @@ const emit = defineEmits<{
 
 const slr1Store = useSLR1Store()
 
-// 响应式数据
-const parseTable = ref<ParseTableRow[]>([])
-const isValidating = ref(false)
-const validationMessage = ref('')
-const validationSuccess = ref(false)
+// 步骤完成状态
+const stepCompleteStatus = ref(false)
 
 // 从store获取分析数据
 const analysisData = computed(() => slr1Store.analysisResult)
@@ -299,10 +139,6 @@ const followSets = computed(() => {
 })
 
 // 计算属性
-const stateCount = computed(() => {
-  return slr1Store.dfaStates.length || 0
-})
-
 const terminals = computed(() => {
   if (!analysisData.value?.Vt) return []
   return analysisData.value.Vt.map((item: any) => item.text || item)
@@ -316,160 +152,68 @@ const nonterminals = computed(() => {
   }).map((item: any) => item.text || item)
 })
 
-const isStepComplete = computed(() => {
-  return validationSuccess.value
+// 数据转换函数 - 将SLR1数据格式转换为ParsingTable组件期望的格式
+const convertSLR1CorrectAnswers = () => {
+  if (!analysisData.value) return { actions: {}, gotos: {} }
+
+  const actions: Record<string, string> = {}
+  const gotos: Record<string, string> = {}
+
+  // 处理actions数据（SLR1 store中actions已经是Record<string, string>格式）
+  if (analysisData.value.actions && typeof analysisData.value.actions === 'object') {
+    // 处理符号差异（# vs $）
+    Object.entries(analysisData.value.actions).forEach(([key, value]) => {
+      const convertedKey = key.replace(',#', ',$')
+      actions[convertedKey] = value
+    })
+  }
+
+  // 处理gotos数据
+  if (analysisData.value.gotos && typeof analysisData.value.gotos === 'object') {
+    Object.assign(gotos, analysisData.value.gotos)
+  }
+
+  return { actions, gotos }
+}
+
+// 为ParsingTable组件准备数据
+const tableProps = computed(() => {
+  try {
+    if (!analysisData.value) return null
+
+    // 验证必要的数据字段
+    if (!analysisData.value.Vt || !analysisData.value.Vn) {
+      console.warn('缺少终结符或非终结符数据')
+      return null
+    }
+
+    return {
+      tableType: 'SLR1' as const,
+      analysisData: analysisData.value,
+      terminals: terminals.value,
+      nonterminals: nonterminals.value,
+      correctAnswers: convertSLR1CorrectAnswers(),
+    }
+  } catch (error) {
+    console.error('准备表格数据时出错:', error)
+    return null
+  }
 })
 
-// 检查表格完成度
-const checkTableCompletion = () => {
-  // 重置验证状态
-  validationMessage.value = ''
-  validationSuccess.value = false
+// 计算属性 - 步骤完成状态
+const isStepComplete = computed(() => {
+  return stepCompleteStatus.value && analysisData.value !== null
+})
+
+// 处理验证完成事件
+const handleValidation = (result: { isValid: boolean; errors: any[] }) => {
+  console.log('SLR1验证结果:', result)
+  // 可以在这里添加额外的验证逻辑
 }
 
-// 获取正确的ACTION表项
-const getCorrectAction = (stateIndex: number, symbol: string): string => {
-  if (!analysisData.value?.actions || typeof analysisData.value.actions !== 'object') return ''
-
-  // actions是一个Record<string, string>，需要构造正确的key
-  const key = `${stateIndex},${symbol}`
-  return analysisData.value.actions[key] || ''
-}
-
-// 获取正确的GOTO表项
-const getCorrectGoto = (stateIndex: number, symbol: string): string => {
-  if (!analysisData.value?.gotos || typeof analysisData.value.gotos !== 'object') return ''
-
-  // gotos是一个Record<string, string>，需要构造正确的key
-  const key = `${stateIndex},${symbol}`
-  return analysisData.value.gotos[key] || ''
-}
-
-// 验证分析表
-const validateTable = async () => {
-  if (!analysisData.value) return
-
-  isValidating.value = true
-  validationMessage.value = ''
-
-  try {
-    let isAllCorrect = true
-
-    // 验证ACTION表和GOTO表
-    for (let stateIndex = 0; stateIndex < parseTable.value.length; stateIndex++) {
-      const row = parseTable.value[stateIndex]
-
-      // 检查ACTION列
-      for (const terminal of terminals.value) {
-        const userInput = row.actions[terminal]?.trim() || ''
-        const correctAnswer = getCorrectAction(stateIndex, terminal)
-
-        if (userInput !== correctAnswer) {
-          isAllCorrect = false
-          break
-        }
-      }
-
-      // 检查$列
-      const userInputDollar = row.actions['$']?.trim() || ''
-      const correctAnswerDollar = getCorrectAction(stateIndex, '#') // 后端使用#表示$
-      if (userInputDollar !== correctAnswerDollar) {
-        isAllCorrect = false
-      }
-
-      // 检查GOTO列
-      for (const nonterminal of nonterminals.value) {
-        const userInput = row.gotos[nonterminal]?.trim() || ''
-        const correctAnswer = getCorrectGoto(stateIndex, nonterminal)
-
-        if (userInput !== correctAnswer) {
-          isAllCorrect = false
-          break
-        }
-      }
-
-      if (!isAllCorrect) break
-    }
-
-    if (isAllCorrect) {
-      validationSuccess.value = true
-      validationMessage.value = 'SLR1分析表构建正确！'
-
-      // 保存解析表到store（如果需要的话）
-      slr1Store.actionTable = Object.fromEntries(
-        parseTable.value.flatMap((row, index) =>
-          Object.entries(row.actions).map(([symbol, action]) => [`${index},${symbol}`, action]),
-        ),
-      )
-      slr1Store.gotoTable = Object.fromEntries(
-        parseTable.value.flatMap((row, index) =>
-          Object.entries(row.gotos).map(([symbol, goto]) => [`${index},${symbol}`, goto]),
-        ),
-      )
-    } else {
-      validationSuccess.value = false
-      validationMessage.value = '分析表存在错误，请检查填写'
-    }
-  } catch (error) {
-    console.error('验证失败:', error)
-    validationSuccess.value = false
-    validationMessage.value = '验证失败，请检查输入'
-  } finally {
-    isValidating.value = false
-  }
-}
-
-// 显示答案
-const showAnswer = async () => {
-  if (!analysisData.value) return
-
-  try {
-    // 填充正确答案到表格
-    for (let stateIndex = 0; stateIndex < parseTable.value.length; stateIndex++) {
-      const row = parseTable.value[stateIndex]
-
-      // 填充ACTION列
-      for (const terminal of terminals.value) {
-        row.actions[terminal] = getCorrectAction(stateIndex, terminal)
-      }
-
-      // 填充$列
-      row.actions['$'] = getCorrectAction(stateIndex, '#') // 后端使用#表示$
-
-      // 填充GOTO列
-      for (const nonterminal of nonterminals.value) {
-        row.gotos[nonterminal] = getCorrectGoto(stateIndex, nonterminal)
-      }
-    }
-
-    validationMessage.value = '已显示标准答案'
-    validationSuccess.value = true
-  } catch (error) {
-    console.error('显示答案失败:', error)
-    validationMessage.value = '显示答案失败'
-  }
-}
-
-// 初始化分析表
-const initializeParseTable = () => {
-  if (!analysisData.value || !slr1Store.dfaStates.length) return
-
-  const stateCount = slr1Store.dfaStates.length
-
-  // 创建空的分析表
-  parseTable.value = Array.from({ length: stateCount }, () => ({
-    actions: {
-      ...terminals.value.reduce(
-        (acc: Record<string, string>, t: string) => ({ ...acc, [t]: '' }),
-        {},
-      ),
-      $: '',
-    },
-    gotos: nonterminals.value.reduce(
-      (acc: Record<string, string>, nt: string) => ({ ...acc, [nt]: '' }),
-      {},
-    ),
-  }))
+// 处理步骤完成状态
+const handleStepComplete = (isComplete: boolean) => {
+  stepCompleteStatus.value = isComplete
 }
 
 // 下一步
@@ -478,34 +222,6 @@ const nextStep = () => {
     emit('next-step')
   }
 }
-
-// 监听分析数据变化
-watch(
-  () => analysisData.value,
-  () => {
-    if (analysisData.value) {
-      initializeParseTable()
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  () => slr1Store.dfaStates,
-  () => {
-    if (slr1Store.dfaStates.length > 0) {
-      initializeParseTable()
-    }
-  },
-  { immediate: true },
-)
-
-// 组件挂载时初始化
-onMounted(() => {
-  if (analysisData.value && slr1Store.dfaStates.length > 0) {
-    initializeParseTable()
-  }
-})
 </script>
 
 <style scoped>

@@ -42,117 +42,20 @@
         <p class="text-gray-500">需要先完成文法分析和DFA构造才能建立分析表</p>
       </div>
 
-      <div v-else class="space-y-8">
-        <!-- 分析表构建区域 -->
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">LR0分析表</h3>
-            <p class="text-sm text-gray-600 mt-1">ACTION表和GOTO表的组合</p>
-          </div>
+      <!-- 替换原有表格区域为ParsingTable组件 -->
+      <div v-else-if="tableProps" class="mt-6">
+        <ParsingTable
+          v-bind="tableProps"
+          @validation-complete="handleValidation"
+          @step-complete="handleStepComplete"
+        />
+      </div>
 
-          <div class="p-6">
-            <!-- 表格头部信息 -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm">
-              <div class="bg-blue-50 p-3 rounded">
-                <span class="font-medium text-blue-900">状态数量：</span>
-                <span class="text-blue-700">{{ lr0Store.dfaStates.length }}</span>
-              </div>
-              <div class="bg-green-50 p-3 rounded">
-                <span class="font-medium text-green-900">终结符：</span>
-                <span class="text-green-700">{{ lr0Store.analysisResult.Vt.join(', ') }}</span>
-              </div>
-              <div class="bg-purple-50 p-3 rounded">
-                <span class="font-medium text-purple-900">非终结符：</span>
-                <span class="text-purple-700">{{ lr0Store.analysisResult.Vn.join(', ') }}</span>
-              </div>
-            </div>
-
-            <!-- 分析表 -->
-            <div class="overflow-x-auto">
-              <table class="min-w-full border border-gray-300">
-                <!-- 表头 -->
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900">
-                      状态
-                    </th>
-                    <!-- ACTION列 -->
-                    <th
-                      v-for="terminal in lr0Store.analysisResult.Vt"
-                      :key="terminal"
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50"
-                    >
-                      {{ terminal }}
-                    </th>
-                    <th
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50"
-                    >
-                      $
-                    </th>
-                    <!-- GOTO列 -->
-                    <th
-                      v-for="nonterminal in lr0Store.analysisResult.Vn"
-                      :key="nonterminal"
-                      class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-green-50"
-                    >
-                      {{ nonterminal }}
-                    </th>
-                  </tr>
-                </thead>
-
-                <!-- 表体 -->
-                <tbody>
-                  <tr v-for="(state, index) in lr0Store.dfaStates" :key="index">
-                    <td class="px-3 py-2 border border-gray-300 text-xs font-bold bg-gray-50">
-                      I{{ index }}
-                    </td>
-                    <!-- ACTION单元格 -->
-                    <td
-                      v-for="terminal in [...lr0Store.analysisResult.Vt, '$']"
-                      :key="`action-${index}-${terminal}`"
-                      class="px-3 py-2 border border-gray-300 text-xs text-center"
-                    >
-                      {{ getActionValue(index, terminal) }}
-                    </td>
-                    <!-- GOTO单元格 -->
-                    <td
-                      v-for="nonterminal in lr0Store.analysisResult.Vn"
-                      :key="`goto-${index}-${nonterminal}`"
-                      class="px-3 py-2 border border-gray-300 text-xs text-center"
-                    >
-                      {{ getGotoValue(index, nonterminal) }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- 表格说明 -->
-            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div class="bg-blue-50 p-3 rounded">
-                <h4 class="font-medium text-blue-900 mb-1">ACTION动作</h4>
-                <ul class="text-xs text-blue-700 space-y-1">
-                  <li>• Si: 移进到状态i</li>
-                  <li>• rj: 用产生式j规约</li>
-                  <li>• acc: 接受</li>
-                </ul>
-              </div>
-              <div class="bg-green-50 p-3 rounded">
-                <h4 class="font-medium text-green-900 mb-1">GOTO函数</h4>
-                <ul class="text-xs text-green-700 space-y-1">
-                  <li>• 数字: 转移到对应状态</li>
-                  <li>• 空白: 无转移</li>
-                </ul>
-              </div>
-              <div class="bg-purple-50 p-3 rounded">
-                <h4 class="font-medium text-purple-900 mb-1">分析结果</h4>
-                <p class="text-xs text-purple-700">
-                  {{ lr0Store.isLR0Grammar ? '✓ 符合LR0文法' : '✗ 存在冲突' }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- 数据格式异常的后备显示 -->
+      <div v-else-if="!tableProps" class="text-center py-12">
+        <Icon icon="lucide:alert-triangle" class="w-12 h-12 mx-auto mb-3 text-yellow-500" />
+        <p class="text-lg font-medium text-gray-600">数据加载异常</p>
+        <p class="text-sm text-gray-500 mt-1">请检查前面的步骤是否正确完成</p>
       </div>
     </div>
 
@@ -180,9 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useLR0Store } from '@/stores/lr0'
+import ParsingTable from '@/components/lr/ParsingTable.vue'
 
 const emit = defineEmits<{
   'next-step': []
@@ -191,21 +95,50 @@ const emit = defineEmits<{
 
 const lr0Store = useLR0Store()
 
-// 计算属性
-const isStepComplete = computed(() => {
-  return lr0Store.analysisResult !== null && lr0Store.isLR0Grammar === true
+// 步骤完成状态
+const stepCompleteStatus = ref(false)
+
+// 为ParsingTable组件准备数据
+const tableProps = computed(() => {
+  try {
+    if (!lr0Store.analysisResult) return null
+
+    // 验证必要的数据字段
+    if (!lr0Store.analysisResult.Vt || !lr0Store.analysisResult.Vn) {
+      console.warn('缺少终结符或非终结符数据')
+      return null
+    }
+
+    return {
+      tableType: 'LR0' as const,
+      analysisData: lr0Store.analysisResult,
+      terminals: lr0Store.analysisResult.Vt || [],
+      nonterminals: lr0Store.analysisResult.Vn || [],
+      correctAnswers: {
+        actions: lr0Store.actionTable || {},
+        gotos: lr0Store.gotoTable || {},
+      },
+    }
+  } catch (error) {
+    console.error('准备表格数据时出错:', error)
+    return null
+  }
 })
 
-// 获取ACTION表的值
-const getActionValue = (stateIndex: number, terminal: string) => {
-  const key = `${stateIndex},${terminal}`
-  return lr0Store.actionTable[key] || ''
+// 计算属性 - 步骤完成状态
+const isStepComplete = computed(() => {
+  return stepCompleteStatus.value && lr0Store.analysisResult !== null
+})
+
+// 处理验证完成事件
+const handleValidation = (result: { isValid: boolean; errors: any[] }) => {
+  console.log('LR0验证结果:', result)
+  // 可以在这里添加额外的验证逻辑
 }
 
-// 获取GOTO表的值
-const getGotoValue = (stateIndex: number, nonterminal: string) => {
-  const key = `${stateIndex},${nonterminal}`
-  return lr0Store.gotoTable[key] || ''
+// 处理步骤完成状态
+const handleStepComplete = (isComplete: boolean) => {
+  stepCompleteStatus.value = isComplete
 }
 
 const nextStep = () => {
