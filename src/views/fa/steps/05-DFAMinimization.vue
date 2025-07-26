@@ -324,22 +324,21 @@
                     "
                   >
                     <!-- 答案矩阵表格 -->
-                    <TransitionTable
-                      :data="{
-                        headers: ['S', ...alphabetSymbols],
-                        rows: Array.from({ length: originalStateCount }, (_, rowIndex) => [
-                          faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ?? rowIndex,
-                          ...alphabetSymbols.map(symbol => faStore.originalData?.table_to_num_min[symbol]?.[rowIndex] ?? '-')
-                        ])
-                      }"
-                      type="minimized"
-                      :columns="[{ key: 'S', title: 'S', type: 'state' as const, editable: false }, ...alphabetSymbols.map(symbol => ({ key: symbol, title: symbol, type: 'transition' as const, editable: false }))]"
-                      :editable="false"
-                      :show-answer="true"
-                      :final-state-config="{
-                        isFinalState: (row, col, value) => minimizedAcceptingStates.has(String(value))
-                      }"
-                    />
+                                <TransitionTable
+              :data="{
+                headers: ['S', ...alphabetSymbols],
+                rows: Array.from({ length: originalStateCount }, (_, rowIndex) => [
+                  faStore.originalData?.table_to_num_min?.['S']?.[rowIndex] ?? rowIndex,
+                  ...alphabetSymbols.map(symbol => faStore.originalData?.table_to_num_min[symbol]?.[rowIndex] ?? '-')
+                ])
+              }"
+              :columns="[{ key: 'S', title: 'S', type: 'state' as const, editable: false }, ...alphabetSymbols.map(symbol => ({ key: symbol, title: symbol, type: 'transition' as const, editable: false }))]"
+              :editable="false"
+              :show-answer="true"
+              :final-state-config="{
+                isFinalState: (row, col, value) => minimizedAcceptingStates.has(String(value))
+              }"
+            />
                   </div>
                   <div v-else class="text-center py-8 text-gray-500">
                     <Icon icon="lucide:eye-off" class="w-12 h-12 mx-auto mb-3 text-gray-400" />

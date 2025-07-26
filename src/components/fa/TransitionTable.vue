@@ -67,6 +67,7 @@ import { DEFAULT_THEMES } from './types/table'
 
 // 定义组件Props
 const props = withDefaults(defineProps<TransitionTableProps>(), {
+  type: 'minimized',
   showAnswer: false,
   editable: false,
   finalStateClass: 'final-state-cell text-green-800 font-semibold'

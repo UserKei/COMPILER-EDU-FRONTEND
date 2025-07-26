@@ -212,7 +212,6 @@
                           conversionTableColumns.map(col => answerConversionTable[col]?.[rowIndex] || '-')
                         )
                       }"
-                      type="conversion"
                       :columns="conversionTableColumns.map(col => ({
                         key: col,
                         title: col,
@@ -390,7 +389,6 @@
                           matrixStateColumns.map(state => answerTransitionMatrix[rowKey]?.[state] || '-')
                         )
                       }"
-                      type="matrix"
                       :columns="matrixStateColumns.map(state => ({
                         key: state,
                         title: state,

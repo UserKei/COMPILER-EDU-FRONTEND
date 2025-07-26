@@ -33,57 +33,55 @@
                 <!-- 转换表 -->
                 <div v-if="conversionTableColumns.length" class="conversion-table">
                   <h4 class="font-medium text-gray-800 mb-3">NFA → DFA 转换表</h4>
-                  <TransitionTable
-                    :data="{
-                      headers: conversionTableColumns,
-                      rows: Array.from({ length: Math.max(...conversionTableColumns.map(col => conversionTable[col]?.length || 0)) }, (_, rowIndex) =>
-                        conversionTableColumns.map(col => conversionTable[col]?.[rowIndex] || '-')
-                      )
-                    }"
-                    type="conversion"
-                    :columns="conversionTableColumns.map(col => ({
-                      key: col,
-                      title: col,
-                      type: col === 'I' ? 'state' as const : 'transition' as const,
-                      editable: false
-                    }))"
-                    :editable="false"
-                    :show-answer="true"
-                    :final-state-config="{
-                      isFinalState: (row: number, col: string, value: any) => value && value.includes('Y')
-                    }"
-                  />
+                              <TransitionTable
+              :data="{
+                headers: conversionTableColumns,
+                rows: Array.from({ length: Math.max(...conversionTableColumns.map(col => conversionTable[col]?.length || 0)) }, (_, rowIndex) =>
+                  conversionTableColumns.map(col => conversionTable[col]?.[rowIndex] || '-')
+                )
+              }"
+              :columns="conversionTableColumns.map(col => ({
+                key: col,
+                title: col,
+                type: col === 'I' ? 'state' as const : 'transition' as const,
+                editable: false
+              }))"
+              :editable="false"
+              :show-answer="true"
+              :final-state-config="{
+                isFinalState: (row: number, col: string, value: any) => value && value.includes('Y')
+              }"
+            />
                 </div>
 
                 <!-- 状态转换矩阵 -->
                 <div v-if="Object.keys(answerTransitionMatrix).length > 0" class="transition-matrix">
                   <h4 class="font-medium text-gray-800 mb-3">状态转换矩阵</h4>
-                  <TransitionTable
-                    :data="{
-                      headers: matrixStateColumns,
-                      rows: Object.keys(answerTransitionMatrix).map(rowKey =>
-                        matrixStateColumns.map(state => answerTransitionMatrix[rowKey]?.[state] || '-')
-                      )
-                    }"
-                    type="matrix"
-                    :columns="matrixStateColumns.map(state => ({
-                      key: state,
-                      title: state,
-                      type: state === 'S' ? 'state' as const : 'transition' as const,
-                      editable: false
-                    }))"
-                    :editable="false"
-                    :show-answer="true"
-                    :final-state-config="{
-                      isFinalState: (row: number, col: string, value: any) => {
-                        const columnMapping: Record<string, string> = {
-                          'S': 'I', 'a': 'Ia', 'b': 'Ib', 'c': 'Ic'
-                        }
-                        const mappedColumn = columnMapping[col] || col
-                        return finalStatePositions.some((pos: {row: number, col: string}) => pos.row === row && pos.col === mappedColumn)
-                      }
-                    }"
-                  />
+                              <TransitionTable
+              :data="{
+                headers: matrixStateColumns,
+                rows: Object.keys(answerTransitionMatrix).map(rowKey =>
+                  matrixStateColumns.map(state => answerTransitionMatrix[rowKey]?.[state] || '-')
+                )
+              }"
+              :columns="matrixStateColumns.map(state => ({
+                key: state,
+                title: state,
+                type: state === 'S' ? 'state' as const : 'transition' as const,
+                editable: false
+              }))"
+              :editable="false"
+              :show-answer="true"
+              :final-state-config="{
+                isFinalState: (row: number, col: string, value: any) => {
+                  const columnMapping: Record<string, string> = {
+                    'S': 'I', 'a': 'Ia', 'b': 'Ib', 'c': 'Ic'
+                  }
+                  const mappedColumn = columnMapping[col] || col
+                  return finalStatePositions.some((pos: {row: number, col: string}) => pos.row === row && pos.col === mappedColumn)
+                }
+              }"
+            />
                 </div>
               </div>
               <div v-else class="text-center py-8 text-gray-500">

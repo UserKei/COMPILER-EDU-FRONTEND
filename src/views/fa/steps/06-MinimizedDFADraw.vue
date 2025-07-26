@@ -28,24 +28,23 @@
               <!-- 矩阵显示区域 -->
               <div v-if="matrixStateColumns.length && originalStateCount > 0" class="minimized-matrix">
                 <h4 class="font-medium text-gray-800 mb-3">最小化状态转换矩阵</h4>
-                <TransitionTable
-                  :data="{
-                    headers: matrixStateColumns,
-                    rows: matrixData
-                  }"
-                  type="minimized"
-                  :columns="matrixStateColumns.map(state => ({
-                    key: state,
-                    title: state,
-                    type: state === 'S' ? 'state' : 'transition',
-                    editable: false
-                  }))"
-                  :editable="false"
-                  :show-answer="true"
-                  :final-state-config="{
-                    isFinalState: (row, col, value) => minimizedAcceptingStates.has(String(value))
-                  }"
-                />
+                            <TransitionTable
+              :data="{
+                headers: matrixStateColumns,
+                rows: matrixData
+              }"
+              :columns="matrixStateColumns.map(state => ({
+                key: state,
+                title: state,
+                type: state === 'S' ? 'state' : 'transition',
+                editable: false
+              }))"
+              :editable="false"
+              :show-answer="true"
+              :final-state-config="{
+                isFinalState: (row, col, value) => minimizedAcceptingStates.has(String(value))
+              }"
+            />
               </div>
 
               <!-- 无数据状态 -->
