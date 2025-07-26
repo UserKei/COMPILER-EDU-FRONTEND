@@ -47,7 +47,7 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900">
-                    状态
+                    State
                   </th>
                   <!-- ACTION列 -->
                   <th
@@ -189,7 +189,9 @@
               <table class="min-w-full border border-gray-300 text-xs">
                 <thead class="bg-gray-50">
                   <tr>
-                    <th class="px-3 py-2 border border-gray-300 font-medium text-gray-900">状态</th>
+                    <th class="px-3 py-2 border border-gray-300 font-medium text-gray-900">
+                      State
+                    </th>
                     <!-- ACTION列 -->
                     <th
                       v-for="terminal in terminals"
