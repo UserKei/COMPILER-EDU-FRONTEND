@@ -162,7 +162,7 @@
       <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
           <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900">验证结果与答案对照</h3>
+            <h3 class="text-lg font-semibold text-gray-900">标准答案</h3>
             <button
               @click="toggleAnswerDisplay"
               class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
@@ -183,62 +183,8 @@
         </div>
 
         <div v-else-if="showAnswers || hasValidationResults" class="p-6">
-          <!-- 验证统计 -->
-          <div v-if="hasValidationResults" class="mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-              <div class="bg-green-50 p-3 rounded text-center">
-                <div class="text-2xl font-bold text-green-600">{{ validationStats.correct }}</div>
-                <div class="text-green-700">正确</div>
-              </div>
-              <div class="bg-red-50 p-3 rounded text-center">
-                <div class="text-2xl font-bold text-red-600">{{ validationStats.incorrect }}</div>
-                <div class="text-red-700">错误</div>
-              </div>
-              <div class="bg-yellow-50 p-3 rounded text-center">
-                <div class="text-2xl font-bold text-yellow-600">{{ validationStats.empty }}</div>
-                <div class="text-yellow-700">未填写</div>
-              </div>
-              <div class="bg-blue-50 p-3 rounded text-center">
-                <div class="text-2xl font-bold text-blue-600">
-                  {{ Math.round(validationStats.accuracy) }}%
-                </div>
-                <div class="text-blue-700">准确率</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 错误详情 -->
-          <div v-if="validationErrors.length > 0" class="mb-6">
-            <h4 class="text-lg font-semibold text-gray-900 mb-3">错误详情</h4>
-            <div class="space-y-2">
-              <div
-                v-for="error in validationErrors"
-                :key="error.key"
-                class="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded"
-              >
-                <div class="flex items-center gap-3">
-                  <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600" />
-                  <span class="text-sm font-medium text-red-900">
-                    {{ error.type === 'action' ? 'ACTION' : 'GOTO' }}[{{ error.position }}]
-                  </span>
-                </div>
-                <div class="text-sm text-red-700">
-                  <span v-if="error.userAnswer" class="mr-2">
-                    你的答案: <code class="bg-red-100 px-1 rounded">{{ error.userAnswer }}</code>
-                  </span>
-                  <span v-else class="mr-2 text-yellow-600">未填写</span>
-                  正确答案:
-                  <code class="bg-green-100 text-green-800 px-1 rounded">{{
-                    error.correctAnswer || '--'
-                  }}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 完整答案表格 -->
+          <!-- 标准答案表格 -->
           <div v-if="showAnswers">
-            <h4 class="text-lg font-semibold text-gray-900 mb-3">标准答案</h4>
             <div class="overflow-x-auto">
               <table class="min-w-full border border-gray-300 text-xs">
                 <thead class="bg-gray-50">
@@ -277,7 +223,6 @@
                       v-for="terminal in [...terminals, '$']"
                       :key="`ans-action-${stateIndex - 1}-${terminal}`"
                       class="px-3 py-2 border border-gray-300 text-center"
-                      :class="getAnswerCellStyle(`${stateIndex - 1},${terminal}`, 'action')"
                     >
                       {{ getCorrectAnswer(`${stateIndex - 1},${terminal}`, 'action') || '--' }}
                     </td>
@@ -286,7 +231,6 @@
                       v-for="nonterminal in nonterminals"
                       :key="`ans-goto-${stateIndex - 1}-${nonterminal}`"
                       class="px-3 py-2 border border-gray-300 text-center"
-                      :class="getAnswerCellStyle(`${stateIndex - 1},${nonterminal}`, 'goto')"
                     >
                       {{ getCorrectAnswer(`${stateIndex - 1},${nonterminal}`, 'goto') || '--' }}
                     </td>
@@ -365,57 +309,13 @@ const validationStats = computed(() => {
     ...Object.values(validationResults.gotos),
   ]
   const correct = allResults.filter((r) => r.type === 'correct').length
-  const incorrect = allResults.filter((r) => r.type === 'incorrect').length
-  const empty = allResults.filter((r) => r.type === 'empty').length
   const total = allResults.length
-  const accuracy = total > 0 ? (correct / total) * 100 : 0
 
-  return { correct, incorrect, empty, total, accuracy }
-})
-
-const validationErrors = computed(() => {
-  const errors: Array<{
-    key: string
-    type: 'action' | 'goto'
-    position: string
-    userAnswer: string
-    correctAnswer: string
-  }> = []
-
-  // 检查 ACTION 错误
-  Object.entries(validationResults.actions).forEach(([key, result]) => {
-    if (result.type !== 'correct') {
-      errors.push({
-        key,
-        type: 'action',
-        position: key,
-        userAnswer: userInputs.actions[key] || '',
-        correctAnswer: result.correctAnswer || '',
-      })
-    }
-  })
-
-  // 检查 GOTO 错误
-  Object.entries(validationResults.gotos).forEach(([key, result]) => {
-    if (result.type !== 'correct') {
-      errors.push({
-        key,
-        type: 'goto',
-        position: key,
-        userAnswer: userInputs.gotos[key] || '',
-        correctAnswer: result.correctAnswer || '',
-      })
-    }
-  })
-
-  return errors
+  return { correct, total }
 })
 
 const isTableComplete = computed(() => {
   const totalCells = stateCount.value * (props.terminals.length + 1 + props.nonterminals.length)
-  const filledCells =
-    Object.values(userInputs.actions).filter((v) => v?.trim()).length +
-    Object.values(userInputs.gotos).filter((v) => v?.trim()).length
 
   return totalCells > 0 && validationStats.value.correct === totalCells
 })
@@ -475,8 +375,16 @@ const validateTable = async () => {
     hasValidationResults.value = true
 
     // 发出验证完成事件
-    const isValid = validationErrors.value.length === 0
-    emit('validation-complete', { isValid, errors: validationErrors.value })
+    const allResults = [
+      ...Object.values(validationResults.actions),
+      ...Object.values(validationResults.gotos),
+    ]
+    const hasErrors = allResults.some(
+      (result) => result.type === 'incorrect' || result.type === 'empty',
+    )
+    const isValid = !hasErrors
+
+    emit('validation-complete', { isValid, errors: [] })
     emit('step-complete', isTableComplete.value)
   } finally {
     isValidating.value = false
@@ -505,21 +413,6 @@ const getCellStyle = (key: string, type: 'action' | 'goto'): string => {
       return 'bg-green-50 border border-green-400'
     default:
       return 'bg-white'
-  }
-}
-
-const getAnswerCellStyle = (key: string, type: 'action' | 'goto'): string => {
-  const result = type === 'action' ? validationResults.actions[key] : validationResults.gotos[key]
-
-  if (!result) return ''
-
-  switch (result.type) {
-    case 'incorrect':
-      return 'bg-red-100 border-red-300'
-    case 'correct':
-      return 'bg-green-100 border-green-300'
-    default:
-      return ''
   }
 }
 
