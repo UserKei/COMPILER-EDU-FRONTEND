@@ -45,10 +45,29 @@
             <table class="min-w-full border border-gray-300">
               <!-- 表头 -->
               <thead class="bg-gray-50">
+                <!-- 分组表头行 -->
                 <tr>
-                  <th class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900">
+                  <th
+                    rowspan="2"
+                    class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-gray-100"
+                  >
                     State
                   </th>
+                  <th
+                    :colspan="terminals.length + 1"
+                    class="px-3 py-2 border border-gray-300 text-xs font-bold text-blue-900 bg-blue-100 text-center"
+                  >
+                    ACTION
+                  </th>
+                  <th
+                    :colspan="nonterminals.length"
+                    class="px-3 py-2 border border-gray-300 text-xs font-bold text-green-900 bg-green-100 text-center"
+                  >
+                    GOTO
+                  </th>
+                </tr>
+                <!-- 具体列名行 -->
+                <tr>
                   <!-- ACTION列 -->
                   <th
                     v-for="terminal in terminals"
@@ -188,10 +207,29 @@
             <div class="overflow-x-auto">
               <table class="min-w-full border border-gray-300 text-xs">
                 <thead class="bg-gray-50">
+                  <!-- 分组表头行 -->
                   <tr>
-                    <th class="px-3 py-2 border border-gray-300 font-medium text-gray-900">
+                    <th
+                      rowspan="2"
+                      class="px-3 py-2 border border-gray-300 font-medium text-gray-900 bg-gray-100"
+                    >
                       State
                     </th>
+                    <th
+                      :colspan="terminals.length + 1"
+                      class="px-3 py-2 border border-gray-300 font-bold text-blue-900 bg-blue-100 text-center"
+                    >
+                      ACTION
+                    </th>
+                    <th
+                      :colspan="nonterminals.length"
+                      class="px-3 py-2 border border-gray-300 font-bold text-green-900 bg-green-100 text-center"
+                    >
+                      GOTO
+                    </th>
+                  </tr>
+                  <!-- 具体列名行 -->
+                  <tr>
                     <!-- ACTION列 -->
                     <th
                       v-for="terminal in terminals"
@@ -408,66 +446,14 @@ const validateTable = async () => {
 const getCorrectAnswer = (key: string, type: 'action' | 'goto'): string => {
   // 转换键值格式：从 "state,symbol" 到 "state|symbol"
   const convertedKey = key.replace(',', '|')
-
-  console.log('=== getCorrectAnswer 调试 ===')
-  console.log('原始键值:', key)
-  console.log('转换后键值:', convertedKey)
-  console.log('查找类型:', type)
-
   const actionsData = props.correctAnswers.actions
   const gotosData = props.correctAnswers.gotos
 
-  console.log('Actions数据键值:', Object.keys(actionsData))
-  console.log('Gotos数据键值:', Object.keys(gotosData))
-
   if (type === 'action') {
-    // 先尝试转换后的键值
-    let answer = actionsData[convertedKey]
-
-    // 如果没找到，尝试原始键值
-    if (answer === undefined || answer === null) {
-      answer = actionsData[key]
-      console.log(`Action答案 [原始键值 ${key}]:`, answer, typeof answer)
-    } else {
-      console.log(`Action答案 [转换键值 ${convertedKey}]:`, answer, typeof answer)
-    }
-
-    // 如果还是没找到，尝试其他可能的格式
-    if (answer === undefined || answer === null) {
-      // 尝试不同的分隔符格式
-      const altKey1 = key.replace(',', '_')
-      const altKey2 = key.replace(',', '-')
-      answer = actionsData[altKey1] || actionsData[altKey2]
-      if (answer !== undefined && answer !== null) {
-        console.log(`Action答案 [备用格式]:`, answer, typeof answer)
-      }
-    }
-
-    // 确保返回字符串类型
+    const answer = actionsData[convertedKey]
     return answer !== undefined && answer !== null ? String(answer) : ''
   } else {
-    // 先尝试转换后的键值
-    let answer = gotosData[convertedKey]
-
-    // 如果没找到，尝试原始键值
-    if (answer === undefined || answer === null) {
-      answer = gotosData[key]
-      console.log(`Goto答案 [原始键值 ${key}]:`, answer, typeof answer)
-    } else {
-      console.log(`Goto答案 [转换键值 ${convertedKey}]:`, answer, typeof answer)
-    }
-
-    // 如果还是没找到，尝试其他可能的格式
-    if (answer === undefined || answer === null) {
-      const altKey1 = key.replace(',', '_')
-      const altKey2 = key.replace(',', '-')
-      answer = gotosData[altKey1] || gotosData[altKey2]
-      if (answer !== undefined && answer !== null) {
-        console.log(`Goto答案 [备用格式]:`, answer, typeof answer)
-      }
-    }
-
-    // 确保返回字符串类型
+    const answer = gotosData[convertedKey]
     return answer !== undefined && answer !== null ? String(answer) : ''
   }
 }
