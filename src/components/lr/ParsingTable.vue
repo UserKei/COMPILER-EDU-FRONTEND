@@ -60,7 +60,7 @@
                   <th
                     class="px-3 py-2 border border-gray-300 text-xs font-medium text-gray-900 bg-blue-50"
                   >
-                    $
+                    #
                   </th>
                   <!-- GOTO列 -->
                   <th
@@ -84,7 +84,7 @@
 
                   <!-- ACTION单元格 -->
                   <td
-                    v-for="terminal in [...terminals, '$']"
+                    v-for="terminal in [...terminals, '#']"
                     :key="`action-${stateIndex - 1}-${terminal}`"
                     class="px-2 py-1 border border-gray-300 text-xs"
                   >
@@ -201,7 +201,7 @@
                     <th
                       class="px-3 py-2 border border-gray-300 font-medium text-gray-900 bg-blue-50"
                     >
-                      $
+                      #
                     </th>
                     <!-- GOTO列 -->
                     <th
@@ -220,7 +220,7 @@
                     </td>
                     <!-- ACTION答案 -->
                     <td
-                      v-for="terminal in [...terminals, '$']"
+                      v-for="terminal in [...terminals, '#']"
                       :key="`ans-action-${stateIndex - 1}-${terminal}`"
                       class="px-3 py-2 border border-gray-300 text-center"
                     >
@@ -358,7 +358,7 @@ const validateTable = async () => {
   try {
     // 验证所有 ACTION 单元格
     for (let stateIndex = 0; stateIndex < stateCount.value; stateIndex++) {
-      for (const terminal of [...props.terminals, '$']) {
+      for (const terminal of [...props.terminals, '#']) {
         const key = `${stateIndex},${terminal}`
         validateCell(key, 'action')
       }
@@ -424,7 +424,7 @@ const toggleAnswerDisplay = () => {
 const initializeUserInputs = () => {
   // 初始化 ACTION 输入
   for (let stateIndex = 0; stateIndex < stateCount.value; stateIndex++) {
-    for (const terminal of [...props.terminals, '$']) {
+    for (const terminal of [...props.terminals, '#']) {
       const key = `${stateIndex},${terminal}`
       if (!(key in userInputs.actions)) {
         userInputs.actions[key] = ''
