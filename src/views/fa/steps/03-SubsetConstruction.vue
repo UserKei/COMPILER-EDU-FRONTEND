@@ -319,7 +319,7 @@
                               type="text"
                               placeholder="-"
                               :class="
-                                getFieldClass(Number(rowKey), `${String(rowKey)}-${state}`, 'matrix') +
+                                getFieldClass(Number(rowKey), state, 'matrix') +
                                 ' text-center'
                               "
                               @blur="
@@ -327,7 +327,7 @@
                                   validateField(
                                     userTransitionMatrix[String(rowKey)][state],
                                     Number(rowKey),
-                                    `${String(rowKey)}-${state}`,
+                                    state,
                                     'matrix',
                                   )
                               "
@@ -844,25 +844,19 @@ const validateTransition = (
     console.log(`转换表验证：${field}[${rowIndex}] 用户值:"${normalizedUserValue}" 正确答案:"${normalizedCorrectValue}"`)
     return normalizedUserValue === normalizedCorrectValue
   } else {
-    // 矩阵验证：解析字段名 "rowKey-state"
-    const [rowKey, state] = field.split('-')
-    if (!rowKey || !state) {
-      console.log(`矩阵验证失败：无法解析字段名 ${field}`)
-      return false
-    }
-
-    const answerRow = answerTransitionMatrix.value[rowKey]
+    // 矩阵验证：字段名直接是状态名，行索引通过参数传递
+    const answerRow = answerTransitionMatrix.value[rowIndex.toString()]
     if (!answerRow) {
-      console.log(`矩阵验证失败：找不到行 ${rowKey} 的答案数据`)
+      console.log(`矩阵验证失败：找不到行 ${rowIndex} 的答案数据`)
       return false
     }
 
-    const correctValue = answerRow[state] || '-'
+    const correctValue = answerRow[field] || '-'
     // 标准化比较：去除空格，统一大小写
     const normalizedUserValue = userValue.trim().toLowerCase()
     const normalizedCorrectValue = correctValue.trim().toLowerCase()
 
-    console.log(`矩阵验证：${rowKey}-${state} 用户值:"${normalizedUserValue}" 正确答案:"${normalizedCorrectValue}"`)
+    console.log(`矩阵验证：${rowIndex}-${field} 用户值:"${normalizedUserValue}" 正确答案:"${normalizedCorrectValue}"`)
     return normalizedUserValue === normalizedCorrectValue
   }
 }
@@ -884,7 +878,7 @@ const validateTable = (tableType: 'table' | 'matrix') => {
     Object.keys(userTransitionMatrix.value).forEach((rowKey) => {
       matrixStateColumns.value.forEach((state) => {
         const value = userTransitionMatrix.value[rowKey]?.[state] || ''
-        validateField(value, Number(rowKey), `${rowKey}-${state}`, tableType)
+        validateField(value, Number(rowKey), state, tableType)
       })
     })
   }
@@ -937,13 +931,8 @@ const formatFieldKey = (fieldKey: string, tableType: 'table' | 'matrix') => {
       // 转换表：显示列名
       return `第${rowIndex}行${fieldName}列`
     } else {
-      // 矩阵：显示符号-状态
-      if (fieldName.includes('-')) {
-        const [symbol, state] = fieldName.split('-')
-        return `第${rowIndex}行${symbol}符号${state}状态`
-      } else {
-        return `第${rowIndex}行${fieldName}`
-      }
+      // 矩阵：字段名直接是状态名（如 "S", "a", "b"）
+      return `第${rowIndex}行${fieldName}列`
     }
   }
   return fieldKey
