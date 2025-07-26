@@ -19,12 +19,15 @@
           <h3 class="text-lg font-semibold text-gray-900 mb-4">输入待分析字符串</h3>
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"> 字符串输入 </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                字符串输入
+                <span class="text-xs text-gray-500 ml-2">(结束符 # 会自动添加)</span>
+              </label>
               <div class="flex gap-4">
                 <input
                   v-model="inputString"
                   type="text"
-                  placeholder="例如: id+id*id"
+                  placeholder="例如: ab (不需要输入结束符#)"
                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   @keyup.enter="analyzeString"
                 />
@@ -36,6 +39,9 @@
                   <Icon v-if="analyzing" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
                   {{ analyzing ? '分析中...' : '开始分析' }}
                 </button>
+              </div>
+              <div class="mt-2 text-xs text-blue-600">
+                <p>💡 提示：输入的字符串末尾会自动添加结束符 # 进行LL1分析</p>
               </div>
             </div>
 
@@ -259,8 +265,8 @@ const analysisResult = ref<AnalysisResult | null>(null)
 // 分析状态
 const analyzing = computed(() => loading.value)
 
-// 示例字符串
-const exampleStrings = ['i+i*i', 'i*i+i', '(i+i)*i', 'i', '(i)']
+// 示例字符串 (不包含结束符，系统会自动添加#)
+const exampleStrings = ['a', 'ab', 'aab', 'b']
 
 // 监听输入字符串变化，自动触发分析
 watch(

@@ -63,6 +63,7 @@
                   <p>• 开始符：第一个产生式的左侧大写字母为开始符</p>
                   <p>• 字符规定：每个符号必须是单个字符（如A、B、C，而非E1、id等）</p>
                   <p>• 产生式：每行一个产生式，确保文法符合LL1要求（无左递归、无回溯）</p>
+                  <p>• 结束符：系统使用 # 作为输入串结束符（会自动添加）</p>
                   <p class="text-green-600 mt-2">
                     • <strong>输入完成后，点击"分析文法"按钮进行验证</strong>
                   </p>
@@ -290,17 +291,17 @@ const exampleGrammars = [
   {
     name: '基础文法1',
     grammar: 'S->AB\nA->a|ε\nB->b',
-    description: '最简单的LL(1)文法示例，适合初学者',
+    description: '最简单的LL(1)文法示例，适合初学者，结束符使用#',
   },
   {
     name: '基础文法2',
     grammar: 'S->aS|b',
-    description: '简单的递归文法，生成a*b形式的字符串',
+    description: '简单的递归文法，生成a*b形式的字符串，结束符使用#',
   },
   {
     name: '基础文法3',
     grammar: 'S->AB\nA->aA|ε\nB->bB|c',
-    description: '生成a*bc+形式字符串的文法',
+    description: '生成a*bc+形式字符串的文法，结束符使用#',
   },
 ]
 

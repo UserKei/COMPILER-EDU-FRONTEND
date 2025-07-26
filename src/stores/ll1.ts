@@ -168,7 +168,7 @@ export const useLL1Store = defineStore('ll1', () => {
       const arrowCount = (production.match(/->/g) || []).length
       if (arrowCount > 1) return false
 
-      // 验证格式: X->Y (X是大写字母，Y支持|分隔)
+      // 验证格式: X->Y (X是大写字母，Y支持|分隔，支持#作为终结符)
       const match = production.match(/^([A-Z])->((?:[^|]+\|)*[^|]+)$/)
       return !!match
     })
@@ -352,10 +352,16 @@ export const useLL1Store = defineStore('ll1', () => {
   // 分析输入串
   const analyzeInputString = async () => {
     // 输入串预处理
-    const cleanedInputString = inputString.value.replace(/ +/g, '') // 移除空格
+    let cleanedInputString = inputString.value.replace(/ +/g, '') // 移除空格
     if (/^\s*$/.test(cleanedInputString)) {
       commonStore.setError('请先输入字符串')
       return false
+    }
+
+    // 确保输入串以 # 结尾（LL1分析的结束符）
+    if (!cleanedInputString.endsWith('#')) {
+      cleanedInputString += '#'
+      console.log('自动为输入串添加结束符 #:', cleanedInputString)
     }
 
     if (productions.value.length === 0) {

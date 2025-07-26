@@ -263,7 +263,7 @@
                 >
                   <span class="font-mono text-green-600">{{ symbol }}:</span>
                   <span class="ml-2 text-green-700">{{
-                    correctFollowSets[symbol]?.join(' ') || '$'
+                    correctFollowSets[symbol]?.join(' ') || '#'
                   }}</span>
                 </div>
               </div>
@@ -287,7 +287,7 @@
             <div>
               <h5 class="font-medium text-gray-800 mb-2">Follow集计算规则:</h5>
               <ul class="space-y-1 text-gray-600">
-                <li>• $ ∈ Follow(S)，S 为开始符号</li>
+                <li>• # ∈ Follow(S)，S 为开始符号</li>
                 <li>• 若 A→αBβ，将 First(β) 中非 ε 符号加入 Follow(B)</li>
                 <li>• 若 A→αB 或 A→αBβ 且 ε ∈ First(β)，将 Follow(A) 加入 Follow(B)</li>
               </ul>

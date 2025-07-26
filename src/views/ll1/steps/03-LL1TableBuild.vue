@@ -328,8 +328,8 @@ defineEmits<{
 const nonTerminals = computed(() => originalData.value?.Vn || [])
 const terminals = computed(() => {
   if (!originalData.value?.Vt) return []
-  // 添加 $ 符号
-  const terminalSet = new Set([...originalData.value.Vt, '$'])
+  // 添加 # 符号
+  const terminalSet = new Set([...originalData.value.Vt, '#'])
   return Array.from(terminalSet).sort()
 })
 
