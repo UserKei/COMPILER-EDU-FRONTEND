@@ -18,9 +18,27 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900">输入产生式</h3>
-            <div class="flex items-center gap-1.5">
-              <Icon icon="lucide:info" class="w-4 h-4 text-blue-500" />
-              <span class="text-sm text-gray-600">支持格式：A->α|β</span>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5">
+                <Icon icon="lucide:info" class="w-4 h-4 text-blue-500" />
+                <span class="text-sm text-gray-600">支持格式：A->α|β</span>
+              </div>
+              <button
+                @click="handleAnalyzeGrammar"
+                :disabled="!grammarInput.trim() || loading"
+                :class="[
+                  'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                  !grammarInput.trim() || loading
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700',
+                ]"
+              >
+                <Icon
+                  :icon="loading ? 'lucide:loader-2' : 'lucide:play'"
+                  :class="['w-4 h-4', loading ? 'animate-spin' : '']"
+                />
+                <span>{{ loading ? '分析中...' : '分析文法' }}</span>
+              </button>
             </div>
           </div>
           <div class="space-y-4">
@@ -45,6 +63,9 @@
                   <p>• 开始符：第一个产生式的左侧大写字母为开始符</p>
                   <p>• 字符规定：每个符号必须是单个字符（如A、B、C，而非E1、id等）</p>
                   <p>• 产生式：每行一个产生式，确保文法符合LL1要求（无左递归、无回溯）</p>
+                  <p class="text-green-600 mt-2">
+                    • <strong>输入完成后，点击"分析文法"按钮进行验证</strong>
+                  </p>
                 </div>
               </div>
             </div>
@@ -298,7 +319,8 @@ const handleGrammarInput = () => {
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let isAnalyzing = false // 添加标志防止重复分析
 
-const performAnalysisWithDebounce = () => {
+// 手动分析文法
+const handleAnalyzeGrammar = async () => {
   // 如果正在分析，跳过
   if (isAnalyzing) {
     return
@@ -312,31 +334,37 @@ const performAnalysisWithDebounce = () => {
   // 清除之前的错误
   commonStore.clearError()
 
-  if (productions.value.length > 0) {
-    // 设置新的防抖定时器
-    debounceTimer = setTimeout(async () => {
-      isAnalyzing = true
-      try {
-        // 使用原始输入文本进行完整的验证和格式化处理
-        const inputText = grammarInput.value
-        console.log('前端原始输入:', inputText)
-        console.log('是否包含空格:', inputText.includes(' '))
-
-        await ll1Store.performLL1AnalysisFromText(inputText)
-      } catch (error) {
-        console.error('Analysis failed:', error)
-      } finally {
-        isAnalyzing = false
-        debounceTimer = null
-      }
-    }, 800) // 800ms防抖
+  if (!grammarInput.value.trim()) {
+    commonStore.setError('请输入文法产生式')
+    return
   }
+
+  isAnalyzing = true
+  try {
+    // 使用原始输入文本进行完整的验证和格式化处理
+    const inputText = grammarInput.value
+    console.log('前端原始输入:', inputText)
+    console.log('是否包含空格:', inputText.includes(' '))
+
+    await ll1Store.performLL1AnalysisFromText(inputText)
+  } catch (error) {
+    console.error('Analysis failed:', error)
+  } finally {
+    isAnalyzing = false
+  }
+}
+
+const performAnalysisWithDebounce = () => {
+  // 移除自动分析逻辑 - 现在只有手动触发
+  return
 }
 
 // 使用示例文法
 const useExample = (example: any) => {
   grammarInput.value = example.grammar
-  // 不需要手动触发分析，watch 会自动处理
+  // 清除之前的分析结果，等待用户手动分析
+  ll1Store.resetAll()
+  commonStore.setError('已加载示例文法，请点击"分析文法"按钮进行验证')
 }
 
 // 处理下一步
@@ -347,14 +375,12 @@ const handleNextStep = () => {
   }
 }
 
-// 监听 productions 变化，自动触发分析
+// 监听 productions 变化，但不自动触发分析
 watch(
   () => productions.value,
   (newProductions) => {
-    if (newProductions.length > 0) {
-      performAnalysisWithDebounce()
-    } else {
-      // 清空相关状态
+    if (newProductions.length === 0) {
+      // 只在清空时重置状态
       commonStore.clearError()
       isAnalyzing = false // 重置分析状态
       if (debounceTimer) {
@@ -362,16 +388,15 @@ watch(
         debounceTimer = null
       }
     }
+    // 移除自动分析 - 现在需要用户手动点击按钮
   },
   { deep: true },
 )
 
 // 组件挂载时初始化
 onMounted(() => {
-  // 如果已经有数据，并且没有分析结果，则触发分析
-  if (productions.value.length > 0 && !originalData.value) {
-    performAnalysisWithDebounce()
-  }
+  // 移除自动分析 - 现在需要用户手动点击按钮
+  console.log('LL1 组件已挂载，等待用户手动分析文法')
 })
 </script>
 
