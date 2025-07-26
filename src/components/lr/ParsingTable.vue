@@ -327,14 +327,26 @@ const validateCell = (key: string, type: 'action' | 'goto') => {
   const userInput = (type === 'action' ? userInputs.actions[key] : userInputs.gotos[key]) || ''
   const correctAnswer = getCorrectAnswer(key, type)
 
+  // 添加详细的调试信息
+  console.log('=== validateCell 调试 ===')
+  console.log('键值:', key)
+  console.log('类型:', type)
+  console.log('用户输入:', `"${userInput}"`)
+  console.log('正确答案:', `"${correctAnswer}"`)
+  console.log('用户输入(trim):', `"${userInput.trim()}"`)
+  console.log('比较结果:', userInput.trim() === correctAnswer)
+
   let result: { type: 'empty' | 'incorrect' | 'correct'; correctAnswer?: string }
 
   if (!userInput.trim()) {
     result = { type: 'empty', correctAnswer }
+    console.log('结果: 空值')
   } else if (userInput.trim() !== correctAnswer) {
     result = { type: 'incorrect', correctAnswer }
+    console.log('结果: 错误')
   } else {
     result = { type: 'correct' }
+    console.log('结果: 正确')
   }
 
   if (type === 'action') {
@@ -397,22 +409,66 @@ const getCorrectAnswer = (key: string, type: 'action' | 'goto'): string => {
   // 转换键值格式：从 "state,symbol" 到 "state|symbol"
   const convertedKey = key.replace(',', '|')
 
-  console.log('获取答案:', {
-    originalKey: key,
-    convertedKey,
-    type,
-    actionsKeys: Object.keys(props.correctAnswers.actions),
-    gotosKeys: Object.keys(props.correctAnswers.gotos),
-  })
+  console.log('=== getCorrectAnswer 调试 ===')
+  console.log('原始键值:', key)
+  console.log('转换后键值:', convertedKey)
+  console.log('查找类型:', type)
+
+  const actionsData = props.correctAnswers.actions
+  const gotosData = props.correctAnswers.gotos
+
+  console.log('Actions数据键值:', Object.keys(actionsData))
+  console.log('Gotos数据键值:', Object.keys(gotosData))
 
   if (type === 'action') {
-    const answer = props.correctAnswers.actions[convertedKey] || ''
-    console.log(`Action答案 [${key}] -> [${convertedKey}]:`, answer)
-    return answer
+    // 先尝试转换后的键值
+    let answer = actionsData[convertedKey]
+
+    // 如果没找到，尝试原始键值
+    if (answer === undefined || answer === null) {
+      answer = actionsData[key]
+      console.log(`Action答案 [原始键值 ${key}]:`, answer, typeof answer)
+    } else {
+      console.log(`Action答案 [转换键值 ${convertedKey}]:`, answer, typeof answer)
+    }
+
+    // 如果还是没找到，尝试其他可能的格式
+    if (answer === undefined || answer === null) {
+      // 尝试不同的分隔符格式
+      const altKey1 = key.replace(',', '_')
+      const altKey2 = key.replace(',', '-')
+      answer = actionsData[altKey1] || actionsData[altKey2]
+      if (answer !== undefined && answer !== null) {
+        console.log(`Action答案 [备用格式]:`, answer, typeof answer)
+      }
+    }
+
+    // 确保返回字符串类型
+    return answer !== undefined && answer !== null ? String(answer) : ''
   } else {
-    const answer = props.correctAnswers.gotos[convertedKey] || ''
-    console.log(`Goto答案 [${key}] -> [${convertedKey}]:`, answer)
-    return answer
+    // 先尝试转换后的键值
+    let answer = gotosData[convertedKey]
+
+    // 如果没找到，尝试原始键值
+    if (answer === undefined || answer === null) {
+      answer = gotosData[key]
+      console.log(`Goto答案 [原始键值 ${key}]:`, answer, typeof answer)
+    } else {
+      console.log(`Goto答案 [转换键值 ${convertedKey}]:`, answer, typeof answer)
+    }
+
+    // 如果还是没找到，尝试其他可能的格式
+    if (answer === undefined || answer === null) {
+      const altKey1 = key.replace(',', '_')
+      const altKey2 = key.replace(',', '-')
+      answer = gotosData[altKey1] || gotosData[altKey2]
+      if (answer !== undefined && answer !== null) {
+        console.log(`Goto答案 [备用格式]:`, answer, typeof answer)
+      }
+    }
+
+    // 确保返回字符串类型
+    return answer !== undefined && answer !== null ? String(answer) : ''
   }
 }
 
@@ -439,25 +495,36 @@ const toggleAnswerDisplay = () => {
 
 // 初始化用户输入数据结构
 const initializeUserInputs = () => {
+  console.log('=== 初始化用户输入数据结构 ===')
+  console.log('状态数量:', stateCount.value)
+  console.log('终结符:', props.terminals)
+  console.log('非终结符:', props.nonterminals)
+
   // 初始化 ACTION 输入
+  const actionKeys: string[] = []
   for (let stateIndex = 0; stateIndex < stateCount.value; stateIndex++) {
     for (const terminal of [...props.terminals, '#']) {
       const key = `${stateIndex},${terminal}`
+      actionKeys.push(key)
       if (!(key in userInputs.actions)) {
         userInputs.actions[key] = ''
       }
     }
   }
+  console.log('生成的 ACTION 键值:', actionKeys)
 
   // 初始化 GOTO 输入
+  const gotoKeys: string[] = []
   for (let stateIndex = 0; stateIndex < stateCount.value; stateIndex++) {
     for (const nonterminal of props.nonterminals) {
       const key = `${stateIndex},${nonterminal}`
+      gotoKeys.push(key)
       if (!(key in userInputs.gotos)) {
         userInputs.gotos[key] = ''
       }
     }
   }
+  console.log('生成的 GOTO 键值:', gotoKeys)
 }
 
 // 监听数据变化
@@ -478,12 +545,30 @@ watch(
 
 // 组件挂载
 onMounted(() => {
-  console.log('ParsingTable 组件挂载，接收到的数据:')
+  console.log('=== ParsingTable 组件挂载调试 ===')
   console.log('tableType:', props.tableType)
   console.log('terminals:', props.terminals)
   console.log('nonterminals:', props.nonterminals)
-  console.log('correctAnswers:', props.correctAnswers)
   console.log('analysisData:', props.analysisData)
+
+  console.log('=== correctAnswers 详细调试 ===')
+  console.log('actions 对象:', props.correctAnswers.actions)
+  console.log('gotos 对象:', props.correctAnswers.gotos)
+
+  console.log('=== actions 所有键值对 ===')
+  Object.entries(props.correctAnswers.actions).forEach(([key, value]) => {
+    console.log(`  "${key}" => "${value}"`)
+  })
+
+  console.log('=== gotos 所有键值对 ===')
+  Object.entries(props.correctAnswers.gotos).forEach(([key, value]) => {
+    console.log(`  "${key}" => "${value}"`)
+  })
+
+  console.log('=== 状态和符号信息 ===')
+  console.log('状态数量:', stateCount.value)
+  console.log('终结符列表:', [...props.terminals, '#'])
+  console.log('非终结符列表:', props.nonterminals)
 
   initializeUserInputs()
 })
