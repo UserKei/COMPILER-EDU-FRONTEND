@@ -49,12 +49,11 @@
             <p class="mt-1">• 多个符号用空格分隔（如：a b c）</p>
             <p>• 空符号用 ε 表示</p>
             <p>• 注意字符的大小写</p>
-            <p class="mt-1 text-blue-600 font-medium">• 可通过拖拽输入和双击符号卡片复制内容</p>
           </div>
         </div>
 
         <!-- 已知信息区域 -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <!-- 非终结符 -->
           <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 class="text-md font-semibold text-gray-900 mb-4 flex items-center">
@@ -62,14 +61,10 @@
               非终结符 Vn
             </h3>
             <div class="flex flex-wrap gap-2">
-              <!-- 拖拽：非终结符卡片 -->
               <span
                 v-for="symbol in originalData.Vn"
-                :key="'vn-' + symbol"
-                class="flex items-center justify-center rounded-full bg-purple-100 text-purple-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-purple-200 transition-all select-none"
-                draggable="true"
-                @dragstart="onDragStart(symbol, $event)"
-                @dblclick="onSymbolDblClick(symbol)"
+                :key="symbol"
+                class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-mono"
               >
                 {{ symbol }}
               </span>
@@ -83,44 +78,12 @@
               终结符 Vt
             </h3>
             <div class="flex flex-wrap gap-2">
-              <!-- 拖拽：终结符卡片 -->
               <span
                 v-for="symbol in originalData.Vt"
-                :key="'vt-' + symbol"
-                class="flex items-center justify-center rounded-full bg-green-100 text-green-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-green-200 transition-all select-none"
-                draggable="true"
-                @dragstart="onDragStart(symbol, $event)"
-                @dblclick="onSymbolDblClick(symbol)"
+                :key="symbol"
+                class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-mono"
               >
                 {{ symbol }}
-              </span>
-            </div>
-          </div>
-
-          <!-- 其他符号 -->
-          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 class="text-md font-semibold text-gray-900 mb-4 flex items-center">
-              <Icon icon="lucide:circle" class="w-4 h-4 mr-2 text-pink-600" />
-              其他符号
-            </h3>
-            <div class="flex flex-wrap gap-2">
-              <!-- 拖拽：空串ε -->
-              <span
-                class="flex items-center justify-center rounded-full bg-pink-100 text-pink-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-pink-200 transition-all select-none"
-                draggable="true"
-                @dragstart="onDragStart('ε', $event)"
-                @dblclick="onSymbolDblClick('ε')"
-              >
-                ε
-              </span>
-              <!-- 拖拽：输入结束符# -->
-              <span
-                class="flex items-center justify-center rounded-full bg-blue-100 text-blue-800 font-mono text-base w-10 h-10 cursor-move shadow hover:bg-blue-200 transition-all select-none"
-                draggable="true"
-                @dragstart="onDragStart('#', $event)"
-                @dblclick="onSymbolDblClick('#')"
-              >
-                #
               </span>
             </div>
           </div>
@@ -134,7 +97,7 @@
             <div class="space-y-1">
               <div
                 v-for="(productions, nonTerminal) in originalData.formulas_dict"
-                :key="'prod-' + nonTerminal"
+                :key="nonTerminal"
                 class="text-sm"
               >
                 <span class="font-mono text-blue-600">{{ nonTerminal }}</span>
@@ -154,23 +117,18 @@
                 <Icon icon="lucide:arrow-right" class="w-5 h-5 mr-2 text-blue-600" />
                 First集合
               </h3>
-              <div class="flex gap-2">
-                <button
-                  @click="clearFirstSets"
-                  class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Icon icon="lucide:refresh-cw" class="w-4 h-4 mr-2" />
-                  清空重填
-                </button>
-                <button
-                  @click="checkFirstSets"
-                  :disabled="loading.first"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-                >
-                  <Icon v-if="loading.first" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
-                  校验First集
-                </button>
-              </div>
+              <button
+                @click="checkFirstSets"
+                :disabled="localLoading.first"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                <Icon
+                  v-if="localLoading.first"
+                  icon="lucide:loader-2"
+                  class="w-4 h-4 animate-spin mr-2"
+                />
+                校验First集
+              </button>
             </div>
 
             <div class="space-y-3">
@@ -180,7 +138,8 @@
                 class="flex items-center gap-3"
               >
                 <span class="w-20 text-sm font-medium text-gray-700">
-                  first(<span class="font-mono text-blue-600">{{ symbol }}</span>) =
+                  first(<span class="font-mono text-blue-600">{{ symbol }}</span
+                  >) =
                 </span>
                 <div class="flex-1 relative">
                   <input
@@ -189,7 +148,7 @@
                     placeholder="输入First集，用空格分隔"
                     :class="[
                       'w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors',
-                      getInputClass('first', symbol)
+                      getInputClass('first', symbol),
                     ]"
                     @focus="clearValidation('first', symbol)"
                   />
@@ -210,7 +169,10 @@
             </div>
 
             <!-- First集答案提示 -->
-            <div v-if="showFirstAnswer && firstAttempts >= maxAttempts" class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <div
+              v-if="showFirstAnswer && firstAttempts >= maxAttempts"
+              class="mt-4 p-4 bg-blue-50 rounded-lg"
+            >
               <h4 class="text-sm font-medium text-blue-800 mb-2">正确答案：</h4>
               <div class="space-y-1">
                 <div
@@ -219,7 +181,9 @@
                   class="text-sm"
                 >
                   <span class="font-mono text-blue-600">{{ symbol }}:</span>
-                  <span class="ml-2 text-blue-700">{{ correctFirstSets[symbol]?.join(' ') || 'ε' }}</span>
+                  <span class="ml-2 text-blue-700">{{
+                    correctFirstSets[symbol]?.join(' ') || 'ε'
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -232,23 +196,18 @@
                 <Icon icon="lucide:arrow-left" class="w-5 h-5 mr-2 text-green-600" />
                 Follow集合
               </h3>
-              <div class="flex gap-2">
-                <button
-                  @click="clearFollowSets"
-                  class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Icon icon="lucide:refresh-cw" class="w-4 h-4 mr-2" />
-                  清空重填
-                </button>
-                <button
-                  @click="checkFollowSets"
-                  :disabled="loading.follow || !firstStepCompleted"
-                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
-                >
-                  <Icon v-if="loading.follow" icon="lucide:loader-2" class="w-4 h-4 animate-spin mr-2" />
-                  校验Follow集
-                </button>
-              </div>
+              <button
+                @click="checkFollowSets"
+                :disabled="localLoading.follow || !firstStepCompleted"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
+              >
+                <Icon
+                  v-if="localLoading.follow"
+                  icon="lucide:loader-2"
+                  class="w-4 h-4 animate-spin mr-2"
+                />
+                校验Follow集
+              </button>
             </div>
 
             <div class="space-y-3">
@@ -258,7 +217,8 @@
                 class="flex items-center gap-3"
               >
                 <span class="w-20 text-sm font-medium text-gray-700">
-                  follow(<span class="font-mono text-green-600">{{ symbol }}</span>) =
+                  follow(<span class="font-mono text-green-600">{{ symbol }}</span
+                  >) =
                 </span>
                 <div class="flex-1 relative">
                   <input
@@ -269,7 +229,7 @@
                     :class="[
                       'w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors',
                       getInputClass('follow', symbol),
-                      !firstStepCompleted && 'bg-gray-100 cursor-not-allowed'
+                      !firstStepCompleted && 'bg-gray-100 cursor-not-allowed',
                     ]"
                     @focus="clearValidation('follow', symbol)"
                   />
@@ -290,7 +250,10 @@
             </div>
 
             <!-- Follow集答案提示 -->
-            <div v-if="showFollowAnswer && followAttempts >= maxAttempts" class="mt-4 p-4 bg-green-50 rounded-lg">
+            <div
+              v-if="showFollowAnswer && followAttempts >= maxAttempts"
+              class="mt-4 p-4 bg-green-50 rounded-lg"
+            >
               <h4 class="text-sm font-medium text-green-800 mb-2">正确答案：</h4>
               <div class="space-y-1">
                 <div
@@ -299,7 +262,9 @@
                   class="text-sm"
                 >
                   <span class="font-mono text-green-600">{{ symbol }}:</span>
-                  <span class="ml-2 text-green-700">{{ correctFollowSets[symbol]?.join(' ') || '$' }}</span>
+                  <span class="ml-2 text-green-700">{{
+                    correctFollowSets[symbol]?.join(' ') || '$'
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -360,7 +325,7 @@
             'px-6 py-2 rounded-lg transition-colors flex items-center gap-2',
             allCompleted
               ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -368,33 +333,33 @@
         </button>
       </div>
     </div>
-
-    <transition name="fade">
-      <div v-if="copyTip" class="fixed top-8 right-8 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 bg-green-600 text-white">
-        <Icon icon="lucide:copy" class="w-5 h-5" />
-        <span>{{ copyTip }}</span>
-      </div>
-    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Icon } from '@iconify/vue'
 import { useLL1Store } from '@/stores/ll1'
+import { useCommonStore } from '@/stores/common'
 
+// 获取 Store 实例
+const ll1Store = useLL1Store()
+const commonStore = useCommonStore()
+
+// 解构响应式状态（用于模板绑定）
+const { originalData, validationData } = storeToRefs(ll1Store)
+const { loading } = storeToRefs(commonStore)
+
+// 定义 emits
 defineEmits<{
   'next-step': []
   'prev-step': []
 }>()
 
-// 使用pinia store
-const ll1Store = useLL1Store()
-
-// 数据引用
-const originalData = computed(() => ll1Store.originalData)
-const correctFirstSets = computed(() => ll1Store.firstSets)
-const correctFollowSets = computed(() => ll1Store.followSets)
+// 从 Store 获取正确答案
+const correctFirstSets = computed(() => originalData.value?.first || {})
+const correctFollowSets = computed(() => originalData.value?.follow || {})
 
 // 用户输入的集合
 const userFirstSets = ref<Record<string, string>>({})
@@ -404,10 +369,10 @@ const userFollowSets = ref<Record<string, string>>({})
 const firstValidation = ref<Record<string, 'correct' | 'incorrect' | ''>>({})
 const followValidation = ref<Record<string, 'correct' | 'incorrect' | ''>>({})
 
-// 加载状态
-const loading = ref({
+// 本地加载状态（用于按钮）
+const localLoading = ref({
   first: false,
-  follow: false
+  follow: false,
 })
 
 // 显示答案
@@ -421,18 +386,20 @@ const maxAttempts = 3
 
 // 完成状态
 const firstStepCompleted = computed(() => {
-  return originalData.value?.Vn.every(symbol => firstValidation.value[symbol] === 'correct') || false
+  if (!originalData.value?.Vn) return false
+  return originalData.value.Vn.every((symbol) => firstValidation.value[symbol] === 'correct')
 })
 
 const allCompleted = computed(() => {
-  const firstCompleted = originalData.value?.Vn.every(symbol => firstValidation.value[symbol] === 'correct') || false
-  const followCompleted = originalData.value?.Vn.every(symbol => followValidation.value[symbol] === 'correct') || false
+  if (!originalData.value?.Vn) return false
+  const firstCompleted = originalData.value.Vn.every(
+    (symbol) => firstValidation.value[symbol] === 'correct',
+  )
+  const followCompleted = originalData.value.Vn.every(
+    (symbol) => followValidation.value[symbol] === 'correct',
+  )
   return firstCompleted && followCompleted
 })
-
-// 复制提示
-const copyTip = ref('')
-let copyTipTimer: number | null = null
 
 // 工具函数
 const areCharacterSetsEqual = (str1: string, str2: string): boolean => {
@@ -452,7 +419,8 @@ const areCharacterSetsEqual = (str1: string, str2: string): boolean => {
 }
 
 const getInputClass = (type: 'first' | 'follow', symbol: string): string => {
-  const validation = type === 'first' ? firstValidation.value[symbol] : followValidation.value[symbol]
+  const validation =
+    type === 'first' ? firstValidation.value[symbol] : followValidation.value[symbol]
 
   if (validation === 'correct') {
     return 'border-green-300 bg-green-50'
@@ -478,7 +446,7 @@ const clearValidation = (type: 'first' | 'follow', symbol: string) => {
 const checkFirstSets = async () => {
   if (!originalData.value) return
 
-  loading.value.first = true
+  localLoading.value.first = true
   firstAttempts.value++
 
   try {
@@ -499,6 +467,8 @@ const checkFirstSets = async () => {
 
     if (isAllCorrect) {
       showFirstAnswer.value = false
+      // 可以在这里添加成功提示
+      console.log('First sets validation completed successfully')
     } else {
       if (firstAttempts.value >= maxAttempts) {
         // 显示正确答案
@@ -511,14 +481,14 @@ const checkFirstSets = async () => {
       }
     }
   } finally {
-    loading.value.first = false
+    localLoading.value.first = false
   }
 }
 
 const checkFollowSets = async () => {
   if (!originalData.value) return
 
-  loading.value.follow = true
+  localLoading.value.follow = true
   followAttempts.value++
 
   try {
@@ -539,6 +509,8 @@ const checkFollowSets = async () => {
 
     if (isAllCorrect) {
       showFollowAnswer.value = false
+      // 可以在这里添加成功提示
+      console.log('Follow sets validation completed successfully')
     } else {
       if (followAttempts.value >= maxAttempts) {
         // 显示正确答案
@@ -551,75 +523,36 @@ const checkFollowSets = async () => {
       }
     }
   } finally {
-    loading.value.follow = false
+    localLoading.value.follow = false
   }
 }
 
-// 清空用户输入
-const clearFirstSets = () => {
+// 初始化和重置函数
+const initializeState = () => {
   if (originalData.value?.Vn) {
-    originalData.value.Vn.forEach(symbol => {
+    originalData.value.Vn.forEach((symbol) => {
       userFirstSets.value[symbol] = ''
-      firstValidation.value[symbol] = ''
-    })
-    showFirstAnswer.value = false
-    firstAttempts.value = 0
-  }
-}
-
-const clearFollowSets = () => {
-  if (originalData.value?.Vn) {
-    originalData.value.Vn.forEach(symbol => {
       userFollowSets.value[symbol] = ''
+      firstValidation.value[symbol] = ''
       followValidation.value[symbol] = ''
     })
-    showFollowAnswer.value = false
-    followAttempts.value = 0
   }
 }
 
-// 拖拽事件处理函数，供所有卡片使用
-function onDragStart(symbol: string, event: DragEvent) {
-  // 将符号内容写入拖拽数据
-  event.dataTransfer?.setData('text/plain', symbol)
-}
+// 监听原始数据变化，重新初始化状态
+watch(
+  () => originalData.value,
+  (newData) => {
+    if (newData) {
+      initializeState()
+    }
+  },
+  { immediate: true },
+)
 
-// 双击符号卡片复制到剪贴板并弹出提示
-function onSymbolDblClick(symbol: string) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(symbol).then(() => {
-      showCopyTip(`已复制：${symbol}`)
-    })
-  } else {
-    // 兼容性处理
-    const textarea = document.createElement('textarea')
-    textarea.value = symbol
-    document.body.appendChild(textarea)
-    textarea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textarea)
-    showCopyTip(`已复制：${symbol}`)
-  }
-}
-
-function showCopyTip(msg: string) {
-  copyTip.value = msg
-  if (copyTipTimer) clearTimeout(copyTipTimer)
-  copyTipTimer = window.setTimeout(() => {
-    copyTip.value = ''
-  }, 1200)
-}
-
-// 初始化
+// 组件挂载时初始化
 onMounted(() => {
-  if (originalData.value?.Vn) {
-    originalData.value.Vn.forEach(symbol => {
-      userFirstSets.value[symbol] = ''
-      userFollowSets.value[symbol] = ''
-      firstValidation.value[symbol] = ''
-      followValidation.value[symbol] = ''
-    })
-  }
+  initializeState()
 })
 </script>
 
@@ -647,14 +580,5 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 </style>
