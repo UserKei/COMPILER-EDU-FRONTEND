@@ -61,7 +61,9 @@
 
       <!-- LR画布 -->
       <div class="canvas-wrapper">
-        <LRCanvas ref="lrCanvasRef" @nodes-change="onNodesChange" @edges-change="onEdgesChange" />
+        <div class="h-[700px]">
+          <LRCanvas ref="lrCanvasRef" @nodes-change="onNodesChange" @edges-change="onEdgesChange" />
+        </div>
       </div>
 
       <!-- 验证按钮 -->
