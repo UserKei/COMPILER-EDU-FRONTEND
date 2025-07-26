@@ -158,6 +158,31 @@ export const useSLR1Store = defineStore('slr1', () => {
         if (result && result.S) {
           analysisResult.value = result
 
+          // 添加后端数据调试日志
+          console.log('=== SLR1 后端返回数据调试 ===')
+          console.log('后端返回的 actions:', result.actions)
+          console.log('后端返回的 gotos:', result.gotos)
+          console.log('actions 类型:', typeof result.actions)
+          console.log('gotos 类型:', typeof result.gotos)
+
+          if (result.actions) {
+            console.log('actions 键值示例:')
+            Object.entries(result.actions)
+              .slice(0, 5)
+              .forEach(([key, value]) => {
+                console.log(`  ${key} => ${value}`)
+              })
+          }
+
+          if (result.gotos) {
+            console.log('gotos 键值示例:')
+            Object.entries(result.gotos)
+              .slice(0, 5)
+              .forEach(([key, value]) => {
+                console.log(`  ${key} => ${value}`)
+              })
+          }
+
           // 更新相关状态
           actionTable.value = result.actions || {}
           gotoTable.value = result.gotos || {}

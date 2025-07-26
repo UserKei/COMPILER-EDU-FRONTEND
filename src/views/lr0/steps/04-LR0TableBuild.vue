@@ -109,15 +109,43 @@ const tableProps = computed(() => {
       return null
     }
 
+    // 准备传递给 ParsingTable 的数据
+    const answers = {
+      actions: lr0Store.actionTable || {},
+      gotos: lr0Store.gotoTable || {},
+    }
+
+    // 处理终结符和非终结符数据格式
+    const terminals = Array.isArray(lr0Store.analysisResult.Vt)
+      ? lr0Store.analysisResult.Vt.map((item: any) =>
+          typeof item === 'object' ? item.text || item.value : item,
+        )
+      : []
+
+    const nonterminals = Array.isArray(lr0Store.analysisResult.Vn)
+      ? lr0Store.analysisResult.Vn.filter((item: any) => {
+          const text = typeof item === 'object' ? item.text || item.value : item
+          return text !== (lr0Store.analysisResult?.S || '') + "'"
+        }).map((item: any) => (typeof item === 'object' ? item.text || item.value : item))
+      : []
+
+    console.log('=== LR0TableBuild 传递给 ParsingTable 的数据 ===')
+    console.log('tableType: LR0')
+    console.log('原始 Vt:', lr0Store.analysisResult.Vt)
+    console.log('处理后 terminals:', terminals)
+    console.log('原始 Vn:', lr0Store.analysisResult.Vn)
+    console.log('处理后 nonterminals:', nonterminals)
+    console.log('actions数据:', answers.actions)
+    console.log('gotos数据:', answers.gotos)
+    console.log('actions键值数量:', Object.keys(answers.actions).length)
+    console.log('gotos键值数量:', Object.keys(answers.gotos).length)
+
     return {
       tableType: 'LR0' as const,
       analysisData: lr0Store.analysisResult,
-      terminals: lr0Store.analysisResult.Vt || [],
-      nonterminals: lr0Store.analysisResult.Vn || [],
-      correctAnswers: {
-        actions: lr0Store.actionTable || {},
-        gotos: lr0Store.gotoTable || {},
-      },
+      terminals: terminals,
+      nonterminals: nonterminals,
+      correctAnswers: answers,
     }
   } catch (error) {
     console.error('准备表格数据时出错:', error)

@@ -159,19 +159,30 @@ const convertSLR1CorrectAnswers = () => {
   const actions: Record<string, string> = {}
   const gotos: Record<string, string> = {}
 
+  console.log('=== SLR1 数据转换调试 ===')
+  console.log('原始 actions 数据:', analysisData.value.actions)
+  console.log('原始 gotos 数据:', analysisData.value.gotos)
+
   // 处理actions数据（SLR1 store中actions已经是Record<string, string>格式）
   if (analysisData.value.actions && typeof analysisData.value.actions === 'object') {
-    // 处理符号差异（# vs $）
+    // 直接使用后端返回的数据，后端已经使用正确的格式（state|symbol）
     Object.entries(analysisData.value.actions).forEach(([key, value]) => {
-      const convertedKey = key.replace(',#', ',$')
-      actions[convertedKey] = value
+      // 后端返回的键值格式应该已经是 state|# 的形式
+      actions[key] = value
+      console.log(`Action: ${key} = ${value}`)
     })
   }
 
   // 处理gotos数据
   if (analysisData.value.gotos && typeof analysisData.value.gotos === 'object') {
-    Object.assign(gotos, analysisData.value.gotos)
+    Object.entries(analysisData.value.gotos).forEach(([key, value]) => {
+      gotos[key] = value
+      console.log(`Goto: ${key} = ${value}`)
+    })
   }
+
+  console.log('转换后的 actions:', actions)
+  console.log('转换后的 gotos:', gotos)
 
   return { actions, gotos }
 }
@@ -187,12 +198,22 @@ const tableProps = computed(() => {
       return null
     }
 
+    const answers = convertSLR1CorrectAnswers()
+
+    console.log('=== SLR1TableBuild 传递给 ParsingTable 的数据 ===')
+    console.log('tableType: SLR1')
+    console.log('terminals:', terminals.value)
+    console.log('nonterminals:', nonterminals.value)
+    console.log('answers:', answers)
+    console.log('actions键值数量:', Object.keys(answers.actions).length)
+    console.log('gotos键值数量:', Object.keys(answers.gotos).length)
+
     return {
       tableType: 'SLR1' as const,
       analysisData: analysisData.value,
       terminals: terminals.value,
       nonterminals: nonterminals.value,
-      correctAnswers: convertSLR1CorrectAnswers(),
+      correctAnswers: answers,
     }
   } catch (error) {
     console.error('准备表格数据时出错:', error)

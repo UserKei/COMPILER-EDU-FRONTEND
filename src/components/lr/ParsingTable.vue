@@ -392,10 +392,25 @@ const validateTable = async () => {
 }
 
 const getCorrectAnswer = (key: string, type: 'action' | 'goto'): string => {
+  // 转换键值格式：从 "state,symbol" 到 "state|symbol"
+  const convertedKey = key.replace(',', '|')
+
+  console.log('获取答案:', {
+    originalKey: key,
+    convertedKey,
+    type,
+    actionsKeys: Object.keys(props.correctAnswers.actions),
+    gotosKeys: Object.keys(props.correctAnswers.gotos),
+  })
+
   if (type === 'action') {
-    return props.correctAnswers.actions[key] || ''
+    const answer = props.correctAnswers.actions[convertedKey] || ''
+    console.log(`Action答案 [${key}] -> [${convertedKey}]:`, answer)
+    return answer
   } else {
-    return props.correctAnswers.gotos[key] || ''
+    const answer = props.correctAnswers.gotos[convertedKey] || ''
+    console.log(`Goto答案 [${key}] -> [${convertedKey}]:`, answer)
+    return answer
   }
 }
 
@@ -461,6 +476,13 @@ watch(
 
 // 组件挂载
 onMounted(() => {
+  console.log('ParsingTable 组件挂载，接收到的数据:')
+  console.log('tableType:', props.tableType)
+  console.log('terminals:', props.terminals)
+  console.log('nonterminals:', props.nonterminals)
+  console.log('correctAnswers:', props.correctAnswers)
+  console.log('analysisData:', props.analysisData)
+
   initializeUserInputs()
 })
 </script>
