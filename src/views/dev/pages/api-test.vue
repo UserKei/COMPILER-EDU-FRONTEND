@@ -27,14 +27,24 @@
           <div class="test-header">
             <h3>服务器连接</h3>
             <button @click="testConnection" :disabled="commonAPI.loading.value" class="test-btn">
-              <Icon v-if="commonAPI.loading.value" icon="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon
+                v-if="commonAPI.loading.value"
+                icon="lucide:loader-2"
+                class="w-4 h-4 animate-spin"
+              />
               <Icon v-else icon="lucide:play" class="w-4 h-4" />
               测试连接
             </button>
           </div>
-          <div v-if="connectionResult" class="test-result" :class="connectionResult.success ? 'success' : 'error'">
+          <div
+            v-if="connectionResult"
+            class="test-result"
+            :class="connectionResult.success ? 'success' : 'error'"
+          >
             <p>{{ connectionResult.message }}</p>
-            <pre v-if="connectionResult.data">{{ JSON.stringify(connectionResult.data, null, 2) }}</pre>
+            <pre v-if="connectionResult.data">{{
+              JSON.stringify(connectionResult.data, null, 2)
+            }}</pre>
           </div>
         </div>
       </div>
@@ -46,7 +56,11 @@
           <div class="test-header">
             <h3>LL1分析测试</h3>
             <button @click="testLL1" :disabled="ll1API.loading.value" class="test-btn">
-              <Icon v-if="ll1API.loading.value" icon="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon
+                v-if="ll1API.loading.value"
+                icon="lucide:loader-2"
+                class="w-4 h-4 animate-spin"
+              />
               <Icon v-else icon="lucide:play" class="w-4 h-4" />
               测试LL1
             </button>
@@ -58,7 +72,11 @@
               class="input-textarea"
             ></textarea>
           </div>
-          <div v-if="ll1Result" class="test-result" :class="ll1Result.success ? 'success' : 'error'">
+          <div
+            v-if="ll1Result"
+            class="test-result"
+            :class="ll1Result.success ? 'success' : 'error'"
+          >
             <p>{{ ll1Result.message }}</p>
             <details v-if="ll1Result.data">
               <summary>查看详细结果</summary>
@@ -75,7 +93,11 @@
           <div class="test-header">
             <h3>LR0分析测试</h3>
             <button @click="testLR0" :disabled="lr0API.loading.value" class="test-btn">
-              <Icon v-if="lr0API.loading.value" icon="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon
+                v-if="lr0API.loading.value"
+                icon="lucide:loader-2"
+                class="w-4 h-4 animate-spin"
+              />
               <Icon v-else icon="lucide:play" class="w-4 h-4" />
               测试LR0
             </button>
@@ -87,7 +109,11 @@
               class="input-textarea"
             ></textarea>
           </div>
-          <div v-if="lr0Result" class="test-result" :class="lr0Result.success ? 'success' : 'error'">
+          <div
+            v-if="lr0Result"
+            class="test-result"
+            :class="lr0Result.success ? 'success' : 'error'"
+          >
             <p>{{ lr0Result.message }}</p>
             <details v-if="lr0Result.data">
               <summary>查看详细结果</summary>
@@ -104,7 +130,11 @@
           <div class="test-header">
             <h3>SLR1分析测试</h3>
             <button @click="testSLR1" :disabled="slr1API.loading.value" class="test-btn">
-              <Icon v-if="slr1API.loading.value" icon="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon
+                v-if="slr1API.loading.value"
+                icon="lucide:loader-2"
+                class="w-4 h-4 animate-spin"
+              />
               <Icon v-else icon="lucide:play" class="w-4 h-4" />
               测试SLR1
             </button>
@@ -116,7 +146,11 @@
               class="input-textarea"
             ></textarea>
           </div>
-          <div v-if="slr1Result" class="test-result" :class="slr1Result.success ? 'success' : 'error'">
+          <div
+            v-if="slr1Result"
+            class="test-result"
+            :class="slr1Result.success ? 'success' : 'error'"
+          >
             <p>{{ slr1Result.message }}</p>
             <details v-if="slr1Result.data">
               <summary>查看详细结果</summary>
@@ -133,7 +167,11 @@
           <div class="test-header">
             <h3>正则表达式转DFAM</h3>
             <button @click="testFA" :disabled="faAPI.loading.value" class="test-btn">
-              <Icon v-if="faAPI.loading.value" icon="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon
+                v-if="faAPI.loading.value"
+                icon="lucide:loader-2"
+                class="w-4 h-4 animate-spin"
+              />
               <Icon v-else icon="lucide:play" class="w-4 h-4" />
               测试FA
             </button>
@@ -171,9 +209,9 @@ const slr1API = useSLR1API()
 const faAPI = useFAAPI()
 
 // 测试输入
-const ll1Productions = ref('E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id')
-const lr0Productions = ref('E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id')
-const slr1Productions = ref('E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id')
+const ll1Productions = ref('E -> E + T | T\nT -> T * F | F\nF -> ( E ) | i')
+const lr0Productions = ref('E -> E + T | T\nT -> T * F | F\nF -> ( E ) | i')
+const slr1Productions = ref('E -> E + T | T\nT -> T * F | F\nF -> ( E ) | i')
 const regexInput = ref('(a|b)*abb')
 
 // 测试结果
@@ -185,9 +223,15 @@ const faResult = ref<any>(null)
 
 // 整体状态计算
 const overallStatus = computed(() => {
-  const results = [connectionResult.value, ll1Result.value, lr0Result.value, slr1Result.value, faResult.value]
-  const hasError = results.some(r => r && !r.success)
-  const hasSuccess = results.some(r => r && r.success)
+  const results = [
+    connectionResult.value,
+    ll1Result.value,
+    lr0Result.value,
+    slr1Result.value,
+    faResult.value,
+  ]
+  const hasError = results.some((r) => r && !r.success)
+  const hasSuccess = results.some((r) => r && r.success)
 
   if (hasError) return 'error'
   if (hasSuccess) return 'success'
@@ -201,67 +245,67 @@ const testConnection = async () => {
     connectionResult.value = {
       success: true,
       message: '服务器连接成功',
-      data: result
+      data: result,
     }
   } catch (error: any) {
     connectionResult.value = {
       success: false,
       message: `连接失败: ${error.message}`,
-      data: null
+      data: null,
     }
   }
 }
 
 const testLL1 = async () => {
   try {
-    const productions = ll1Productions.value.split('\n').filter(p => p.trim())
+    const productions = ll1Productions.value.split('\n').filter((p) => p.trim())
     const result = await ll1API.analyseGrammar(productions)
     ll1Result.value = {
       success: true,
       message: 'LL1分析成功',
-      data: result.data
+      data: result.data,
     }
   } catch (error: any) {
     ll1Result.value = {
       success: false,
       message: `LL1分析失败: ${error.message}`,
-      data: null
+      data: null,
     }
   }
 }
 
 const testLR0 = async () => {
   try {
-    const productions = lr0Productions.value.split('\n').filter(p => p.trim())
+    const productions = lr0Productions.value.split('\n').filter((p) => p.trim())
     const result = await lr0API.analyseGrammar(productions)
     lr0Result.value = {
       success: true,
       message: 'LR0分析成功',
-      data: result.data
+      data: result.data,
     }
   } catch (error: any) {
     lr0Result.value = {
       success: false,
       message: `LR0分析失败: ${error.message}`,
-      data: null
+      data: null,
     }
   }
 }
 
 const testSLR1 = async () => {
   try {
-    const productions = slr1Productions.value.split('\n').filter(p => p.trim())
+    const productions = slr1Productions.value.split('\n').filter((p) => p.trim())
     const result = await slr1API.analyseGrammar(productions)
     slr1Result.value = {
       success: true,
       message: 'SLR1分析成功',
-      data: result.data
+      data: result.data,
     }
   } catch (error: any) {
     slr1Result.value = {
       success: false,
       message: `SLR1分析失败: ${error.message}`,
-      data: null
+      data: null,
     }
   }
 }
@@ -272,13 +316,13 @@ const testFA = async () => {
     faResult.value = {
       success: true,
       message: '有限自动机分析成功',
-      data: result.data
+      data: result.data,
     }
   } catch (error: any) {
     faResult.value = {
       success: false,
       message: `有限自动机分析失败: ${error.message}`,
-      data: null
+      data: null,
     }
   }
 }
@@ -286,17 +330,23 @@ const testFA = async () => {
 // 状态辅助函数
 const getOverallStatusIcon = () => {
   switch (overallStatus.value) {
-    case 'success': return 'lucide:check-circle'
-    case 'error': return 'lucide:x-circle'
-    default: return 'lucide:clock'
+    case 'success':
+      return 'lucide:check-circle'
+    case 'error':
+      return 'lucide:x-circle'
+    default:
+      return 'lucide:clock'
   }
 }
 
 const getOverallStatusText = () => {
   switch (overallStatus.value) {
-    case 'success': return 'API连接正常'
-    case 'error': return '部分API连接异常'
-    default: return '等待测试'
+    case 'success':
+      return 'API连接正常'
+    case 'error':
+      return '部分API连接异常'
+    default:
+      return '等待测试'
   }
 }
 </script>
@@ -338,9 +388,18 @@ const getOverallStatusText = () => {
   justify-content: center;
 }
 
-.status-icon.success { background: #d1fae5; color: #065f46; }
-.status-icon.error { background: #fee2e2; color: #dc2626; }
-.status-icon.pending { background: #fef3c7; color: #d97706; }
+.status-icon.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+.status-icon.error {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.status-icon.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
 
 .status-title {
   font-size: 1.125rem;
@@ -479,7 +538,9 @@ const getOverallStatusText = () => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin {

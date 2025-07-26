@@ -9,11 +9,7 @@ export function useLL1Example() {
   const ll1API = useLL1API()
 
   const testLL1Analysis = async () => {
-    const productions = [
-      'E -> E + T | T',
-      'T -> T * F | F',
-      'F -> ( E ) | id'
-    ]
+    const productions = ['E -> E + T | T', 'T -> T * F | F', 'F -> ( E ) | i']
 
     try {
       await ll1API.analyseGrammar(productions)
@@ -25,7 +21,7 @@ export function useLL1Example() {
 
   return {
     ll1API,
-    testLL1Analysis
+    testLL1Analysis,
   }
 }
 
@@ -72,7 +68,7 @@ const runAnalysis = async () => {
   const productions = [
     'E -> E + T | T',
     'T -> T * F | F',
-    'F -> ( E ) | id'
+    'F -> ( E ) | i'
   ]
 
   await analyseGrammar(productions)
@@ -91,10 +87,7 @@ export function useLRExample() {
   const slr1API = useSLR1API()
 
   const testLR0Analysis = async () => {
-    const productions = [
-      'S -> A A',
-      'A -> a A | b'
-    ]
+    const productions = ['S -> A A', 'A -> a A | b']
 
     try {
       await lr0API.analyseGrammar(productions)
@@ -106,10 +99,7 @@ export function useLRExample() {
   }
 
   const testSLR1Analysis = async () => {
-    const productions = [
-      'S -> A A',
-      'A -> a A | b'
-    ]
+    const productions = ['S -> A A', 'A -> a A | b']
 
     try {
       await slr1API.analyseGrammar(productions)
@@ -124,7 +114,7 @@ export function useLRExample() {
     lr0API,
     slr1API,
     testLR0Analysis,
-    testSLR1Analysis
+    testSLR1Analysis,
   }
 }
 
@@ -150,7 +140,7 @@ export function useFAExample() {
 
   return {
     faAPI,
-    testRegexAnalysis
+    testRegexAnalysis,
   }
 }
 
@@ -185,7 +175,7 @@ export function useInputStringAnalysis() {
 
   return {
     analyseLL1InputString,
-    analyseLR0InputString
+    analyseLR0InputString,
   }
 }
 
@@ -208,6 +198,6 @@ export function useConnectionTest() {
 
   return {
     commonAPI,
-    testConnection
+    testConnection,
   }
 }

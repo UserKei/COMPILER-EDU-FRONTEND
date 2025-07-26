@@ -364,15 +364,15 @@ const loadExample = () => {
   if (grammarData.value?.Vt) {
     // 基于终结符构造一个简单的示例
     const terminals = grammarData.value.Vt.map((item: any) => item.text || item)
-    if (terminals.includes('id') && terminals.includes('+') && terminals.includes('*')) {
-      inputString.value = 'id+id*id'
+    if (terminals.includes('i') && terminals.includes('+') && terminals.includes('*')) {
+      inputString.value = 'i+i*i'
     } else if (terminals.length > 0) {
       inputString.value = terminals.slice(0, 3).join('')
     } else {
       inputString.value = 'abc'
     }
   } else {
-    inputString.value = 'id+id*id'
+    inputString.value = 'i+i*i'
   }
 }
 

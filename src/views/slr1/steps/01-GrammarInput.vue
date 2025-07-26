@@ -37,7 +37,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-2"> 输入SLR1文法产生式 </label>
           <textarea
             v-model="grammarInput"
-            placeholder="请输入文法产生式，例如：&#10;S → E&#10;E → E + T | T&#10;T → T * F | F&#10;F → ( E ) | id"
+            placeholder="请输入文法产生式，例如：&#10;S -> E&#10;E -> E + T | T&#10;T -> T * F | F&#10;F -> ( E ) | i"
             class="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 resize-none font-mono text-sm"
             @input="onInputChange"
           ></textarea>
@@ -49,10 +49,10 @@
             <h4 class="font-medium text-gray-900 mb-2">示例文法1（算术表达式）</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <pre class="text-xs font-mono text-gray-700">
-S → E
-E → E + T | T
-T → T * F | F
-F → ( E ) | id</pre
+S -> E
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | i</pre
               >
               <button
                 @click="loadExample(1)"
@@ -67,8 +67,8 @@ F → ( E ) | id</pre
             <h4 class="font-medium text-gray-900 mb-2">示例文法2（简单文法）</h4>
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <pre class="text-xs font-mono text-gray-700">
-S → A a | b
-A → c</pre
+S -> A a | b
+A -> c</pre
               >
               <button
                 @click="loadExample(2)"
@@ -232,12 +232,12 @@ const onInputChange = () => {
 // 加载示例文法
 const loadExample = (exampleId: number) => {
   const examples = {
-    1: `S → E
-E → E + T | T
-T → T * F | F
-F → ( E ) | id`,
-    2: `S → A a | b
-A → c`,
+    1: `S -> E
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | i`,
+    2: `S -> A a | b
+A -> c`,
   }
 
   grammarInput.value = examples[exampleId as keyof typeof examples] || ''
