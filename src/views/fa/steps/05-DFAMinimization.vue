@@ -98,7 +98,7 @@
                         请输入状态子集
                       </div>
                       <div v-else-if="pItem.check === 'isError'" class="text-xs text-red-600 ml-2">
-                        答案不正确
+                        {{ isDuplicateAnswer(pItem) ? '答案重复' : '答案不正确' }}
                       </div>
                       <div
                         v-else-if="pItem.check === 'isCorrect'"
@@ -615,6 +615,21 @@ const validateSinglePSet = (pItem: PSetItem) => {
     return
   }
 
+  // 检查是否有重复输入
+  const currentIndex = localPSets.value.findIndex(item => item.id === pItem.id)
+  const otherInputs = localPSets.value
+    .filter((item, index) => index !== currentIndex && item.text.trim())
+    .map(item => item.text.trim())
+
+  const isDuplicate = otherInputs.some(otherInput =>
+    areCharacterSetsEqual(inputText, otherInput)
+  )
+
+  if (isDuplicate) {
+    pItem.check = ValidationState.ERROR
+    return
+  }
+
   const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
   const answerItem = answerList.find((answer: string) => areCharacterSetsEqual(answer, inputText))
 
@@ -657,6 +672,21 @@ const areCharacterSetsEqual = (str1: string, str2: string): boolean => {
   return true
 }
 
+// 检查是否为重复答案
+const isDuplicateAnswer = (pItem: PSetItem): boolean => {
+  const inputText = pItem.text.trim()
+  if (!inputText) return false
+
+  const currentIndex = localPSets.value.findIndex(item => item.id === pItem.id)
+  const otherInputs = localPSets.value
+    .filter((item, index) => index !== currentIndex && item.text.trim())
+    .map(item => item.text.trim())
+
+  return otherInputs.some(otherInput =>
+    areCharacterSetsEqual(inputText, otherInput)
+  )
+}
+
 // P集合匹配验证
 const matchPSetsValue = (answerList: string[], inputList: PSetItem[]) => {
   const answerSet = new Set(answerList)
@@ -682,6 +712,7 @@ const validatePSets = () => {
 
   let hasEmpty = false
   let hasError = false
+  let hasDuplicate = false
 
   // 检验所有P集合项
   localPSets.value.forEach((item) => {
@@ -690,8 +721,23 @@ const validatePSets = () => {
     if (item.check === ValidationState.ERROR) hasError = true
   })
 
-  // 如果有空项或错误项，不进入下一阶段
-  if (hasEmpty || hasError) return
+  // 额外检查是否有重复答案
+  const filledInputs = localPSets.value
+    .filter(item => item.text.trim())
+    .map(item => item.text.trim())
+
+  const uniqueInputs = new Set()
+  for (const input of filledInputs) {
+    const normalizedInput = input.split('').sort().join('')
+    if (uniqueInputs.has(normalizedInput)) {
+      hasDuplicate = true
+      break
+    }
+    uniqueInputs.add(normalizedInput)
+  }
+
+  // 如果有空项、错误项或重复项，不进入下一阶段
+  if (hasEmpty || hasError || hasDuplicate) return
 
   // 检查是否所有答案都正确且完整匹配
   const answerList = faStore.originalData.P.map((pSet: string[]) => pSet.join(''))
