@@ -137,7 +137,155 @@ export const useLL1Store = defineStore('ll1', () => {
     inputAnalysisResult.value = null
   }
 
-  // 执行LL1语法分析
+  // 验证和格式化输入文本
+  const validateAndFormatInput = (inputText: string): string[] => {
+    console.log('=== validateAndFormatInput 开始处理 ===')
+    console.log('原始输入:', JSON.stringify(inputText))
+
+    // 1. 空输入检查
+    const isEmpty = /^\s*$/.test(inputText)
+    if (isEmpty) throw new Error('请输入产生式！')
+
+    // 2. 中文字符检查
+    const hasChinese = /[\u4e00-\u9fa5]/.test(inputText)
+    if (hasChinese) throw new Error('输入不能包含中文！')
+
+    // 3. 基本格式预处理
+    const cleanedText = inputText.replace(/ +/g, '') // 移除空格但保留换行
+    console.log('移除空格后:', JSON.stringify(cleanedText))
+
+    const productionList = cleanedText.split('\n').filter((item) => item.trim() !== '')
+    console.log('分割并过滤后的产生式列表:', productionList)
+
+    // 4. 重复项检查
+    const productionSet = new Set(productionList)
+    if (productionList.length !== productionSet.size) {
+      throw new Error('产生式含重复项，请重新输入！')
+    }
+
+    // 5. 产生式格式验证
+    const isValidFormat = productionList.every((production) => {
+      const arrowCount = (production.match(/->/g) || []).length
+      if (arrowCount > 1) return false
+
+      // 验证格式: X->Y (X是大写字母，Y支持|分隔)
+      const match = production.match(/^([A-Z])->((?:[^|]+\|)*[^|]+)$/)
+      return !!match
+    })
+
+    if (!isValidFormat) {
+      throw new Error('产生式不符合文法规范，请重新输入！')
+    }
+
+    // 6. 语法逻辑验证
+    // 构建产生式字典
+    const formulasDict: { [key: string]: string[] } = {}
+    for (const production of productionList) {
+      const [left, right] = production.split('->')
+      if (right.includes('|')) {
+        const rightList = right.split('|')
+        if (!formulasDict[left]) formulasDict[left] = []
+        rightList.forEach((r) => {
+          if (!formulasDict[left].includes(r)) {
+            formulasDict[left].push(r)
+          }
+        })
+      } else {
+        if (!formulasDict[left]) formulasDict[left] = []
+        if (!formulasDict[left].includes(right)) {
+          formulasDict[left].push(right)
+        }
+      }
+    }
+
+    // 检查所有非终结符都有定义
+    const allVn = Array.from(new Set(productionList.join('').match(/[A-Z]/g) || []))
+    for (const vn of allVn) {
+      if (!formulasDict[vn]) {
+        throw new Error(`Vn: ${vn}没有候选式！`)
+      }
+    }
+
+    // 左递归检查
+    const checkLeftRecursion = () => {
+      const visited = new Set<string>()
+
+      function hasLeftRecursion(vn: string): boolean {
+        visited.add(vn)
+        for (const str of formulasDict[vn]) {
+          const symbol = str[0]
+          if (visited.has(symbol)) return true
+          if (/[A-Z]/.test(symbol) && formulasDict[symbol]) {
+            if (hasLeftRecursion(symbol)) return true
+          }
+        }
+        visited.delete(vn) // 回溯时移除
+        return false
+      }
+
+      for (const vn of allVn) {
+        visited.clear()
+        if (hasLeftRecursion(vn)) {
+          throw new Error('存在直接或间接左递归，请输入消除左递归后的文法！')
+        }
+      }
+    }
+
+    checkLeftRecursion()
+
+    console.log('最终发送给后端的产生式数组:', productionList)
+    console.log('=== validateAndFormatInput 处理完成 ===')
+
+    return productionList
+  }
+
+  // 从原始输入文本执行LL1语法分析
+  const performLL1AnalysisFromText = async (inputText: string) => {
+    try {
+      commonStore.setLoading(true)
+      commonStore.clearError()
+
+      // 状态重置逻辑 - 清空之前的分析结果
+      originalData.value = null
+      validationData.value = null
+      inputAnalysisResult.value = null
+
+      // 验证和格式化输入
+      const productionList = validateAndFormatInput(inputText)
+
+      // 更新 productions 状态
+      productions.value = productionList
+
+      // 使用验证和格式化后的数据发送请求
+      const response = await getLL1AnalyseAPI(productionList)
+
+      // 修复：后端返回的成功码是 0，不是 200
+      if (response.data.code === 0 && response.data.data) {
+        const rawData = response.data.data
+
+        // 检查是否符合LL1文法
+        if (!rawData.isLL1) {
+          throw new Error('不符合LL1文法，请重新输入！')
+        }
+
+        originalData.value = rawData
+
+        // 转换为校验数据
+        validationData.value = transformToValidationData(rawData)
+
+        return true
+      } else {
+        throw new Error(response.data.message || response.data.msg || 'LL1分析失败')
+      }
+    } catch (err) {
+      commonStore.setError(err instanceof Error ? err.message : 'LL1分析请求失败')
+      return false
+    } finally {
+      commonStore.setLoading(false)
+    }
+  }
+
+  // 执行LL1语法分析（使用已设置的产生式）
   const performLL1Analysis = async () => {
     if (productions.value.length === 0) {
       commonStore.setError('请至少输入一个产生式')
@@ -148,11 +296,41 @@ export const useLL1Store = defineStore('ll1', () => {
       commonStore.setLoading(true)
       commonStore.clearError()
 
+      // 状态重置逻辑
+      originalData.value = null
+      validationData.value = null
+      inputAnalysisResult.value = null
+
       const response = await getLL1AnalyseAPI(productions.value)
 
       // 修复：后端返回的成功码是 0，不是 200
       if (response.data.code === 0 && response.data.data) {
         const rawData = response.data.data
+
+        // 调试：打印后端返回的原始数据
+        console.log('=== LL1 后端返回的原始数据 ===')
+        console.log('完整响应:', response.data)
+        console.log('原始数据:', rawData)
+        console.log('起始符号:', rawData.S)
+        console.log('非终结符 Vn:', rawData.Vn)
+        console.log('终结符 Vt:', rawData.Vt)
+        console.log('Vt 数组长度:', rawData.Vt.length)
+        console.log(
+          'Vt 数组详细:',
+          rawData.Vt.map((item, index) => `[${index}]: "${item}" (length: ${item.length})`),
+        )
+        console.log('First 集合:', rawData.first)
+        console.log('Follow 集合:', rawData.follow)
+        console.log('产生式字典:', rawData.formulas_dict)
+        console.log('分析表:', rawData.table)
+        console.log('是否LL1:', rawData.isLL1)
+        console.log('================================')
+
+        // 检查是否符合LL1文法
+        if (!rawData.isLL1) {
+          throw new Error('不符合LL1文法，请重新输入！')
+        }
+
         originalData.value = rawData
 
         // 转换为校验数据
@@ -173,8 +351,10 @@ export const useLL1Store = defineStore('ll1', () => {
 
   // 分析输入串
   const analyzeInputString = async () => {
-    if (!inputString.value.trim()) {
-      commonStore.setError('请输入要分析的字符串')
+    // 输入串预处理
+    const cleanedInputString = inputString.value.replace(/ +/g, '') // 移除空格
+    if (/^\s*$/.test(cleanedInputString)) {
+      commonStore.setError('请先输入字符串')
       return false
     }
 
@@ -187,10 +367,18 @@ export const useLL1Store = defineStore('ll1', () => {
       commonStore.setLoading(true)
       commonStore.clearError()
 
-      const response = await LL1AnalyseInpStrAPI(productions.value, inputString.value.trim())
+      // 使用清理后的字符串发送请求
+      const response = await LL1AnalyseInpStrAPI(productions.value, cleanedInputString)
 
       if (response.data.code === 0 && response.data.data) {
-        inputAnalysisResult.value = response.data.data
+        const responseData = response.data.data
+
+        // 检查分析结果
+        if (responseData.info_res !== 'Success!') {
+          throw new Error('不是该文法的输入串，请重新输入！')
+        }
+
+        inputAnalysisResult.value = responseData
         return true
       } else {
         commonStore.setError(response.data.message || response.data.msg || '输入串分析失败')
@@ -283,11 +471,13 @@ export const useLL1Store = defineStore('ll1', () => {
     clearProductions,
     setInputString,
     performLL1Analysis: enhancedPerformLL1Analysis,
+    performLL1AnalysisFromText, // 新增：从原始文本分析
     analyzeInputString,
     resetAll,
 
     // 工具方法
     transformToValidationData,
+    validateAndFormatInput, // 新增：输入验证和格式化
 
     // 持久化功能
     persistence: {

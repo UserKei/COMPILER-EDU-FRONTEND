@@ -317,7 +317,12 @@ const performAnalysisWithDebounce = () => {
     debounceTimer = setTimeout(async () => {
       isAnalyzing = true
       try {
-        await ll1Store.performLL1Analysis()
+        // 使用原始输入文本进行完整的验证和格式化处理
+        const inputText = grammarInput.value
+        console.log('前端原始输入:', inputText)
+        console.log('是否包含空格:', inputText.includes(' '))
+
+        await ll1Store.performLL1AnalysisFromText(inputText)
       } catch (error) {
         console.error('Analysis failed:', error)
       } finally {
