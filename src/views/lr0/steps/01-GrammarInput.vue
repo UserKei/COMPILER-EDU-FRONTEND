@@ -94,51 +94,53 @@ B -> ε</pre
         </div>
 
         <!-- 分析结果 -->
-        <div v-if="analysisResult" class="mt-6">
-          <div
-            :class="[
-              'p-4 rounded-lg border',
-              analysisResult.success
-                ? 'bg-green-50 border-green-200 text-green-800'
-                : 'bg-red-50 border-red-200 text-red-800',
-            ]"
-          >
-            <div class="flex items-start gap-2">
-              <Icon
-                :icon="analysisResult.success ? 'lucide:check-circle' : 'lucide:alert-circle'"
-                class="w-5 h-5 mt-0.5 flex-shrink-0"
-              />
-              <div class="flex-1">
-                <p class="font-medium">
-                  {{ analysisResult.success ? '文法分析成功' : '文法分析失败' }}
-                </p>
-                <p class="text-sm mt-1">{{ analysisResult.message }}</p>
+        <transition name="slide-fade" mode="out-in">
+          <div v-if="analysisResult" class="mt-6">
+            <div
+              :class="[
+                'p-4 rounded-lg border transition-all duration-200',
+                analysisResult.success
+                  ? 'bg-green-50 border-green-200 text-green-800'
+                  : 'bg-red-50 border-red-200 text-red-800',
+              ]"
+            >
+              <div class="flex items-start gap-2">
+                <Icon
+                  :icon="analysisResult.success ? 'lucide:check-circle' : 'lucide:alert-circle'"
+                  class="w-5 h-5 mt-0.5 flex-shrink-0"
+                />
+                <div class="flex-1">
+                  <p class="font-medium">
+                    {{ analysisResult.success ? '文法分析成功' : '文法分析失败' }}
+                  </p>
+                  <p class="text-sm mt-1">{{ analysisResult.message }}</p>
 
-                <!-- 成功时显示文法信息 -->
-                <div v-if="analysisResult.success && analysisResult.data" class="mt-4 space-y-3">
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span class="font-medium">开始符号：</span>{{ analysisResult.data.S }}
+                  <!-- 成功时显示文法信息 -->
+                  <div v-if="analysisResult.success && analysisResult.data" class="mt-4 space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span class="font-medium">开始符号：</span>{{ analysisResult.data.S }}
+                      </div>
+                      <div>
+                        <span class="font-medium">非终结符：</span
+                        >{{ analysisResult.data.Vn?.join(', ') }}
+                      </div>
+                      <div>
+                        <span class="font-medium">终结符：</span
+                        >{{ analysisResult.data.Vt?.join(', ') }}
+                      </div>
                     </div>
-                    <div>
-                      <span class="font-medium">非终结符：</span
-                      >{{ analysisResult.data.Vn?.join(', ') }}
-                    </div>
-                    <div>
-                      <span class="font-medium">终结符：</span
-                      >{{ analysisResult.data.Vt?.join(', ') }}
-                    </div>
-                  </div>
 
-                  <div>
-                    <span class="font-medium">产生式：</span>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                      <div
-                        v-for="(prod, index) in analysisResult.data.formulas_list"
-                        :key="index"
-                        class="text-xs bg-white px-2 py-1 rounded border font-mono"
-                      >
-                        {{ prod }}
+                    <div>
+                      <span class="font-medium">产生式：</span>
+                      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                        <div
+                          v-for="(prod, index) in analysisResult.data.formulas_list"
+                          :key="index"
+                          class="text-xs bg-white px-2 py-1 rounded border font-mono"
+                        >
+                          {{ prod }}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -146,7 +148,7 @@ B -> ε</pre
               </div>
             </div>
           </div>
-        </div>
+        </transition>
       </div>
     </div>
 
@@ -245,6 +247,9 @@ B -> ε`,
 const analyzeGrammar = async () => {
   if (!grammarInput.value.trim()) return
 
+  // 清除之前的错误状态
+  commonStore.clearError()
+
   try {
     // 处理输入的产生式
     const productions = grammarInput.value
@@ -252,7 +257,7 @@ const analyzeGrammar = async () => {
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
 
-    // 更新store中的产生式
+    // 批量更新：先更新产生式
     lr0Store.setProductions(productions)
 
     // 执行LR0分析
@@ -295,5 +300,21 @@ const nextStep = () => {
   padding: 1rem 2rem 2rem;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
+}
+
+/* 平滑过渡效果 */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.2s ease-out;
+}
+
+.slide-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>
