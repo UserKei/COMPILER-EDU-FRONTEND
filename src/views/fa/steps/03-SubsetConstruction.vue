@@ -820,6 +820,39 @@ const validateStateSource = (
   return false
 }
 
+// 比较状态集合是否相等（考虑顺序无关性）
+const compareStateSets = (set1: string, set2: string): boolean => {
+  // 如果都是空值或'-'，认为相等
+  if ((!set1 || set1.trim() === '' || set1.trim() === '-') &&
+      (!set2 || set2.trim() === '' || set2.trim() === '-')) {
+    return true
+  }
+
+  // 如果只有一个为空，不相等
+  if (!set1 || set1.trim() === '' || set1.trim() === '-' ||
+      !set2 || set2.trim() === '' || set2.trim() === '-') {
+    return false
+  }
+
+  // 分割状态集合，去除空格并排序
+  const states1 = set1.trim().split(/\s+/).sort()
+  const states2 = set2.trim().split(/\s+/).sort()
+
+  // 比较长度
+  if (states1.length !== states2.length) {
+    return false
+  }
+
+  // 逐个比较状态
+  for (let i = 0; i < states1.length; i++) {
+    if (states1[i] !== states2[i]) {
+      return false
+    }
+  }
+
+  return true
+}
+
 // 验证转换正确性 - 更新为新数据结构
 const validateTransition = (
   rowIndex: number,
@@ -835,14 +868,13 @@ const validateTransition = (
       return false
     }
 
-        const correctValue = answerColumn[rowIndex] || '-'
+    const correctValue = answerColumn[rowIndex] || '-'
 
-    // 标准化比较：去除多余空格，统一大小写
-    const normalizedUserValue = userValue.trim().replace(/\s+/g, ' ').toLowerCase()
-    const normalizedCorrectValue = correctValue.trim().toLowerCase()
+    // 使用状态集合比较函数（考虑顺序无关性）
+    const isEqual = compareStateSets(userValue, correctValue)
 
-    console.log(`转换表验证：${field}[${rowIndex}] 用户值:"${normalizedUserValue}" 正确答案:"${normalizedCorrectValue}"`)
-    return normalizedUserValue === normalizedCorrectValue
+    console.log(`转换表验证：${field}[${rowIndex}] 用户值:"${userValue}" 正确答案:"${correctValue}" 相等:${isEqual}`)
+    return isEqual
   } else {
     // 矩阵验证：字段名直接是状态名，行索引通过参数传递
     const answerRow = answerTransitionMatrix.value[rowIndex.toString()]
@@ -852,12 +884,12 @@ const validateTransition = (
     }
 
     const correctValue = answerRow[field] || '-'
-    // 标准化比较：去除空格，统一大小写
-    const normalizedUserValue = userValue.trim().toLowerCase()
-    const normalizedCorrectValue = correctValue.trim().toLowerCase()
 
-    console.log(`矩阵验证：${rowIndex}-${field} 用户值:"${normalizedUserValue}" 正确答案:"${normalizedCorrectValue}"`)
-    return normalizedUserValue === normalizedCorrectValue
+    // 对于矩阵，也使用状态集合比较函数
+    const isEqual = compareStateSets(userValue, correctValue)
+
+    console.log(`矩阵验证：${rowIndex}-${field} 用户值:"${userValue}" 正确答案:"${correctValue}" 相等:${isEqual}`)
+    return isEqual
   }
 }
 
