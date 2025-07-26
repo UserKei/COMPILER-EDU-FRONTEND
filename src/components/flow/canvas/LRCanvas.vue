@@ -18,12 +18,6 @@
           连接项目集
         </button>
         <button
-          @click="generateDFA"
-          class="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-        >
-          生成DFA
-        </button>
-        <button
           @click="clearCanvas"
           class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
         >
@@ -118,25 +112,22 @@ const edges = ref<Edge[]>([])
 const { getSelectedNodes, getSelectedEdges, onEdgesChange, updateNode } = useVueFlow()
 
 // 使用节点创建功能
-const {
-  handlePaneDoubleClick,
-  clearAll
-} = useNodeCreation(nodes, edges, {
+const { handlePaneDoubleClick, clearAll } = useNodeCreation(nodes, edges, {
   nodeType: 'rectangle',
   generateLabel: (id: string) => {
     const existingLabels = nodes.value
-      .filter(node => node.type === 'rectangle')
-      .map(node => node.data?.title || node.data?.label || '')
-      .filter(label => /^I\d+$/.test(label))
-      .map(label => parseInt(label.replace('I', '')))
-      .filter(num => !isNaN(num))
+      .filter((node) => node.type === 'rectangle')
+      .map((node) => node.data?.title || node.data?.label || '')
+      .filter((label) => /^I\d+$/.test(label))
+      .map((label) => parseInt(label.replace('I', '')))
+      .filter((num) => !isNaN(num))
 
     let newNumber = 0
     while (existingLabels.includes(newNumber)) {
       newNumber++
     }
     return `I${newNumber}`
-  }
+  },
 })
 
 // 计算属性
@@ -154,9 +145,9 @@ const onConnect = (connection: Connection) => {
     targetHandle: connection.targetHandle || 'center-target',
     data: {
       label: '',
-      isEditing: true
+      isEditing: true,
     },
-    markerEnd: 'url(#lr-arrow)'
+    markerEnd: 'url(#lr-arrow)',
   }
 
   edges.value.push(newEdge)
@@ -186,11 +177,11 @@ const onPaneContextMenu = (event: MouseEvent) => {
 const addItemSet = () => {
   // 生成新的项目集编号
   const existingLabels = nodes.value
-    .filter(node => node.type === 'rectangle')
-    .map(node => node.data?.title || node.data?.label || '')
-    .filter(label => /^I\d+$/.test(label))
-    .map(label => parseInt(label.replace('I', '')))
-    .filter(num => !isNaN(num))
+    .filter((node) => node.type === 'rectangle')
+    .map((node) => node.data?.title || node.data?.label || '')
+    .filter((label) => /^I\d+$/.test(label))
+    .map((label) => parseInt(label.replace('I', '')))
+    .filter((num) => !isNaN(num))
 
   let newNumber = 0
   while (existingLabels.includes(newNumber)) {
@@ -206,10 +197,10 @@ const addItemSet = () => {
       items: [
         {
           id: `item-${Date.now()}`,
-          text: ''
-        }
-      ]
-    }
+          text: '',
+        },
+      ],
+    },
   }
 
   nodes.value.push(newNode)
@@ -229,30 +220,12 @@ const connectItemSets = () => {
       targetHandle: 'center-target',
       data: {
         label: '',
-        isEditing: true
+        isEditing: true,
       },
-      markerEnd: 'url(#lr-arrow)'
+      markerEnd: 'url(#lr-arrow)',
     }
 
     edges.value.push(newEdge)
-  }
-}
-
-const generateDFA = () => {
-  // 这里可以添加自动生成DFA的逻辑
-  console.log('Generating DFA...')
-  console.log('Current nodes:', nodes.value)
-  console.log('Current edges:', edges.value)
-
-  // 简单示例：检查是否有初始项目集
-  const hasInitialItemSet = nodes.value.some(node =>
-    node.data.title === 'I0'
-  )
-
-  if (!hasInitialItemSet) {
-    alert('提示：建议先创建初始项目集 I0')
-  } else {
-    alert('DFA 结构验证完成')
   }
 }
 
@@ -292,8 +265,7 @@ defineExpose({
   clearCanvas,
   addNode: (node: Node) => nodes.value.push(node),
   addEdge: (edge: Edge) => edges.value.push(edge),
-  generateDFA,
-  addItemSet
+  addItemSet,
 })
 </script>
 
