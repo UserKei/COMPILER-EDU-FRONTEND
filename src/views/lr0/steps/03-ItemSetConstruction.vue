@@ -46,11 +46,19 @@
                       v-for="(production, index) in grammarInfo.productions"
                       :key="index"
                       class="flex items-center space-x-2 p-2 rounded"
-                      :class="index === 0 ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50 border border-gray-200'"
+                      :class="
+                        index === 0
+                          ? 'bg-yellow-50 border border-yellow-200'
+                          : 'bg-gray-50 border border-gray-200'
+                      "
                     >
                       <span
                         class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                        :class="index === 0 ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-700'"
+                        :class="
+                          index === 0
+                            ? 'bg-yellow-200 text-yellow-800'
+                            : 'bg-gray-200 text-gray-700'
+                        "
                       >
                         {{ index }}
                       </span>
@@ -109,7 +117,7 @@
                     'px-4 py-2 rounded-lg transition-colors',
                     showAnswerFlag
                       ? 'bg-gray-600 text-white hover:bg-gray-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-green-600 text-white hover:bg-green-700',
                   ]"
                 >
                   <Icon
@@ -134,24 +142,21 @@
               <div v-else class="h-full">
                 <!-- 答案DFA -->
                 <div class="h-full">
-                  <div
-                    ref="answerCanvasContainer"
-                    class="h-full w-full flex items-center justify-center bg-gray-50 rounded"
-                  >
-                    <div class="text-center text-gray-600">
-                      <Icon icon="lucide:diagram-project" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                      <p>LR0项目集规范族DFA</p>
-                      <p class="text-sm mt-2">标准答案将在这里显示</p>
-                    </div>
-                  </div>
+                  <div ref="answerCanvasContainer" class="h-full w-full bg-gray-50 rounded"></div>
                 </div>
               </div>
             </div>
 
             <!-- 答案分析 -->
-            <div v-if="showAnswerFlag" class="border-t border-gray-200 bg-green-50 p-4">
+            <div
+              v-if="showAnswerFlag && hasDFAData"
+              class="border-t border-gray-200 bg-green-50 p-4"
+            >
               <div class="flex items-start gap-3">
-                <Icon icon="lucide:check-circle" class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <Icon
+                  icon="lucide:check-circle"
+                  class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+                />
                 <div>
                   <h4 class="font-medium text-green-800">LR0项目集规范族构造分析</h4>
                   <div class="text-sm text-green-700 mt-2 space-y-1">
@@ -179,9 +184,7 @@
           上一步
         </button>
 
-        <div class="text-sm text-gray-500">
-          步骤 3 / 5
-        </div>
+        <div class="text-sm text-gray-500">步骤 3 / 5</div>
 
         <button
           @click="proceedToNext"
@@ -196,80 +199,120 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
+import { useLR0Store } from '@/stores/lr0'
+import { instance } from '@viz-js/viz'
 
 const emit = defineEmits<{
   'next-step': []
   'prev-step': []
-  'complete': [data: any]
+  complete: [data: any]
 }>()
 
-// 从上一步获取数据
-const grammarInfo = ref<{
-  startSymbol: string
-  productions: string[]
-} | null>(null)
+const lr0Store = useLR0Store()
 
-// 答案显示控制
+// 本地状态
 const showAnswerFlag = ref(false)
+const hasRendered = ref(false) // 防重复渲染
 
 // 画布相关
 const canvasRef = ref<InstanceType<typeof LRCanvas>>()
 const answerCanvasContainer = ref<HTMLElement>()
 
-// 答案数据
-const answerData = ref<any>(null)
+// 计算属性
+const lr0DotString = computed(() => lr0Store.dotString)
+const hasDFAData = computed(() => lr0Store.analysisResult !== null && lr0Store.dotString !== '')
 
-// 从localStorage获取上一步的数据
-onMounted(() => {
-  try {
-    const savedData = localStorage.getItem('lr0-step2-data')
-    if (savedData) {
-      const stepData = JSON.parse(savedData)
-      grammarInfo.value = {
-        startSymbol: stepData.newStartSymbol || "S'",
-        productions: stepData.augmentedProductions || []
-      }
+// 从store获取文法数据
+const grammarInfo = computed(() => {
+  if (lr0Store.analysisResult) {
+    // 构造增广产生式
+    const augmentedProductions = [
+      `S' -> ${lr0Store.analysisResult.S}`,
+      ...lr0Store.analysisResult.formulas_list,
+    ]
 
-      console.log('Step 3 loaded data:', stepData)
+    return {
+      startSymbol: "S'",
+      productions: augmentedProductions,
     }
-  } catch (error) {
-    console.error('读取上一步数据失败：', error)
   }
+  return null
 })
 
-// 答案控制
-const toggleAnswer = () => {
+// 答案数据 - 从store获取
+const answerData = computed(() => {
+  if (lr0Store.dfaStates && lr0Store.dfaStates.length > 0) {
+    return {
+      itemSets: lr0Store.dfaStates,
+      transitions: [], // 可以从dfaStates中提取转移关系
+    }
+  }
+  return null
+})
+
+// 答案控制 - 参考FA组件的SVG渲染实现
+const toggleAnswer = async () => {
   showAnswerFlag.value = !showAnswerFlag.value
+
+  if (showAnswerFlag.value && lr0DotString.value) {
+    await nextTick()
+
+    // 清理之前的内容
+    if (answerCanvasContainer.value) {
+      answerCanvasContainer.value.innerHTML = ''
+    }
+
+    // 重新渲染SVG
+    if (answerCanvasContainer.value) {
+      try {
+        const viz = await instance()
+        const svg = viz.renderSVGElement(lr0DotString.value)
+
+        // 模仿FA组件：直接添加SVG，添加样式类
+        svg.classList.add('lr0-dfa-svg')
+        answerCanvasContainer.value.appendChild(svg)
+        hasRendered.value = true
+      } catch (error) {
+        console.error('LR0 DFA render failed:', error)
+        // 简单错误处理：在容器中显示错误信息
+        if (answerCanvasContainer.value) {
+          answerCanvasContainer.value.innerHTML = `
+            <div class="text-center text-red-500 p-4">
+              <p>渲染失败: ${error instanceof Error ? error.message : String(error)}</p>
+            </div>
+          `
+        }
+      }
+    }
+  } else if (!showAnswerFlag.value) {
+    // 隐藏答案时清理容器并重置渲染标志
+    if (answerCanvasContainer.value) {
+      answerCanvasContainer.value.innerHTML = ''
+    }
+    hasRendered.value = false
+  }
 }
 
 // 是否构造完成 - 简化逻辑，允许用户直接进入下一步
 const isConstructionComplete = computed(() => {
-  return true // 允许用户随时进入下一步
+  return lr0Store.analysisResult !== null
 })
 
 // 进入下一步
 const proceedToNext = () => {
-  // 从画布获取用户绘制的数据
-  const nodes = canvasRef.value?.getNodes() || []
-  const edges = canvasRef.value?.getEdges() || []
+  if (isConstructionComplete.value) {
+    // 从画布获取用户绘制的数据
+    const nodes = canvasRef.value?.getNodes() || []
+    const edges = canvasRef.value?.getEdges() || []
 
-  const stepData = {
-    userNodes: nodes,
-    userEdges: edges,
-    itemSetsCount: nodes.length,
-    transitionsCount: edges.length,
-    timestamp: new Date().toISOString()
+    console.log('Step 3 user data:', { nodes, edges })
+
+    // 触发下一步事件
+    emit('next-step')
   }
-
-  // 保存数据
-  localStorage.setItem('lr0-step3-data', JSON.stringify(stepData))
-  console.log('Step 3 saved data:', stepData)
-
-  // 触发下一步事件 - 使用正确的Vue emit
-  emit('next-step')
 }
 </script>
 
@@ -312,5 +355,13 @@ const proceedToNext = () => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* LR0 DFA SVG 样式 */
+:deep(.lr0-dfa-svg) {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  width: auto;
 }
 </style>

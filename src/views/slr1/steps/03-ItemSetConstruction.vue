@@ -40,9 +40,7 @@
       <div v-if="grammarInfo" class="bg-gray-50 rounded-lg p-4 mb-4">
         <h4 class="font-semibold text-gray-800 mb-2">当前增广文法</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span class="font-medium">开始符号：</span>{{ grammarInfo.startSymbol }}
-          </div>
+          <div><span class="font-medium">开始符号：</span>{{ grammarInfo.startSymbol }}</div>
           <div>
             <span class="font-medium">产生式数量：</span>{{ grammarInfo.productions?.length || 0 }}
           </div>
@@ -63,11 +61,7 @@
 
       <!-- LR画布 -->
       <div class="canvas-wrapper">
-        <LRCanvas
-          ref="lrCanvasRef"
-          @nodes-change="onNodesChange"
-          @edges-change="onEdgesChange"
-        />
+        <LRCanvas ref="lrCanvasRef" @nodes-change="onNodesChange" @edges-change="onEdgesChange" />
       </div>
 
       <!-- 验证按钮 -->
@@ -100,7 +94,7 @@
             'p-4 rounded-lg border',
             validationSuccess
               ? 'bg-green-50 border-green-200 text-green-800'
-              : 'bg-red-50 border-red-200 text-red-800'
+              : 'bg-red-50 border-red-200 text-red-800',
           ]"
         >
           <div class="flex items-start gap-2">
@@ -119,7 +113,10 @@
 
     <div class="step-actions">
       <div class="flex justify-between items-center">
-        <button @click="$emit('prev-step')" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          @click="$emit('prev-step')"
+          class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Icon icon="lucide:chevron-left" class="w-4 h-4 inline mr-2" />
           上一步
         </button>
@@ -131,7 +128,7 @@
             'px-6 py-2 rounded-lg transition-colors',
             isStepComplete
               ? 'bg-purple-600 text-white hover:bg-purple-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
           ]"
         >
           下一步
@@ -145,7 +142,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { useSLR1API } from '@/composables/api/useSLR1API'
+import { useSLR1Store } from '@/stores/slr1'
 import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
 
 const emit = defineEmits<{
@@ -153,7 +150,7 @@ const emit = defineEmits<{
   'prev-step': []
 }>()
 
-const slr1API = useSLR1API()
+const slr1Store = useSLR1Store()
 
 // 画布引用
 const lrCanvasRef = ref<InstanceType<typeof LRCanvas>>()
@@ -164,17 +161,22 @@ const validationMessage = ref('')
 const validationSuccess = ref(false)
 const savedCanvasData = ref<any>(null)
 
-// 模拟的文法信息（在实际应用中应该从store或props获取）
-const grammarInfo = computed(() => ({
-  startSymbol: "S'",
-  productions: [
-    "S' → S",
-    "S → E",
-    "E → E + T | T",
-    "T → T * F | F",
-    "F → ( E ) | id"
-  ]
-}))
+// 从store获取文法信息
+const grammarInfo = computed(() => {
+  if (slr1Store.analysisResult) {
+    // 构造增广产生式
+    const augmentedProductions = [
+      `${slr1Store.analysisResult.S}' -> ${slr1Store.analysisResult.S}`,
+      ...slr1Store.analysisResult.formulas_list,
+    ]
+
+    return {
+      startSymbol: `${slr1Store.analysisResult.S}'`,
+      productions: augmentedProductions,
+    }
+  }
+  return null
+})
 
 // 步骤完成状态
 const isStepComplete = ref(false)
@@ -184,7 +186,7 @@ const onNodesChange = (nodes: any[]) => {
   // 保存节点状态
   savedCanvasData.value = {
     nodes: lrCanvasRef.value?.getNodes() || [],
-    edges: lrCanvasRef.value?.getEdges() || []
+    edges: lrCanvasRef.value?.getEdges() || [],
   }
   checkStepCompletion()
 }
@@ -193,7 +195,7 @@ const onEdgesChange = (edges: any[]) => {
   // 保存边状态
   savedCanvasData.value = {
     nodes: lrCanvasRef.value?.getNodes() || [],
-    edges: lrCanvasRef.value?.getEdges() || []
+    edges: lrCanvasRef.value?.getEdges() || [],
   }
   checkStepCompletion()
 }
@@ -218,11 +220,15 @@ const validateDFA = async () => {
     const nodes = lrCanvasRef.value.getNodes()
     const edges = lrCanvasRef.value.getEdges()
 
-    // 这里应该调用实际的API来验证DFA
-    // 暂时使用模拟的验证逻辑
+    // 获取后端DFA数据进行对比验证
+    const correctDFACount = slr1Store.dfaStates?.length || 0
+
     if (nodes.length === 0) {
       validationSuccess.value = false
       validationMessage.value = '请至少创建一个项目集'
+    } else if (nodes.length < correctDFACount) {
+      validationSuccess.value = false
+      validationMessage.value = `项目集数量不足，应该有${correctDFACount}个项目集`
     } else {
       validationSuccess.value = true
       validationMessage.value = `验证成功！已创建${nodes.length}个项目集，${edges.length}个转移关系`
@@ -239,39 +245,69 @@ const validateDFA = async () => {
 
 // 显示答案
 const showAnswer = async () => {
-  if (!lrCanvasRef.value) return
+  if (!lrCanvasRef.value || !slr1Store.analysisResult) return
 
   try {
-    // 这里应该从API获取标准答案
-    // 暂时使用模拟数据
+    // 清空画布
     lrCanvasRef.value.clearCanvas()
 
-    // 添加示例项目集
-    setTimeout(() => {
-      lrCanvasRef.value?.addItemSet()
-      isStepComplete.value = true
-      validationMessage.value = '已加载标准答案'
-      validationSuccess.value = true
-    }, 100)
+    // 根据后端数据添加项目集节点
+    const dfaStates = slr1Store.dfaStates || []
+    dfaStates.forEach((state, index) => {
+      setTimeout(() => {
+        lrCanvasRef.value?.addItemSet()
+      }, index * 100)
+    })
+
+    setTimeout(
+      () => {
+        isStepComplete.value = true
+        validationMessage.value = '已加载标准答案'
+        validationSuccess.value = true
+      },
+      dfaStates.length * 100 + 200,
+    )
   } catch (error) {
     console.error('Error loading answer:', error)
   }
 }
 
 const nextStep = () => {
-  emit('next-step')
+  if (isStepComplete.value) {
+    emit('next-step')
+  }
 }
 
 // 组件挂载后的初始化
 onMounted(() => {
-  // 这里可以加载之前保存的画布数据
-  // 暂时使用空的初始化
+  // 如果有保存的画布数据，恢复画布状态
+  if (savedCanvasData.value) {
+    // 这里可以实现画布状态恢复
+    checkStepCompletion()
+  }
 })
 </script>
 
 <style scoped>
-.step-header { padding: 2rem 2rem 1rem; border-bottom: 1px solid #e5e7eb; }
-.step-icon { width: 3rem; height: 3rem; background: #f3e8ff; border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
-.step-content { padding: 2rem; }
-.step-actions { padding: 1rem 2rem 2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; }
+.step-header {
+  padding: 2rem 2rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.step-icon {
+  width: 3rem;
+  height: 3rem;
+  background: #f3e8ff;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-content {
+  padding: 2rem;
+}
+.step-actions {
+  padding: 1rem 2rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 </style>
