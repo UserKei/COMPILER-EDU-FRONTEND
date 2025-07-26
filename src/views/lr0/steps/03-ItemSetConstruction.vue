@@ -257,10 +257,15 @@ const answerData = computed(() => {
 const toggleAnswer = async () => {
   showAnswerFlag.value = !showAnswerFlag.value
 
-  if (showAnswerFlag.value && !hasRendered.value && lr0DotString.value) {
+  if (showAnswerFlag.value && lr0DotString.value) {
     await nextTick()
 
-    // 直接渲染，不要复杂的状态管理
+    // 清理之前的内容
+    if (answerCanvasContainer.value) {
+      answerCanvasContainer.value.innerHTML = ''
+    }
+
+    // 重新渲染SVG
     if (answerCanvasContainer.value) {
       try {
         const viz = await instance()
@@ -269,7 +274,7 @@ const toggleAnswer = async () => {
         // 模仿FA组件：直接添加SVG，添加样式类
         svg.classList.add('lr0-dfa-svg')
         answerCanvasContainer.value.appendChild(svg)
-        hasRendered.value = true // 防重复渲染
+        hasRendered.value = true
       } catch (error) {
         console.error('LR0 DFA render failed:', error)
         // 简单错误处理：在容器中显示错误信息
@@ -282,6 +287,12 @@ const toggleAnswer = async () => {
         }
       }
     }
+  } else if (!showAnswerFlag.value) {
+    // 隐藏答案时清理容器并重置渲染标志
+    if (answerCanvasContainer.value) {
+      answerCanvasContainer.value.innerHTML = ''
+    }
+    hasRendered.value = false
   }
 }
 
