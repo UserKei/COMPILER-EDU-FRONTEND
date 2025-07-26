@@ -81,11 +81,14 @@
         </button>
 
         <button
-          @click="showAnswer"
+          @click="toggleAnswer"
           class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          <Icon icon="lucide:eye" class="w-4 h-4 inline mr-2" />
-          显示答案
+          <Icon
+            :icon="showAnswerFlag ? 'lucide:eye-off' : 'lucide:eye'"
+            class="w-4 h-4 inline mr-2"
+          />
+          {{ showAnswerFlag ? '隐藏答案' : '查看答案' }}
         </button>
       </div>
 
@@ -107,6 +110,70 @@
             <div>
               <p class="font-medium">{{ validationSuccess ? '验证成功' : '验证失败' }}</p>
               <p class="text-sm mt-1">{{ validationMessage }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 答案区域 -->
+      <div class="answer-area mt-6">
+        <div class="bg-white border border-gray-200 rounded-lg">
+          <!-- 答案区域头部 -->
+          <div class="border-b border-gray-200 p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-gray-900">标准答案</h3>
+              <button
+                @click="toggleAnswer"
+                :class="[
+                  'px-4 py-2 rounded-lg transition-colors',
+                  showAnswerFlag
+                    ? 'bg-gray-600 text-white hover:bg-gray-700'
+                    : 'bg-green-600 text-white hover:bg-green-700',
+                ]"
+              >
+                <Icon
+                  :icon="showAnswerFlag ? 'lucide:eye-off' : 'lucide:eye'"
+                  class="w-4 h-4 inline mr-2"
+                />
+                {{ showAnswerFlag ? '隐藏答案' : '查看答案' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 答案内容 -->
+          <div class="h-80 p-4">
+            <div v-if="!showAnswerFlag" class="h-full flex items-center justify-center">
+              <div class="text-center text-gray-500">
+                <Icon icon="lucide:lock" class="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <p class="text-lg font-medium">答案已隐藏</p>
+                <p class="text-sm mt-1">完成你的构造后点击"查看答案"按钮</p>
+              </div>
+            </div>
+
+            <div v-else class="h-full">
+              <!-- 答案DFA -->
+              <div class="h-full">
+                <div ref="answerCanvasContainer" class="h-full w-full bg-gray-50 rounded"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 答案分析 -->
+          <div v-if="showAnswerFlag && hasDFAData" class="border-t border-gray-200 bg-green-50 p-4">
+            <div class="flex items-start gap-3">
+              <Icon
+                icon="lucide:check-circle"
+                class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
+              />
+              <div>
+                <h4 class="font-medium text-green-800">SLR1项目集规范族构造分析</h4>
+                <div class="text-sm text-green-700 mt-2 space-y-1">
+                  <p>• 项目集数量: {{ answerData?.itemSets?.length || 0 }}</p>
+                  <p>• 转移关系数量: {{ answerData?.transitions?.length || 0 }}</p>
+                  <p>• GOTO函数构造完成</p>
+                  <p>• 可进行下一步SLR1分析表构建</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -142,10 +209,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useSLR1Store } from '@/stores/slr1'
 import LRCanvas from '@/components/flow/canvas/LRCanvas.vue'
+import { instance } from '@viz-js/viz'
 
 const emit = defineEmits<{
   'next-step': []
@@ -156,12 +224,21 @@ const slr1Store = useSLR1Store()
 
 // 画布引用
 const lrCanvasRef = ref<InstanceType<typeof LRCanvas>>()
+const answerCanvasContainer = ref<HTMLElement>()
 
 // 组件状态
 const isValidating = ref(false)
 const validationMessage = ref('')
 const validationSuccess = ref(false)
 const savedCanvasData = ref<any>(null)
+
+// 答案显示相关状态
+const showAnswerFlag = ref(false)
+const hasRendered = ref(false)
+
+// 计算属性
+const slr1DotString = computed(() => slr1Store.dotString)
+const hasDFAData = computed(() => slr1Store.analysisResult !== null && slr1Store.dotString !== '')
 
 // 从store获取文法信息
 const grammarInfo = computed(() => {
@@ -175,6 +252,17 @@ const grammarInfo = computed(() => {
     return {
       startSymbol: `${slr1Store.analysisResult.S}'`,
       productions: augmentedProductions,
+    }
+  }
+  return null
+})
+
+// 答案数据 - 从store获取
+const answerData = computed(() => {
+  if (slr1Store.dfaStates && slr1Store.dfaStates.length > 0) {
+    return {
+      itemSets: slr1Store.dfaStates,
+      transitions: [], // 可以从dfaStates中提取转移关系
     }
   }
   return null
@@ -245,32 +333,46 @@ const validateDFA = async () => {
   }
 }
 
-// 显示答案
-const showAnswer = async () => {
-  if (!lrCanvasRef.value || !slr1Store.analysisResult) return
+// 答案控制 - 参考LR0组件的SVG渲染实现
+const toggleAnswer = async () => {
+  showAnswerFlag.value = !showAnswerFlag.value
 
-  try {
-    // 清空画布
-    lrCanvasRef.value.clearCanvas()
+  if (showAnswerFlag.value && slr1DotString.value) {
+    await nextTick()
 
-    // 根据后端数据添加项目集节点
-    const dfaStates = slr1Store.dfaStates || []
-    dfaStates.forEach((state, index) => {
-      setTimeout(() => {
-        lrCanvasRef.value?.addItemSet()
-      }, index * 100)
-    })
+    // 清理之前的内容
+    if (answerCanvasContainer.value) {
+      answerCanvasContainer.value.innerHTML = ''
+    }
 
-    setTimeout(
-      () => {
-        isStepComplete.value = true
-        validationMessage.value = '已加载标准答案'
-        validationSuccess.value = true
-      },
-      dfaStates.length * 100 + 200,
-    )
-  } catch (error) {
-    console.error('Error loading answer:', error)
+    // 重新渲染SVG
+    if (answerCanvasContainer.value) {
+      try {
+        const viz = await instance()
+        const svg = viz.renderSVGElement(slr1DotString.value)
+
+        // 添加样式类
+        svg.classList.add('slr1-dfa-svg')
+        answerCanvasContainer.value.appendChild(svg)
+        hasRendered.value = true
+      } catch (error) {
+        console.error('SLR1 DFA render failed:', error)
+        // 简单错误处理：在容器中显示错误信息
+        if (answerCanvasContainer.value) {
+          answerCanvasContainer.value.innerHTML = `
+            <div class="text-center text-red-500 p-4">
+              <p>渲染失败: ${error instanceof Error ? error.message : String(error)}</p>
+            </div>
+          `
+        }
+      }
+    }
+  } else if (!showAnswerFlag.value) {
+    // 隐藏答案时清理容器并重置渲染标志
+    if (answerCanvasContainer.value) {
+      answerCanvasContainer.value.innerHTML = ''
+    }
+    hasRendered.value = false
   }
 }
 
@@ -311,5 +413,13 @@ onMounted(() => {
   padding: 1rem 2rem 2rem;
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
+}
+
+/* SLR1 DFA SVG 样式 */
+:deep(.slr1-dfa-svg) {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  width: auto;
 }
 </style>
