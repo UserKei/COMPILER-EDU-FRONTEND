@@ -65,18 +65,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- 示例字符串 -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <button
-                v-for="example in exampleStrings"
-                :key="example"
-                @click="inputString = example"
-                class="text-xs px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-              >
-                {{ example }}
-              </button>
-            </div>
           </div>
         </div>
 
@@ -250,10 +238,6 @@ const analysisSteps = computed(() => {
   return []
 })
 
-// 示例字符串
-const exampleStrings = ['id + id $', 'id * id $', 'id + id * id $', '( id + id ) $', 'id $']
-
-// 步骤完成状态
 const isStepComplete = computed(() => lr0Store.inputAnalysisResult !== null)
 
 // 分析字符串
