@@ -12,6 +12,29 @@ export interface LR0AnalysisResult {
   LR0_dot_str: string
 }
 
+// 校验状态枚举
+export enum ValidationState {
+  NORMAL = 'normal',
+  ERROR = 'error',
+  SUCCESS = 'success',
+  CHECKING = 'checking',
+}
+
+// 产生式项接口
+export interface ProductionItem {
+  id: string
+  text: string
+  validationState: ValidationState
+  errorMessage?: string
+}
+
+// 校验结果接口
+export interface ValidationResult {
+  isValid: boolean
+  errors: string[]
+  warnings: string[]
+}
+
 // LR0校验数据项接口
 export interface LR0ValidationItem {
   id: string

@@ -37,7 +37,14 @@
           <textarea
             v-model="grammarInput"
             placeholder="请输入文法产生式，例如：&#10;S -> aAb&#10;A -> c&#10;A -> ε"
-            class="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
+            :class="[
+              'w-full h-40 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none font-mono text-sm transition-colors',
+              lr0Store.validationErrors.length > 0
+                ? 'border-red-300 focus:border-red-500 bg-red-50'
+                : lr0Store.isValidGrammar === true
+                  ? 'border-green-300 focus:border-green-500 bg-green-50'
+                  : 'border-gray-300 focus:border-blue-500',
+            ]"
             @input="onInputChange"
           ></textarea>
         </div>
@@ -81,6 +88,38 @@ B -> ε</pre
           </div>
         </div>
 
+        <!-- 校验错误显示 -->
+        <div v-if="lr0Store.validationErrors.length > 0" class="mt-4">
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-start">
+              <Icon icon="lucide:alert-circle" class="w-5 h-5 text-red-600 mt-0.5 mr-3" />
+              <div>
+                <h4 class="text-sm font-medium text-red-900 mb-2">输入校验错误</h4>
+                <ul class="text-sm text-red-800 space-y-1">
+                  <li v-for="error in lr0Store.validationErrors" :key="error">• {{ error }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 校验警告显示 -->
+        <div v-if="lr0Store.validationWarnings.length > 0" class="mt-4">
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-start">
+              <Icon icon="lucide:alert-triangle" class="w-5 h-5 text-yellow-600 mt-0.5 mr-3" />
+              <div>
+                <h4 class="text-sm font-medium text-yellow-900 mb-2">警告</h4>
+                <ul class="text-sm text-yellow-800 space-y-1">
+                  <li v-for="warning in lr0Store.validationWarnings" :key="warning">
+                    • {{ warning }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 分析按钮 -->
         <div class="flex justify-center">
           <button
@@ -101,22 +140,41 @@ B -> ε</pre
                 'p-4 rounded-lg border transition-all duration-200',
                 analysisResult.success
                   ? 'bg-green-50 border-green-200 text-green-800'
-                  : 'bg-red-50 border-red-200 text-red-800',
+                  : analysisResult.hasConflicts
+                    ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
+                    : 'bg-red-50 border-red-200 text-red-800',
               ]"
             >
               <div class="flex items-start gap-2">
                 <Icon
-                  :icon="analysisResult.success ? 'lucide:check-circle' : 'lucide:alert-circle'"
+                  :icon="
+                    analysisResult.success
+                      ? 'lucide:check-circle'
+                      : analysisResult.hasConflicts
+                        ? 'lucide:alert-triangle'
+                        : 'lucide:alert-circle'
+                  "
                   class="w-5 h-5 mt-0.5 flex-shrink-0"
                 />
                 <div class="flex-1">
                   <p class="font-medium">
-                    {{ analysisResult.success ? '文法分析成功' : '文法分析失败' }}
+                    {{
+                      analysisResult.success
+                        ? '文法分析成功'
+                        : analysisResult.hasConflicts
+                          ? '文法分析完成（存在冲突）'
+                          : '文法分析失败'
+                    }}
                   </p>
                   <p class="text-sm mt-1">{{ analysisResult.message }}</p>
 
-                  <!-- 成功时显示文法信息 -->
-                  <div v-if="analysisResult.success && analysisResult.data" class="mt-4 space-y-3">
+                  <!-- 成功或有冲突时显示文法信息 -->
+                  <div
+                    v-if="
+                      (analysisResult.success || analysisResult.hasConflicts) && analysisResult.data
+                    "
+                    class="mt-4 space-y-3"
+                  >
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div>
                         <span class="font-medium">开始符号：</span>{{ analysisResult.data.S }}
@@ -193,15 +251,20 @@ const grammarInput = ref('')
 // 从store获取状态
 const analysisResult = computed(() => {
   if (lr0Store.analysisResult) {
+    const hasConflicts = !lr0Store.isLR0Grammar
     return {
-      success: true,
-      message: lr0Store.isLR0Grammar ? '文法分析完成，符合LR0文法！' : '文法存在冲突，不是LR0文法',
+      success: !hasConflicts,
+      hasConflicts: hasConflicts,
+      message: hasConflicts
+        ? '文法存在冲突，不是LR0文法。后续功能不支持有冲突的文法。'
+        : '文法分析完成，符合LR0文法！',
       data: lr0Store.analysisResult,
     }
   }
   if (commonStore.error) {
     return {
       success: false,
+      hasConflicts: false,
       message: commonStore.error,
       data: null,
     }
@@ -209,7 +272,7 @@ const analysisResult = computed(() => {
   return null
 })
 
-// 步骤完成状态
+// 步骤完成状态 - 只有真正的LR0文法才能进入下一步
 const isStepComplete = computed(() => lr0Store.analysisResult && lr0Store.isLR0Grammar === true)
 
 // 组件挂载时加载持久化数据
@@ -220,10 +283,28 @@ onMounted(() => {
   }
 })
 
-// 输入变化处理
+// 输入变化处理 - 添加实时校验
 const onInputChange = () => {
   // 清除错误状态
   commonStore.clearError()
+
+  // 实时校验（使用防抖）
+  if (grammarInput.value.trim()) {
+    // 简单的实时格式检查
+    const lines = grammarInput.value.split('\n').filter((line) => line.trim())
+    const hasFormatError = lines.some((line) => {
+      const cleanLine = line.replace(/\s+/g, '')
+      return cleanLine && !cleanLine.match(/^[A-Z]->.+$/)
+    })
+
+    if (hasFormatError) {
+      lr0Store.validationErrors = ['产生式格式不正确，应为 "A->abc" 的形式']
+    } else {
+      lr0Store.validationErrors = []
+    }
+  } else {
+    lr0Store.validationErrors = []
+  }
 }
 
 // 加载示例文法
@@ -243,28 +324,18 @@ B -> ε`,
   commonStore.clearError()
 }
 
-// 分析文法
+// 分析文法 - 使用新的校验功能
 const analyzeGrammar = async () => {
   if (!grammarInput.value.trim()) return
 
-  // 清除之前的错误状态
-  commonStore.clearError()
-
   try {
-    // 处理输入的产生式
-    const productions = grammarInput.value
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
+    // 使用新的校验和分析方法
+    const success = await lr0Store.performLR0AnalysisFromText(grammarInput.value)
 
-    // 批量更新：先更新产生式
-    lr0Store.setProductions(productions)
-
-    // 执行LR0分析
-    const success = await lr0Store.performLR0Analysis()
-
-    if (!success) {
-      console.error('LR0 analysis failed')
+    if (success) {
+      console.log('LR0 analysis completed successfully')
+    } else {
+      console.error('LR0 analysis failed - validation errors or analysis issues')
     }
   } catch (error: any) {
     console.error('Grammar analysis error:', error)

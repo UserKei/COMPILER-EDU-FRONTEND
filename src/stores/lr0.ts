@@ -1,7 +1,13 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getLR0AnalyseAPI, LR0AnalyseInpStrAPI } from '@/api'
-import type { LR0AnalysisResult, LR0ValidationItem, AnalysisStepInfo } from '@/types'
+import type {
+  LR0AnalysisResult,
+  LR0ValidationItem,
+  AnalysisStepInfo,
+  ValidationResult,
+  ProductionItem,
+} from '@/types'
 import { useCommonStore } from './common'
 import { usePersistence, useMultiConfig, useHistory } from '@/composables/persistence'
 
@@ -22,6 +28,12 @@ export const useLR0Store = defineStore('lr0', () => {
   const inputString = ref('')
   const inputAnalysisResult = ref<AnalysisStepInfo | null>(null)
 
+  // 校验相关状态
+  const validationErrors = ref<string[]>([])
+  const validationWarnings = ref<string[]>([])
+  const isValidGrammar = ref<boolean | null>(null)
+  const productionItems = ref<ProductionItem[]>([])
+
   // 校验数据 - 用于前端显示和交互
   const validationData = ref<LR0ValidationItem[]>([])
   const actionTable = ref<Record<string, string>>({})
@@ -32,6 +44,124 @@ export const useLR0Store = defineStore('lr0', () => {
 
   // DOT字符串用于图形显示
   const dotString = ref('')
+
+  // 校验方法
+  const validateProductions = (inputText: string): ValidationResult => {
+    const errors: string[] = []
+    const warnings: string[] = []
+
+    // 1. 基础空值检测
+    const isEmpty = /^\s*$/.test(inputText)
+    if (isEmpty) {
+      errors.push('请输入产生式！')
+      return { isValid: false, errors, warnings }
+    }
+
+    // 2. 中文字符检测
+    const chinesePattern = /[\u4e00-\u9fa5]/
+    if (chinesePattern.test(inputText)) {
+      errors.push('输入不能包含中文！')
+      return { isValid: false, errors, warnings }
+    }
+
+    // 3. 预处理产生式
+    const cleanedText = inputText.replace(/ +/g, '') // 只消除空格但不消除换行
+    const productionList = cleanedText.split('\n').filter((item) => item.trim() !== '')
+
+    // 4. 重复项检测
+    const productionSet = new Set(productionList)
+    if (productionList.length !== productionSet.size) {
+      errors.push('产生式含重复项，请重新输入！')
+      return { isValid: false, errors, warnings }
+    }
+
+    // 5. 产生式格式校验
+    const isValidProduction = productionList.every((production) => {
+      // 检查是否包含多个->
+      const arrowCount = (production.match(/->/g) || []).length
+      if (arrowCount > 1) return false
+
+      const match = production.match(/^([A-Z])->((?:[^|]+\|)*[^|]+)$/)
+      return !!match
+    })
+
+    if (!isValidProduction) {
+      errors.push('产生式不符合文法规范，请重新输入！')
+      return { isValid: false, errors, warnings }
+    }
+
+    // 6. 文法逻辑校验
+    const grammarMap: { [key: string]: string[] } = {}
+    for (const production of productionList) {
+      const [left, right] = production.split('->')
+      if (right.includes('|')) {
+        const rightList = right.split('|')
+        if (!grammarMap[left]) {
+          grammarMap[left] = []
+        }
+        for (const r of rightList) {
+          grammarMap[left].push(r)
+        }
+      } else {
+        if (!grammarMap[left]) {
+          grammarMap[left] = []
+        }
+        grammarMap[left].push(right)
+      }
+    }
+
+    // 7. 检查非终结符完整性
+    const allNonTerminals = Array.from(productionList.join('').match(/[A-Z]/g) || [])
+    for (const vn of allNonTerminals) {
+      if (!grammarMap[vn]) {
+        errors.push(`Vn: ${vn}没有候选式！`)
+        return { isValid: false, errors, warnings }
+      }
+    }
+
+    return { isValid: true, errors, warnings }
+  }
+
+  // 输入预处理和校验
+  const validateAndFormatInput = (
+    inputText: string,
+  ): { success: boolean; productions: string[] } => {
+    const validation = validateProductions(inputText)
+
+    if (!validation.isValid) {
+      validationErrors.value = validation.errors
+      validationWarnings.value = validation.warnings
+      isValidGrammar.value = false
+      return { success: false, productions: [] }
+    }
+
+    validationErrors.value = []
+    validationWarnings.value = validation.warnings
+    isValidGrammar.value = true
+
+    // 返回处理后的产生式数组
+    const cleanedText = inputText.replace(/ +/g, '')
+    const processedProductions = cleanedText.split('\n').filter((item) => item.trim() !== '')
+
+    return { success: true, productions: processedProductions }
+  }
+
+  // 从原始文本分析（新增方法）
+  const performLR0AnalysisFromText = async (inputText: string) => {
+    const { success, productions: validatedProductions } = validateAndFormatInput(inputText)
+
+    if (!success) {
+      const errorMsg = validationErrors.value.join(', ')
+      commonStore.setError(errorMsg)
+      return false
+    }
+
+    // 更新产生式
+    productions.value = validatedProductions
+
+    // 执行分析
+    return await performLR0Analysis()
+  }
 
   // Actions
   const setProductions = (newProductions: string[]) => {
@@ -76,6 +206,11 @@ export const useLR0Store = defineStore('lr0', () => {
     dotItems.value = []
     isLR0Grammar.value = null
     dotString.value = ''
+    // 清除校验状态
+    validationErrors.value = []
+    validationWarnings.value = []
+    isValidGrammar.value = null
+    productionItems.value = []
   }
 
   // 将后端数据转换为校验数据
@@ -198,6 +333,17 @@ export const useLR0Store = defineStore('lr0', () => {
           dotItems.value = result.dot_items || []
           isLR0Grammar.value = result.isLR0 ?? null
           dotString.value = result.LR0_dot_str || ''
+
+          // 检测冲突并设置警告
+          if (!result.isLR0) {
+            validationWarnings.value = [
+              '检测到移进-规约冲突或规约-规约冲突',
+              '该文法不是LR0文法，后续功能可能无法正常使用',
+              '建议修改文法以消除冲突',
+            ]
+          } else {
+            validationWarnings.value = []
+          }
 
           // 转换为校验数据
           validationData.value = transformToValidationData(result)
@@ -347,6 +493,12 @@ export const useLR0Store = defineStore('lr0', () => {
     isLR0Grammar,
     dotString,
 
+    // 校验状态
+    validationErrors,
+    validationWarnings,
+    isValidGrammar,
+    productionItems,
+
     // Actions
     setProductions,
     addProduction,
@@ -354,9 +506,12 @@ export const useLR0Store = defineStore('lr0', () => {
     clearProductions,
     setInputString,
     performLR0Analysis: enhancedPerformLR0Analysis,
+    performLR0AnalysisFromText, // 新增方法
     analyzeInputString,
     updateValidationItem,
     getValidationDataByCategory,
+    validateProductions, // 导出校验方法
+    validateAndFormatInput, // 导出格式化校验方法
     resetAll,
 
     // 持久化功能
