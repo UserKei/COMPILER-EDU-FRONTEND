@@ -57,8 +57,41 @@ const props = withDefaults(defineProps<Props>(), {
   markerEnd: 'url(#arrow)',
 })
 
-const { updateEdge, getSelectedEdges } = useVueFlow()
-const { updateEdgeData } = useEdgeManagement(ref([]))
+// 从 props 中获取路径数据
+const edgePath = computed(() => {
+  // 简单的路径计算，从源到目标的直线
+  if (
+    props.sourceX !== undefined &&
+    props.sourceY !== undefined &&
+    props.targetX !== undefined &&
+    props.targetY !== undefined
+  ) {
+    const controlX = (props.sourceX + props.targetX) / 2
+    const controlY = (props.sourceY + props.targetY) / 2
+
+    // 应用偏移
+    const offset = edgeData.value.controlOffset || { x: 0, y: 0 }
+    const adjustedControlX = controlX + offset.x
+    const adjustedControlY = controlY + offset.y
+
+    return `M ${props.sourceX} ${props.sourceY} Q ${adjustedControlX} ${adjustedControlY} ${props.targetX} ${props.targetY}`
+  }
+
+  return ''
+})
+
+const { findEdge, edges } = useVueFlow()
+
+// 辅助函数：更新边数据
+const updateCurrentEdgeData = (newData: Partial<EdgeData>) => {
+  const edgeIndex = edges.value.findIndex((e) => e.id === props.id)
+  if (edgeIndex !== -1) {
+    edges.value[edgeIndex] = {
+      ...edges.value[edgeIndex],
+      data: { ...edges.value[edgeIndex].data, ...newData },
+    }
+  }
+}
 
 // 响应式状态
 const labelRef = ref<HTMLElement>()
@@ -77,7 +110,7 @@ const edgeData = computed(() => props.data || {})
 const labelText = computed({
   get: () => edgeData.value.label || '',
   set: (value: string) => {
-    updateEdgeData(props.id, { label: value })
+    updateCurrentEdgeData({ label: value })
   },
 })
 
@@ -88,11 +121,26 @@ const labelPosition = computed(() => {
   const defaultT = 0.5 // 默认在边的中点
   const t = edgeData.value.labelT || defaultT
 
-  // 简化的位置计算，实际应该基于路径
-  return {
-    x: 0, // 这里需要实际的路径计算
-    y: 0,
+  // 基于路径的位置计算
+  // 这里使用简化的计算，实际项目中可能需要更复杂的路径解析
+  if (
+    props.sourceX !== undefined &&
+    props.sourceY !== undefined &&
+    props.targetX !== undefined &&
+    props.targetY !== undefined
+  ) {
+    const x = props.sourceX + (props.targetX - props.sourceX) * t
+    const y = props.sourceY + (props.targetY - props.sourceY) * t
+
+    // 添加控制偏移
+    const offset = edgeData.value.controlOffset || { x: 0, y: 0 }
+    return {
+      x: x + offset.x,
+      y: y + offset.y,
+    }
   }
+
+  return { x: 0, y: 0 }
 })
 
 // 样式计算
@@ -150,7 +198,7 @@ const onMouseMove = (event: MouseEvent) => {
     y: dragOffset.value.y + dy,
   }
 
-  updateEdgeData(props.id, { controlOffset: newOffset })
+  updateCurrentEdgeData({ controlOffset: newOffset })
 }
 
 const onMouseUp = () => {

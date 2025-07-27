@@ -10,10 +10,10 @@
   >
     <!-- Node Title (可选) -->
     <div
-      v-if="nodeData.title"
+      v-if="props.data.title"
       class="text-center text-xs font-semibold text-gray-600 mb-2 border-b border-gray-200 pb-1"
     >
-      {{ nodeData.title }}
+      {{ props.data.title }}
     </div>
 
     <!-- LR Items Container -->
