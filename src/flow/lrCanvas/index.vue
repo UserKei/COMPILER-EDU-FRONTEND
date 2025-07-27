@@ -132,7 +132,7 @@ onMounted(() => {
 // 计算属性
 const displayTitle = computed(() => {
   if (props.title) return props.title
-  const modeMap = {
+  const modeMap: Record<string, string> = {
     lr0: 'LR(0)',
     slr1: 'SLR(1)',
     ll1: 'LL(1)',
@@ -218,7 +218,7 @@ const toolbarButtons = computed((): ToolbarButton[] => [
 // 工具栏按钮样式
 const getButtonClasses = (variant: string = 'primary') => {
   const baseClasses = 'px-3 py-1 rounded transition-colors text-white'
-  const variantClasses = {
+  const variantClasses: Record<string, string> = {
     primary: 'bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400',
     secondary: 'bg-green-500 hover:bg-green-600 disabled:bg-gray-400',
     danger: 'bg-red-500 hover:bg-red-600 disabled:bg-gray-400',
@@ -237,11 +237,13 @@ const onConnect = (connection: Connection) => {
   }
 }
 
-const onNodeClick = (event: MouseEvent, node: Node) => {
+const onNodeClick = (nodeMouseEvent: any) => {
+  const { event, node } = nodeMouseEvent
   editorStore.selectNode(node.id, event.ctrlKey || event.metaKey)
 }
 
-const onEdgeClick = (event: MouseEvent, edge: Edge) => {
+const onEdgeClick = (edgeMouseEvent: any) => {
+  const { event, edge } = edgeMouseEvent
   editorStore.selectEdge(edge.id, event.ctrlKey || event.metaKey)
 }
 
