@@ -6,37 +6,28 @@ const devRoutes: RouteRecordRaw[] = [
     name: 'dev-index',
     component: () => import('../../views/dev/index.vue'),
     meta: {
-      title: '开发调试',
-      description: '开发者调试页面总览'
-    }
+      title: '开发调试中心',
+      description: '画布组件测试导航页面',
+    },
   },
   {
-    path: '/dev/api-test',
-    name: 'dev-api-test',
-    component: () => import('../../views/dev/pages/api-test.vue'),
+    path: '/dev/lr-canvas',
+    name: 'dev-lr-canvas',
+    component: () => import('../../views/dev/pages/LRCanvasTest.vue'),
     meta: {
-      title: 'API测试',
-      description: '前后端API连接测试'
-    }
+      title: 'LR Canvas 测试',
+      description: 'LR 项目集分析画布组件测试',
+    },
   },
   {
-    path: '/dev/canvas',
-    name: 'dev-canvas',
-    component: () => import('../../views/dev/pages/CanvasFlowTest.vue'),
+    path: '/dev/fa-canvas',
+    name: 'dev-fa-canvas',
+    component: () => import('../../views/dev/pages/FACanvasTest.vue'),
     meta: {
-      title: '画布调试',
-      description: 'Vue Flow 画布组件测试和调试'
-    }
+      title: 'FA Canvas 测试',
+      description: '有限自动机画布组件测试 (NFA/DFA)',
+    },
   },
-  {
-    path: '/dev/canvas-demos',
-    name: 'dev-canvas-demos',
-    component: () => import('../../views/dev/pages/CanvasDemos.vue'),
-    meta: {
-      title: '算法画布演示',
-      description: '各种算法的画布组件演示'
-    }
-  }
 ]
 
 export default devRoutes

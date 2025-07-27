@@ -12,25 +12,13 @@ const devBaseRoutes: RouteRecordRaw[] = [
     redirect: '/dev',
     meta: {
       title: '开发环境首页',
-      description: '重定向到开发调试中心'
-    }
+      description: '重定向到画布演示页面',
+    },
   },
-  {
-    path: '/dev-home',
-    name: 'dev-home-alias',
-    component: () => import('../views/dev/index.vue'),
-    meta: {
-      title: '开发中心',
-      description: '开发者工具和调试页面集合'
-    }
-  }
 ]
 
 // 合并开发路由
-const devRouterRoutes: RouteRecordRaw[] = [
-  ...devBaseRoutes,
-  ...devRoutes
-]
+const devRouterRoutes: RouteRecordRaw[] = [...devBaseRoutes, ...devRoutes]
 
 // 创建开发专用路由器
 const devRouter = createRouter({
@@ -51,7 +39,7 @@ devRouter.beforeEach((to, from, next) => {
   next()
 })
 
-devRouter.afterEach((to, from) => {
+devRouter.afterEach((to) => {
   console.log(`[DEV ROUTER] Navigation completed: ${to.path}`)
   console.log('[DEV ROUTER] Route meta:', to.meta)
 })
