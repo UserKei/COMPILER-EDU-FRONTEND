@@ -28,7 +28,7 @@
               <li>
                 • <strong>规约动作：</strong>A → α·且a∈FOLLOW(A)，则ACTION[i,a] = rk（第k个产生式）
               </li>
-              <li>• <strong>接受动作：</strong>S' → S·，则ACTION[i,$] = acc</li>
+              <li>• <strong>接受动作：</strong>S' → S·，则ACTION[i,#] = acc</li>
               <li>• <strong>SLR1特点：</strong>使用FOLLOW集解决LR0的规约/规约冲突</li>
             </ul>
           </div>

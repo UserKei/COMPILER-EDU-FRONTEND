@@ -44,12 +44,12 @@
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                输入字符串（以$结尾）
+                输入字符串（以#结尾）
               </label>
               <div class="flex gap-2">
                 <input
                   v-model="inputString"
-                  placeholder="例如: id + id * id $"
+                  placeholder="例如: id + id * id #"
                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   @keydown.enter="analyzeString"
                 />

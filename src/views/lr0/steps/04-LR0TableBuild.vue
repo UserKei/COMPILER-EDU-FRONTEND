@@ -29,7 +29,7 @@
                 • <strong>规约动作：</strong>A → α·，则对所有终结符a，ACTION[i,a] =
                 rk（第k个产生式）
               </li>
-              <li>• <strong>接受动作：</strong>S' → S·，则ACTION[i,$] = acc</li>
+              <li>• <strong>接受动作：</strong>S' → S·，则ACTION[i,#] = acc</li>
             </ul>
           </div>
         </div>
