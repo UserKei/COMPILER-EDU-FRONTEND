@@ -41,7 +41,7 @@
               v-model="inputString"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="请输入要分析的字符串，如：id+id*id"
+              placeholder="请输入要分析的字符串，如：i+i*i"
             ></textarea>
           </div>
 
@@ -131,7 +131,14 @@
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="(step, index) in analysisSteps" :key="index" class="hover:bg-gray-50">
+                <tr
+                  v-for="(step, index) in analysisSteps"
+                  :key="index"
+                  :class="[
+                    'hover:bg-gray-50',
+                    index === currentStepIndex ? 'bg-blue-50 border-l-4 border-blue-500' : '',
+                  ]"
+                >
                   <td class="px-4 py-2 text-sm text-gray-900">{{ index + 1 }}</td>
                   <td class="px-4 py-2 text-sm font-mono text-gray-900">{{ step.stateStack }}</td>
                   <td class="px-4 py-2 text-sm font-mono text-gray-900">{{ step.symbolStack }}</td>
@@ -153,7 +160,10 @@
               <div class="bg-gray-50 p-4 rounded-lg min-h-[200px]">
                 <div v-if="currentStep" class="space-y-2">
                   <div
-                    v-for="(state, index) in currentStep.stateStack.split(' ').reverse()"
+                    v-for="(state, index) in currentStep.stateStack
+                      .split(' ')
+                      .filter((s) => s.trim())
+                      .reverse()"
                     :key="index"
                     class="bg-blue-100 border border-blue-300 rounded px-3 py-2 text-center font-mono"
                   >
@@ -169,7 +179,10 @@
               <div class="bg-gray-50 p-4 rounded-lg min-h-[200px]">
                 <div v-if="currentStep" class="space-y-2">
                   <div
-                    v-for="(symbol, index) in currentStep.symbolStack.split(' ').reverse()"
+                    v-for="(symbol, index) in currentStep.symbolStack
+                      .split(' ')
+                      .filter((s) => s.trim())
+                      .reverse()"
                     :key="index"
                     class="bg-green-100 border border-green-300 rounded px-3 py-2 text-center font-mono"
                   >
@@ -183,11 +196,26 @@
             <div>
               <h4 class="font-medium text-gray-700 mb-2">剩余输入</h4>
               <div class="bg-gray-50 p-4 rounded-lg min-h-[200px]">
-                <div
-                  v-if="currentStep"
-                  class="bg-yellow-100 border border-yellow-300 rounded px-3 py-2 font-mono"
-                >
-                  {{ currentStep.inputString }}
+                <div v-if="currentStep" class="font-mono text-lg">
+                  <!-- 原始输入串（带高亮） -->
+                  <div class="mb-4">
+                    <span class="text-sm text-gray-600 block mb-2">原始输入串：</span>
+                    <span
+                      v-for="(char, index) in inputString.split('')"
+                      :key="index"
+                      :class="['inline-block px-1', getCharClass(char, index)]"
+                    >
+                      {{ char }}
+                    </span>
+                  </div>
+
+                  <!-- 当前剩余输入 -->
+                  <div>
+                    <span class="text-sm text-gray-600 block mb-2">剩余输入：</span>
+                    <div class="bg-yellow-100 border border-yellow-300 rounded px-3 py-2 font-mono">
+                      {{ currentStep.inputString }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -305,7 +333,7 @@ const inputString = computed({
 const analysisResult = computed(() => {
   if (slr1Store.inputAnalysisResult) {
     return {
-      success: slr1Store.inputAnalysisResult.info_res === '字符串匹配成功',
+      success: slr1Store.inputAnalysisResult.info_res === 'Success!', // 根据旧前端逻辑
       message: slr1Store.inputAnalysisResult.info_res,
     }
   }
@@ -320,9 +348,34 @@ const currentStep = computed(() => {
   return analysisSteps.value[currentStepIndex.value]
 })
 
+// 字符高亮逻辑
+const getCharClass = (char: string, index: number) => {
+  if (!currentStep.value) return ''
+
+  const remaining = currentStep.value.inputString
+  const processedLength = inputString.value.length - remaining.length
+
+  if (index < processedLength) {
+    return 'text-gray-400 line-through' // 已处理
+  } else if (index === processedLength && remaining.length > 0) {
+    return 'text-red-600 font-bold bg-red-100 rounded px-1' // 当前位置
+  } else {
+    return 'text-gray-900' // 未处理
+  }
+}
+
 // 分析字符串
 const analyzeString = async () => {
-  if (!inputString.value.trim() || !grammarData.value) return
+  // 验证输入
+  if (!inputString.value.trim()) {
+    errorMessage.value = '请输入要分析的字符串'
+    return
+  }
+
+  if (!grammarData.value) {
+    errorMessage.value = '请先完成前面的文法分析步骤'
+    return
+  }
 
   isAnalyzing.value = true
   errorMessage.value = ''
@@ -333,21 +386,28 @@ const analyzeString = async () => {
     const success = await slr1Store.analyzeInputString()
 
     if (success && slr1Store.inputAnalysisResult) {
-      // 构造分析步骤
-      const steps: AnalysisStep[] = []
       const result = slr1Store.inputAnalysisResult
 
+      // 正确构造分析步骤
+      const steps: AnalysisStep[] = []
+
+      // 遍历所有步骤
       for (let i = 0; i < result.info_step.length; i++) {
         steps.push({
-          stateStack: result.info_stack[i] || '',
-          symbolStack: result.info_stack[i] || '', // 如果有独立的符号栈数据可以在这里使用
-          inputString: result.info_str[i] || '',
-          action: result.info_action[i] || '',
+          stateStack: result.info_state_stack?.[i] || '', // 状态栈
+          symbolStack: result.info_symbol_stack?.[i] || '', // 符号栈
+          inputString: result.info_str?.[i] || '', // 剩余输入串
+          action: result.info_msg?.[i] || '', // 操作说明
         })
       }
 
       analysisSteps.value = steps
       currentStepIndex.value = 0
+
+      // 如果分析失败，显示错误信息
+      if (result.info_res !== 'Success!') {
+        errorMessage.value = `分析失败：${result.info_res}`
+      }
     } else {
       errorMessage.value = '分析失败：未获取到分析结果'
     }
@@ -362,11 +422,16 @@ const analyzeString = async () => {
 // 加载示例
 const loadExample = () => {
   if (grammarData.value?.Vt) {
-    // 基于终结符构造一个简单的示例
     const terminals = grammarData.value.Vt.map((item: any) => item.text || item)
+
+    // 智能生成示例
     if (terminals.includes('i') && terminals.includes('+') && terminals.includes('*')) {
       inputString.value = 'i+i*i'
-    } else if (terminals.length > 0) {
+    } else if (terminals.includes('id') && terminals.includes('+')) {
+      inputString.value = 'id+id'
+    } else if (terminals.includes('a') && terminals.includes('b')) {
+      inputString.value = 'aab'
+    } else if (terminals.length >= 2) {
       inputString.value = terminals.slice(0, 3).join('')
     } else {
       inputString.value = 'abc'
@@ -398,10 +463,10 @@ watch(
 
       for (let i = 0; i < newResult.info_step.length; i++) {
         steps.push({
-          stateStack: newResult.info_stack[i] || '',
-          symbolStack: newResult.info_stack[i] || '',
-          inputString: newResult.info_str[i] || '',
-          action: newResult.info_action[i] || '',
+          stateStack: newResult.info_state_stack?.[i] || '',
+          symbolStack: newResult.info_symbol_stack?.[i] || '',
+          inputString: newResult.info_str?.[i] || '',
+          action: newResult.info_msg?.[i] || '',
         })
       }
 
@@ -421,10 +486,10 @@ onMounted(() => {
 
     for (let i = 0; i < result.info_step.length; i++) {
       steps.push({
-        stateStack: result.info_stack[i] || '',
-        symbolStack: result.info_stack[i] || '',
-        inputString: result.info_str[i] || '',
-        action: result.info_action[i] || '',
+        stateStack: result.info_state_stack?.[i] || '',
+        symbolStack: result.info_symbol_stack?.[i] || '',
+        inputString: result.info_str?.[i] || '',
+        action: result.info_msg?.[i] || '',
       })
     }
 
