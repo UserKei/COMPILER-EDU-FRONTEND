@@ -53,7 +53,7 @@ import { useVueFlow } from '@vue-flow/core'
 import type { Node, Edge, Connection, MouseTouchEvent } from '@vue-flow/core'
 
 import BaseCanvas from '../base/index.vue'
-import CircleNode from '../../components/circleNode/index.vue'
+import CircleNode from '../../nodes/circle/index.vue'
 import CustomEdge from '../../components/edges/index.vue'
 import type { NodeData, EdgeData } from '../../types'
 
