@@ -8,26 +8,65 @@
 
     <!-- 画布选择网格 -->
     <main class="canvas-grid">
-      <div class="canvas-card" @click="$router.push('/dev/lr-canvas')">
+      <div class="canvas-card" @click="$router.push('/dev/nfa')">
         <div class="card-icon">
-          <Icon icon="lucide:layers" class="w-12 h-12" />
+          <Icon icon="lucide:git-branch" class="w-12 h-12" />
         </div>
         <div class="card-content">
-          <h3 class="card-title">LR Canvas</h3>
-          <p class="card-description">LR 项目集分析画布组件测试</p>
+          <h3 class="card-title">NFA Canvas</h3>
+          <p class="card-description">非确定有限自动机画布组件测试</p>
         </div>
         <div class="card-arrow">
           <Icon icon="lucide:arrow-right" class="w-5 h-5" />
         </div>
       </div>
 
-      <div class="canvas-card" @click="$router.push('/dev/fa-canvas')">
+      <div class="canvas-card" @click="$router.push('/dev/dfa')">
         <div class="card-icon">
           <Icon icon="lucide:workflow" class="w-12 h-12" />
         </div>
         <div class="card-content">
-          <h3 class="card-title">FA Canvas</h3>
-          <p class="card-description">有限自动机画布组件测试 (NFA/DFA)</p>
+          <h3 class="card-title">DFA Canvas</h3>
+          <p class="card-description">确定有限自动机画布组件测试</p>
+        </div>
+        <div class="card-arrow">
+          <Icon icon="lucide:arrow-right" class="w-5 h-5" />
+        </div>
+      </div>
+
+      <div class="canvas-card" @click="$router.push('/dev/min-dfa')">
+        <div class="card-icon">
+          <Icon icon="lucide:minimize-2" class="w-12 h-12" />
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">最小化 DFA</h3>
+          <p class="card-description">最小化确定有限自动机画布组件测试</p>
+        </div>
+        <div class="card-arrow">
+          <Icon icon="lucide:arrow-right" class="w-5 h-5" />
+        </div>
+      </div>
+
+      <div class="canvas-card" @click="$router.push('/dev/lr0')">
+        <div class="card-icon">
+          <Icon icon="lucide:layers" class="w-12 h-12" />
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">LR0 Canvas</h3>
+          <p class="card-description">LR0 分析器画布组件测试</p>
+        </div>
+        <div class="card-arrow">
+          <Icon icon="lucide:arrow-right" class="w-5 h-5" />
+        </div>
+      </div>
+
+      <div class="canvas-card" @click="$router.push('/dev/slr1')">
+        <div class="card-icon">
+          <Icon icon="lucide:list-tree" class="w-12 h-12" />
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">SLR1 Canvas</h3>
+          <p class="card-description">SLR1 分析器画布组件测试</p>
         </div>
         <div class="card-arrow">
           <Icon icon="lucide:arrow-right" class="w-5 h-5" />
