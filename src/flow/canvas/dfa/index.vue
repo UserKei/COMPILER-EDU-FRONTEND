@@ -25,7 +25,7 @@ import type { Node, Edge, Connection, MouseTouchEvent } from '@vue-flow/core'
 
 import BaseCanvas from '../base/index.vue'
 import CircleNode from '../../nodes/circle/index.vue'
-import CustomEdge from '../../components/edges/index.vue'
+import CustomEdge from '../../edges/index.vue'
 import type { NodeData, EdgeData } from '../../types'
 
 // Vue Flow instance

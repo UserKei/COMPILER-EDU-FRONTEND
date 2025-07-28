@@ -80,7 +80,7 @@ import type { Node, Edge, Connection, MouseTouchEvent } from '@vue-flow/core'
 
 import BaseCanvas from '../base/index.vue'
 import RectangleNode from '../../nodes/rectangle/index.vue'
-import CustomEdge from '../../components/edges/index.vue'
+import CustomEdge from '../../edges/index.vue'
 import type { NodeData, EdgeData, LRItem } from '../../types'
 import { LRItemUtils, GrammarUtils } from '../../utils'
 

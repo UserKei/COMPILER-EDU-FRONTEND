@@ -47,8 +47,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted, onMounted, nextTick } from 'vue'
 import { BaseEdge, EdgeLabelRenderer, useVueFlow, type EdgeProps } from '@vue-flow/core'
-import { useEdgeManagement } from '../../composables'
-import type { EdgeData } from '../../types'
+import { useEdgeManagement } from '../composables'
+import type { EdgeData } from '../types'
 
 interface Props extends EdgeProps<EdgeData> {}
 
