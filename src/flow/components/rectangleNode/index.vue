@@ -20,9 +20,9 @@
     <div class="flex flex-col gap-1">
       <div
         v-for="(item, index) in itemList"
-        :key="item.id"
+        :key="item.id || `item-${index}`"
         class="flex items-center gap-2 min-h-6 px-2 py-1 rounded transition-colors duration-150 hover:bg-gray-50 group/item"
-        @click.stop="editItem(item.id)"
+        @click.stop="item.id && editItem(item.id)"
       >
         <!-- Item Content -->
         <div class="flex-1 min-w-0">
@@ -31,23 +31,24 @@
             ref="editInputRef"
             v-model="editingText"
             class="w-full bg-transparent border-none outline-none text-xs text-gray-700 cursor-text font-normal placeholder-gray-400"
-            placeholder="Enter LR item..."
+            placeholder="Enter LR item (e.g., E → E • + T)"
             @blur="finishEditingItem"
             @keyup.enter="finishEditingItem"
             @keyup.escape="cancelEditingItem"
+            @keydown="handleInputKeydown"
           />
           <span
             v-else
             class="text-xs text-gray-700 cursor-text block truncate"
             :class="itemTextClasses(item)"
           >
-            {{ item.text || 'Click to edit...' }}
+            {{ getDisplayText(item) || 'Click to edit...' }}
           </span>
         </div>
 
         <!-- Delete Button (hover时显示) -->
         <button
-          v-if="itemList.length > 1 && editingItemId !== item.id"
+          v-if="itemList.length > 1 && editingItemId !== item.id && item.id"
           @click.stop="deleteItem(item.id)"
           class="opacity-0 group-hover/item:opacity-100 w-4 h-4 rounded-full bg-red-100 hover:bg-red-200 text-red-600 text-xs flex items-center justify-center transition-all duration-150"
         >
@@ -93,7 +94,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { Handle, Position, type NodeProps } from '@vue-flow/core'
 import { useNodeState, useNodeAnimation } from '../../composables'
-import { NodeSizeCalculator, IdGenerator } from '../../utils'
+import { NodeSizeCalculator, IdGenerator, LRItemUtils } from '../../utils'
 import type { NodeData, LRItem } from '../../types'
 
 // 直接使用SVG字符串作为data URI
@@ -129,7 +130,8 @@ const itemList = computed({
     const items = (props.data.items || props.data.pros || []) as LRItem[]
     // 如果没有项目，创建一个默认项目
     if (items.length === 0) {
-      return [{ id: IdGenerator.generateNodeId('item'), text: '' }]
+      const defaultItem = LRItemUtils.create('S', ['E'], 0)
+      return [defaultItem]
     }
     return items
   },
@@ -163,9 +165,24 @@ const nodeClasses = computed(() => ({
 
 // 项目文本CSS类
 const itemTextClasses = (item: LRItem) => ({
-  'italic opacity-50': !item.text,
-  'opacity-100': item.text,
+  'italic opacity-50': !getDisplayText(item),
+  'opacity-100': getDisplayText(item),
 })
+
+// 获取项目的显示文本
+const getDisplayText = (item: LRItem): string => {
+  // 如果有自定义文本，优先使用
+  if (item.text) {
+    return item.text
+  }
+
+  // 如果有 production 和 dotPosition，自动生成文本
+  if (item.production && typeof item.dotPosition === 'number') {
+    return LRItemUtils.getText(item)
+  }
+
+  return ''
+}
 
 // 处理节点点击事件
 const handleNodeClick = (event: MouseEvent) => {
@@ -188,8 +205,9 @@ const editItem = async (itemId: string) => {
   if (!item) return
 
   editingItemId.value = itemId
-  editingText.value = item.text
-  originalText.value = item.text
+  const displayText = getDisplayText(item)
+  editingText.value = displayText
+  originalText.value = displayText
 
   await nextTick()
   if (editInputRef.value) {
@@ -201,9 +219,29 @@ const editItem = async (itemId: string) => {
 // 完成编辑项目
 const finishEditingItem = () => {
   if (editingItemId.value) {
-    const newItems = itemList.value.map((item) =>
-      item.id === editingItemId.value ? { ...item, text: editingText.value } : item,
-    )
+    const newItems = itemList.value.map((item) => {
+      if (item.id === editingItemId.value) {
+        // 尝试从文本解析 LR 项目
+        try {
+          if (editingText.value.includes('→') && editingText.value.includes('•')) {
+            // 如果包含 LR 项目格式，解析它
+            const parsedItem = LRItemUtils.fromString(editingText.value)
+            return {
+              ...item,
+              ...parsedItem,
+              text: editingText.value, // 保留原始文本
+            }
+          } else {
+            // 否则只更新文本
+            return { ...item, text: editingText.value }
+          }
+        } catch (error) {
+          // 解析失败，只更新文本
+          return { ...item, text: editingText.value }
+        }
+      }
+      return item
+    })
     itemList.value = newItems
   }
 
@@ -218,19 +256,36 @@ const cancelEditingItem = () => {
   editingText.value = ''
 }
 
+// 添加键盘快捷键支持
+const handleInputKeydown = (e: KeyboardEvent) => {
+  if (e.ctrlKey && e.key === 'd') {
+    e.preventDefault()
+    const currentText = editingText.value.trim()
+    if (currentText && !currentText.includes('•')) {
+      // 自动在第一个符号后添加点
+      const arrowIndex = currentText.indexOf('→')
+      if (arrowIndex > -1) {
+        const left = currentText.substring(0, arrowIndex + 1).trim()
+        const right = currentText.substring(arrowIndex + 1).trim()
+        editingText.value = `${left} • ${right}`
+      }
+    }
+  }
+}
+
 // 添加新项目
 const addNewItem = () => {
-  const newItem: LRItem = {
-    id: IdGenerator.generateNodeId('item'),
-    text: '',
-  }
+  // 创建一个新的 LR 项目
+  const newItem = LRItemUtils.create('A', ['α'], 0)
 
   const newItems = [...itemList.value, newItem]
   itemList.value = newItems
 
   // 立即编辑新项目
   nextTick(() => {
-    editItem(newItem.id)
+    if (newItem.id) {
+      editItem(newItem.id)
+    }
   })
 }
 
