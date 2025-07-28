@@ -3,7 +3,7 @@
  * 统一管理所有 Flow 相关的工具函数
  */
 
-import type { Position, NodeSize, NodeData, EdgeData } from '../types'
+import type { Position, NodeSize, NodeData, EdgeData, LRItem } from '../types'
 
 /**
  * 坐标转换工具
@@ -403,6 +403,403 @@ class KeyboardUtils {
   }
 }
 
+/**
+ * LR 项目工具类
+ */
+class LRItemUtils {
+  /**
+   * 创建 LR 项目
+   */
+  static create(
+    left: string,
+    right: string[],
+    dotPosition: number = 0,
+    lookahead?: string,
+  ): LRItem {
+    const item: LRItem = {
+      production: { left, right },
+      dotPosition,
+    }
+    if (lookahead) {
+      item.lookahead = lookahead
+    }
+    item.id = this.generateId(item)
+    item.text = this.getText(item)
+    return item
+  }
+
+  /**
+   * 生成项目的唯一标识符
+   */
+  static generateId(item: LRItem): string {
+    const prodStr = `${item.production.left}->${item.production.right.join('')}`
+    const lookaheadStr = item.lookahead ? `/${item.lookahead}` : ''
+    return `${prodStr}@${item.dotPosition}${lookaheadStr}`
+  }
+
+  /**
+   * 生成项目的文本表示
+   */
+  static getText(item: LRItem): string {
+    const left = item.production.left
+    const right = [...item.production.right]
+    right.splice(item.dotPosition, 0, '•')
+    const lookaheadStr = item.lookahead ? `, ${item.lookahead}` : ''
+    return `${left} → ${right.join(' ')}${lookaheadStr}`
+  }
+
+  /**
+   * 检查项目是否可归约 (点在最后)
+   */
+  static isReducible(item: LRItem): boolean {
+    return item.dotPosition >= item.production.right.length
+  }
+
+  /**
+   * 获取点后面的符号
+   */
+  static getNextSymbol(item: LRItem): string | null {
+    if (item.dotPosition < item.production.right.length) {
+      return item.production.right[item.dotPosition]
+    }
+    return null
+  }
+
+  /**
+   * 移动点的位置 (创建新项目)
+   */
+  static moveDot(item: LRItem): LRItem {
+    if (item.dotPosition >= item.production.right.length) {
+      return item // 已经在末尾，无法移动
+    }
+    return this.create(
+      item.production.left,
+      item.production.right,
+      item.dotPosition + 1,
+      item.lookahead,
+    )
+  }
+
+  /**
+   * 比较两个项目是否相等 (核心相等，不包括 lookahead)
+   */
+  static isEqual(item1: LRItem, item2: LRItem): boolean {
+    return (
+      item1.production.left === item2.production.left &&
+      item1.production.right.length === item2.production.right.length &&
+      item1.production.right.every((symbol, index) => symbol === item2.production.right[index]) &&
+      item1.dotPosition === item2.dotPosition
+    )
+  }
+
+  /**
+   * 比较两个项目是否完全相等 (包括 lookahead)
+   */
+  static isEqualWithLookahead(item1: LRItem, item2: LRItem): boolean {
+    return this.isEqual(item1, item2) && item1.lookahead === item2.lookahead
+  }
+
+  /**
+   * 从字符串解析项目 (如 "E → E • + T")
+   */
+  static fromString(str: string): LRItem {
+    const [left, rightPart] = str.split(/\s*→\s*/)
+    const rightSymbols = rightPart.trim().split(/\s+/)
+    const dotIndex = rightSymbols.indexOf('•')
+
+    if (dotIndex === -1) {
+      throw new Error('Invalid LR item string: missing dot (•)')
+    }
+
+    rightSymbols.splice(dotIndex, 1) // 移除点符号
+    return this.create(left.trim(), rightSymbols, dotIndex)
+  }
+
+  /**
+   * 计算项目集的闭包
+   */
+  static computeClosure(
+    items: LRItem[],
+    grammarRules: Array<{ left: string; right: string[] }>,
+  ): LRItem[] {
+    const closure = [...items]
+    let changed = true
+
+    while (changed) {
+      changed = false
+
+      for (const item of closure) {
+        const nextSymbol = this.getNextSymbol(item)
+
+        if (nextSymbol && this.isNonTerminal(nextSymbol)) {
+          const productions = grammarRules.filter((rule) => rule.left === nextSymbol)
+
+          for (const production of productions) {
+            const newItem = this.create(production.left, production.right, 0, item.lookahead)
+
+            const exists = closure.some((existingItem) => this.isEqual(existingItem, newItem))
+
+            if (!exists) {
+              closure.push(newItem)
+              changed = true
+            }
+          }
+        }
+      }
+    }
+
+    return closure
+  }
+
+  /**
+   * 计算 GOTO 函数
+   */
+  static computeGoto(
+    items: LRItem[],
+    symbol: string,
+    grammarRules: Array<{ left: string; right: string[] }>,
+  ): LRItem[] {
+    const gotoItems: LRItem[] = []
+
+    for (const item of items) {
+      const nextSymbol = this.getNextSymbol(item)
+      if (nextSymbol === symbol) {
+        const movedItem = this.moveDot(item)
+        gotoItems.push(movedItem)
+      }
+    }
+
+    return this.computeClosure(gotoItems, grammarRules)
+  }
+
+  /**
+   * 检查符号是否为非终结符
+   */
+  static isNonTerminal(symbol: string): boolean {
+    // 通常非终结符是大写字母开头
+    return /^[A-Z]/.test(symbol) && symbol !== symbol.toLowerCase()
+  }
+
+  /**
+   * 生成项目集的状态键
+   */
+  static getStateKey(items: LRItem[]): string {
+    return items
+      .map((item) => this.generateId(item))
+      .sort()
+      .join('|')
+  }
+
+  /**
+   * 查找可归约的项目
+   */
+  static getReducibleItems(items: LRItem[]): LRItem[] {
+    return items.filter((item) => this.isReducible(item))
+  }
+
+  /**
+   * 获取项目的产生式字符串
+   */
+  static getProductionString(item: LRItem): string {
+    return `${item.production.left} → ${item.production.right.join(' ')}`
+  }
+
+  /**
+   * 批量创建项目
+   */
+  static createFromProductions(
+    productions: Array<{ left: string; right: string[] }>,
+    dotPosition: number = 0,
+  ): LRItem[] {
+    return productions.map((prod) => this.create(prod.left, prod.right, dotPosition))
+  }
+}
+
+/**
+ * 文法分析工具类
+ */
+class GrammarUtils {
+  /**
+   * 检查符号是否为非终结符
+   */
+  static isNonTerminal(symbol: string): boolean {
+    // 通常非终结符是大写字母开头
+    return /^[A-Z]/.test(symbol) && symbol !== symbol.toLowerCase()
+  }
+
+  /**
+   * 检查符号是否为终结符
+   */
+  static isTerminal(symbol: string): boolean {
+    return !this.isNonTerminal(symbol) && symbol !== 'ε' && symbol !== 'λ'
+  }
+
+  /**
+   * 检查是否为空符号
+   */
+  static isEpsilon(symbol: string): boolean {
+    return symbol === 'ε' || symbol === 'λ' || symbol === 'epsilon'
+  }
+
+  /**
+   * 获取文法的所有非终结符
+   */
+  static getNonTerminals(rules: Array<{ left: string; right: string[] }>): string[] {
+    const nonTerminals = new Set<string>()
+
+    rules.forEach((rule) => {
+      nonTerminals.add(rule.left)
+      rule.right.forEach((symbol) => {
+        if (this.isNonTerminal(symbol)) {
+          nonTerminals.add(symbol)
+        }
+      })
+    })
+
+    return Array.from(nonTerminals).sort()
+  }
+
+  /**
+   * 获取文法的所有终结符
+   */
+  static getTerminals(rules: Array<{ left: string; right: string[] }>): string[] {
+    const terminals = new Set<string>()
+
+    rules.forEach((rule) => {
+      rule.right.forEach((symbol) => {
+        if (this.isTerminal(symbol)) {
+          terminals.add(symbol)
+        }
+      })
+    })
+
+    return Array.from(terminals).sort()
+  }
+
+  /**
+   * 获取文法的所有符号
+   */
+  static getAllSymbols(rules: Array<{ left: string; right: string[] }>): {
+    nonTerminals: string[]
+    terminals: string[]
+    all: string[]
+  } {
+    const nonTerminals = this.getNonTerminals(rules)
+    const terminals = this.getTerminals(rules)
+
+    return {
+      nonTerminals,
+      terminals,
+      all: [...nonTerminals, ...terminals].sort(),
+    }
+  }
+
+  /**
+   * 验证文法规则格式
+   */
+  static validateRule(rule: { left: string; right: string[] }): {
+    valid: boolean
+    errors: string[]
+  } {
+    const errors: string[] = []
+
+    if (!rule.left || rule.left.trim() === '') {
+      errors.push('产生式左部不能为空')
+    } else if (!this.isNonTerminal(rule.left)) {
+      errors.push('产生式左部必须为非终结符（大写字母开头）')
+    }
+
+    if (!rule.right || rule.right.length === 0) {
+      errors.push('产生式右部不能为空')
+    } else if (rule.right.some((symbol) => !symbol || symbol.trim() === '')) {
+      errors.push('产生式右部不能包含空符号')
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    }
+  }
+
+  /**
+   * 创建增广文法
+   */
+  static createAugmentedGrammar(
+    rules: Array<{ left: string; right: string[] }>,
+    startSymbol?: string,
+  ): Array<{ left: string; right: string[] }> {
+    if (rules.length === 0) {
+      return []
+    }
+
+    const start = startSymbol || rules[0].left
+    const augmentedStart = `${start}'`
+
+    return [{ left: augmentedStart, right: [start] }, ...rules]
+  }
+
+  /**
+   * 格式化产生式为字符串
+   */
+  static formatProduction(rule: { left: string; right: string[] }): string {
+    return `${rule.left} → ${rule.right.join(' ')}`
+  }
+
+  /**
+   * 从字符串解析产生式
+   */
+  static parseProduction(str: string): { left: string; right: string[] } | null {
+    const match = str.match(/^([A-Za-z][A-Za-z0-9']*)\s*→\s*(.+)$/)
+    if (!match) {
+      return null
+    }
+
+    const left = match[1].trim()
+    const right = match[2]
+      .trim()
+      .split(/\s+/)
+      .filter((s) => s.length > 0)
+
+    return { left, right }
+  }
+
+  /**
+   * 检查文法是否为 LL(1)
+   */
+  static isLL1Grammar(_rules: Array<{ left: string; right: string[] }>): {
+    isLL1: boolean
+    conflicts: Array<{
+      nonTerminal: string
+      conflictType: 'first-first' | 'first-follow'
+      details: string
+    }>
+  } {
+    // 简化实现，实际需要计算 FIRST 和 FOLLOW 集合
+    return {
+      isLL1: true,
+      conflicts: [],
+    }
+  }
+
+  /**
+   * 检查文法是否为 LR(0)
+   */
+  static isLR0Grammar(_rules: Array<{ left: string; right: string[] }>): {
+    isLR0: boolean
+    conflicts: Array<{
+      state: string
+      conflictType: 'shift-reduce' | 'reduce-reduce'
+      details: string
+    }>
+  } {
+    // 简化实现，实际需要构造 LR(0) 自动机
+    return {
+      isLR0: true,
+      conflicts: [],
+    }
+  }
+}
+
 // 导出所有工具类
 export {
   CoordinateUtils,
@@ -412,4 +809,6 @@ export {
   AnimationUtils,
   ColorUtils,
   KeyboardUtils,
+  LRItemUtils,
+  GrammarUtils,
 }

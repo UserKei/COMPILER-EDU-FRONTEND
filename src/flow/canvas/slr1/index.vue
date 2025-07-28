@@ -92,18 +92,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
-import type { Node, Edge, Connection } from '@vue-flow/core'
+import type { Node, Edge, Connection, MouseTouchEvent } from '@vue-flow/core'
 
 import BaseCanvas from '../base/index.vue'
 import RectangleNode from '../../components/rectangleNode/index.vue'
 import CustomEdge from '../../components/edges/index.vue'
-import {
-  useNodeCreation,
-  useNodeState,
-  useEdgeManagement,
-  useCanvasEvents,
-} from '../../composables'
 import type { NodeData, EdgeData, LRItem } from '../../types'
+import { LRItemUtils, GrammarUtils } from '../../utils'
 
 // Vue Flow instance
 const { findNode, findEdge, addNodes, addEdges, removeNodes, removeEdges } = useVueFlow()
@@ -148,19 +143,6 @@ const canvasConfig = {
   backgroundColor: '#e5e7eb',
 }
 
-// Composables
-const { createNode } = useNodeCreation()
-const { updateNodeState } = useNodeState()
-const { createEdge, updateEdgeLabel } = useEdgeManagement()
-const {
-  handlePaneClick,
-  handleNodeClick,
-  handleEdgeClick,
-  handleConnection,
-  handlePaneDoubleClick,
-  handlePaneContextMenu,
-} = useCanvasEvents()
-
 // Toolbar buttons
 const toolbarButtons = computed(() => [
   {
@@ -194,40 +176,50 @@ const toolbarButtons = computed(() => [
 
 // Computed properties
 const hasSelectedNode = computed(() => {
-  return nodes.value.some((node) => node.selected)
+  // 简化实现：检查是否有初始状态节点或第一个节点
+  return nodes.value.length > 0
 })
 
 // Methods
 const addItemSet = () => {
-  const newNode = createNode({
+  // 创建示例 LR 项目使用工具类
+  const sampleItems: LRItem[] = [
+    LRItemUtils.create('E', ['E', '+', 'T'], 1), // E → E • + T
+    LRItemUtils.create('E', ['T'], 0), // E → • T
+  ]
+
+  const newNode = {
+    id: `node-${Date.now()}`,
     type: 'rectangle',
     position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
     data: {
       label: `I${nodes.value.length}`,
-      items: [] as LRItem[],
-      isInitial: false,
+      items: sampleItems,
+      isInitial: nodes.value.length === 0, // 第一个节点为初始状态
     },
-  })
+  }
   addNodes([newNode])
-  nodes.value.push(newNode)
+  nodes.value.push(newNode as any)
 }
 
 const setInitialState = () => {
-  const selectedNode = nodes.value.find((node) => node.selected)
-  if (selectedNode) {
+  // 简化实现：设置第一个节点为初始状态
+  const targetNode = nodes.value[0]
+  if (targetNode) {
     nodes.value.forEach((node) => {
       if (node.data) {
         node.data.isInitial = false
       }
     })
-    if (selectedNode.data) {
-      selectedNode.data.isInitial = true
+    if (targetNode.data) {
+      targetNode.data.isInitial = true
     }
   }
 }
 
 const computeClosure = () => {
-  const selectedNode = nodes.value.find((node) => node.selected)
+  // 简化实现：使用第一个节点或初始状态节点
+  const selectedNode = nodes.value.find((node) => node.data?.isInitial) || nodes.value[0]
   if (selectedNode && selectedNode.data) {
     const items = (selectedNode.data.items as LRItem[]) || []
     const closure = computeItemClosure(items)
@@ -239,58 +231,25 @@ const computeClosure = () => {
       width: `${Math.max(120, itemCount * 30)}px`,
       height: `${Math.max(80, itemCount * 25)}px`,
     }
+
+    alert(`闭包计算完成，共 ${closure.length} 个项目`)
   }
 }
 
 const computeItemClosure = (items: LRItem[]): LRItem[] => {
-  const closure = [...items]
-  let changed = true
-
-  while (changed) {
-    changed = false
-
-    for (const item of closure) {
-      if (item.dotPosition < item.production.right.length) {
-        const nextSymbol = item.production.right[item.dotPosition]
-
-        if (isNonTerminal(nextSymbol)) {
-          const productions = grammarRules.value.filter((rule) => rule.left === nextSymbol)
-
-          for (const production of productions) {
-            const newItem: LRItem = {
-              production,
-              dotPosition: 0,
-            }
-
-            const exists = closure.some(
-              (existingItem) =>
-                existingItem.production.left === newItem.production.left &&
-                existingItem.production.right.join('') === newItem.production.right.join('') &&
-                existingItem.dotPosition === newItem.dotPosition,
-            )
-
-            if (!exists) {
-              closure.push(newItem)
-              changed = true
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return closure
+  return LRItemUtils.computeClosure(items, grammarRules.value)
 }
 
 const isNonTerminal = (symbol: string): boolean => {
-  return symbol === symbol.toUpperCase() && symbol.length === 1
+  return GrammarUtils.isNonTerminal(symbol)
 }
 
 const computeFollowSets = () => {
   const follow: Record<string, Set<string>> = {}
 
-  // Get all non-terminals
-  const nonTerminals = Array.from(new Set(grammarRules.value.map((rule) => rule.left)))
+  // Get all non-terminals using grammar utils
+  const symbols = GrammarUtils.getAllSymbols(grammarRules.value)
+  const nonTerminals = symbols.nonTerminals
 
   // Initialize FOLLOW sets
   for (const nt of nonTerminals) {
@@ -310,14 +269,14 @@ const computeFollowSets = () => {
       for (let i = 0; i < rule.right.length; i++) {
         const symbol = rule.right[i]
 
-        if (isNonTerminal(symbol)) {
+        if (GrammarUtils.isNonTerminal(symbol)) {
           const oldSize = follow[symbol].size
 
           // Add FIRST of everything after this symbol
           for (let j = i + 1; j < rule.right.length; j++) {
             const nextSymbol = rule.right[j]
 
-            if (!isNonTerminal(nextSymbol)) {
+            if (!GrammarUtils.isNonTerminal(nextSymbol)) {
               follow[symbol].add(nextSymbol)
               break
             } else {
@@ -341,7 +300,7 @@ const computeFollowSets = () => {
           let allDeriveEpsilon = true
           for (let j = i + 1; j < rule.right.length; j++) {
             const nextSymbol = rule.right[j]
-            if (!isNonTerminal(nextSymbol) || !computeFirstSet(nextSymbol).has('ε')) {
+            if (!GrammarUtils.isNonTerminal(nextSymbol) || !computeFirstSet(nextSymbol).has('ε')) {
               allDeriveEpsilon = false
               break
             }
@@ -368,12 +327,19 @@ const computeFollowSets = () => {
   }
 
   followSets.value = result
+
+  // Show computed FOLLOW sets
+  const followInfo = Object.entries(result)
+    .map(([symbol, set]) => `FOLLOW(${symbol}) = { ${set.join(', ')} }`)
+    .join('\n')
+
+  alert(`FOLLOW 集合计算完成：\n${followInfo}`)
 }
 
 const computeFirstSet = (symbol: string): Set<string> => {
   const first = new Set<string>()
 
-  if (!isNonTerminal(symbol)) {
+  if (!GrammarUtils.isNonTerminal(symbol)) {
     first.add(symbol)
     return first
   }
@@ -381,13 +347,13 @@ const computeFirstSet = (symbol: string): Set<string> => {
   const productions = grammarRules.value.filter((rule) => rule.left === symbol)
 
   for (const production of productions) {
-    if (production.right.length === 0 || production.right[0] === 'ε') {
+    if (production.right.length === 0 || GrammarUtils.isEpsilon(production.right[0])) {
       first.add('ε')
     } else {
       for (let i = 0; i < production.right.length; i++) {
         const currentSymbol = production.right[i]
 
-        if (!isNonTerminal(currentSymbol)) {
+        if (!GrammarUtils.isNonTerminal(currentSymbol)) {
           first.add(currentSymbol)
           break
         } else {
@@ -423,13 +389,12 @@ const autoConstruct = () => {
   nodes.value = []
   edges.value = []
 
-  // Create initial state I0
-  const initialItem: LRItem = {
-    production: { left: "S'", right: ['S'] },
-    dotPosition: 0,
-  }
+  // Create augmented grammar and initial state I0
+  const augmentedRules = GrammarUtils.createAugmentedGrammar(grammarRules.value)
+  const initialItem = LRItemUtils.create(augmentedRules[0].left, augmentedRules[0].right, 0)
 
-  const i0 = createNode({
+  const i0 = {
+    id: 'I0',
     type: 'rectangle',
     position: { x: 100, y: 100 },
     data: {
@@ -437,10 +402,10 @@ const autoConstruct = () => {
       items: computeItemClosure([initialItem]),
       isInitial: true,
     },
-  })
+  }
 
   addNodes([i0])
-  nodes.value.push(i0)
+  nodes.value.push(i0 as any)
 
   // Queue for processing states
   const queue = [i0]
@@ -457,8 +422,9 @@ const autoConstruct = () => {
     const items = (currentState.data?.items as LRItem[]) || []
 
     for (const item of items) {
-      if (item.dotPosition < item.production.right.length) {
-        symbols.add(item.production.right[item.dotPosition])
+      const nextSymbol = LRItemUtils.getNextSymbol(item)
+      if (nextSymbol) {
+        symbols.add(nextSymbol)
       }
     }
 
@@ -474,7 +440,8 @@ const autoConstruct = () => {
 
         if (!targetState) {
           const stateNumber = nodes.value.length
-          targetState = createNode({
+          targetState = {
+            id: `I${stateNumber}`,
             type: 'rectangle',
             position: {
               x: 100 + (stateNumber % 4) * 200,
@@ -485,14 +452,15 @@ const autoConstruct = () => {
               items: gotoItems,
               isInitial: false,
             },
-          })
+          }
 
           addNodes([targetState])
-          nodes.value.push(targetState)
-          queue.push(targetState)
+          nodes.value.push(targetState as any)
+          queue.push(targetState as any)
         }
 
-        const newEdge = createEdge({
+        const newEdge = {
+          id: `e${currentState.id}-${targetState.id}-${Date.now()}`,
           source: currentState.id,
           target: targetState.id,
           type: 'custom',
@@ -500,38 +468,23 @@ const autoConstruct = () => {
             label: symbol,
             isEditing: false,
           },
-        })
+        }
 
         addEdges([newEdge])
-        edges.value.push(newEdge)
+        edges.value.push(newEdge as any)
       }
     }
   }
+
+  alert(`SLR1 自动构造完成！创建了 ${nodes.value.length} 个状态，${edges.value.length} 个转移`)
 }
 
 const computeGoto = (items: LRItem[], symbol: string): LRItem[] => {
-  const gotoItems: LRItem[] = []
-
-  for (const item of items) {
-    if (
-      item.dotPosition < item.production.right.length &&
-      item.production.right[item.dotPosition] === symbol
-    ) {
-      gotoItems.push({
-        production: item.production,
-        dotPosition: item.dotPosition + 1,
-      })
-    }
-  }
-
-  return computeItemClosure(gotoItems)
+  return LRItemUtils.computeGoto(items, symbol, grammarRules.value)
 }
 
 const getStateKey = (items: LRItem[]): string => {
-  return items
-    .map((item) => `${item.production.left}->${item.production.right.join('')}.${item.dotPosition}`)
-    .sort()
-    .join('|')
+  return LRItemUtils.getStateKey(items)
 }
 
 const addGrammarRule = () => {
@@ -556,20 +509,17 @@ const checkSLR1Conflicts = () => {
   for (const node of nodes.value) {
     const items = (node.data?.items as LRItem[]) || []
 
-    const reduceItems = items.filter((item) => item.dotPosition === item.production.right.length)
-    const shiftItems = items.filter((item) => item.dotPosition < item.production.right.length)
+    const reduceItems = items.filter((item) => LRItemUtils.isReducible(item))
+    const shiftItems = items.filter((item) => !LRItemUtils.isReducible(item))
 
     // Check for shift-reduce conflicts using FOLLOW sets
     for (const reduceItem of reduceItems) {
       const followSet = followSets.value[reduceItem.production.left] || []
 
       for (const shiftItem of shiftItems) {
-        if (shiftItem.dotPosition < shiftItem.production.right.length) {
-          const nextSymbol = shiftItem.production.right[shiftItem.dotPosition]
-
-          if (followSet.includes(nextSymbol)) {
-            conflictCount.value++
-          }
+        const nextSymbol = LRItemUtils.getNextSymbol(shiftItem)
+        if (nextSymbol && followSet.includes(nextSymbol)) {
+          conflictCount.value++
         }
       }
     }
@@ -608,66 +558,59 @@ const clearCanvas = () => {
 
 // Event handlers
 const onConnect = (connection: Connection) => {
-  const newEdge = createEdge({
-    ...connection,
+  const newEdge = {
+    id: `e${connection.source}-${connection.target}-${Date.now()}`,
+    source: connection.source,
+    target: connection.target,
     type: 'custom',
     data: {
       label: 'a',
       isEditing: false,
     },
-  })
+  }
   addEdges([newEdge])
-  edges.value.push(newEdge)
+  edges.value.push(newEdge as any)
 }
 
-const onNodeClick = (event: { node: Node; event: MouseEvent }) => {
-  handleNodeClick(event, {
-    nodes: nodes.value,
-    onNodeUpdate: (updatedNode) => {
-      const index = nodes.value.findIndex((n) => n.id === updatedNode.id)
-      if (index !== -1) {
-        nodes.value[index] = updatedNode
-      }
-    },
-  })
+const onNodeClick = (event: { node: Node; event: MouseTouchEvent }) => {
+  // SLR1-specific node click handling
+  console.log('SLR1 Node clicked:', event.node)
 }
 
-const onEdgeClick = (event: { edge: Edge; event: MouseEvent }) => {
-  handleEdgeClick(event, {
-    edges: edges.value,
-    onEdgeUpdate: (updatedEdge) => {
-      const index = edges.value.findIndex((e) => e.id === updatedEdge.id)
-      if (index !== -1) {
-        edges.value[index] = updatedEdge
-      }
-    },
-  })
+const onEdgeClick = (event: { edge: Edge; event: MouseTouchEvent }) => {
+  // SLR1-specific edge click handling
+  console.log('SLR1 Edge clicked:', event.edge)
 }
 
 const onPaneClick = (event: MouseEvent) => {
-  handlePaneClick(event, { nodes: nodes.value })
+  // Handle pane click
 }
 
 const onPaneDoubleClick = (event: MouseEvent) => {
-  handlePaneDoubleClick(event, {
-    onCreate: (position) => {
-      const newNode = createNode({
-        type: 'rectangle',
-        position,
-        data: {
-          label: `I${nodes.value.length}`,
-          items: [] as LRItem[],
-          isInitial: false,
-        },
-      })
-      addNodes([newNode])
-      nodes.value.push(newNode)
+  // Handle double click to create new node
+  const rect = (event.target as Element).getBoundingClientRect()
+  const position = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  }
+
+  const newNode = {
+    id: `node-${Date.now()}`,
+    type: 'rectangle',
+    position,
+    data: {
+      label: `I${nodes.value.length}`,
+      items: [] as LRItem[],
+      isInitial: false,
     },
-  })
+  }
+  addNodes([newNode])
+  nodes.value.push(newNode as any)
 }
 
 const onPaneContextMenu = (event: MouseEvent) => {
-  handlePaneContextMenu(event)
+  // Handle right click
+  event.preventDefault()
 }
 
 const onPaneReady = (vueFlowInstance: any) => {

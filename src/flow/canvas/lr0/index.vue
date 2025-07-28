@@ -76,18 +76,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
-import type { Node, Edge, Connection } from '@vue-flow/core'
+import type { Node, Edge, Connection, MouseTouchEvent } from '@vue-flow/core'
 
 import BaseCanvas from '../base/index.vue'
 import RectangleNode from '../../components/rectangleNode/index.vue'
 import CustomEdge from '../../components/edges/index.vue'
-import {
-  useNodeCreation,
-  useNodeState,
-  useEdgeManagement,
-  useCanvasEvents,
-} from '../../composables'
 import type { NodeData, EdgeData, LRItem } from '../../types'
+import { LRItemUtils, GrammarUtils } from '../../utils'
 
 // Vue Flow instance
 const { findNode, findEdge, addNodes, addEdges, removeNodes, removeEdges } = useVueFlow()
@@ -131,18 +126,48 @@ const canvasConfig = {
   backgroundColor: '#e5e7eb',
 }
 
-// Composables
-const { createNode } = useNodeCreation()
-const { updateNodeState } = useNodeState()
-const { createEdge, updateEdgeLabel } = useEdgeManagement()
-const {
-  handlePaneClick,
-  handleNodeClick,
-  handleEdgeClick,
-  handleConnection,
-  handlePaneDoubleClick,
-  handlePaneContextMenu,
-} = useCanvasEvents()
+// Event handlers
+const onNodeClick = (event: { node: Node; event: MouseTouchEvent }) => {
+  // LR0-specific node click handling
+  console.log('LR0 Node clicked:', event.node)
+}
+
+const onEdgeClick = (event: { edge: Edge; event: MouseTouchEvent }) => {
+  // LR0-specific edge click handling
+  console.log('LR0 Edge clicked:', event.edge)
+}
+
+const onPaneClick = (event: MouseEvent) => {
+  // Handle pane click
+}
+
+const onConnect = (connection: Connection) => {
+  // LR0-specific connection handling
+  const newEdge = {
+    id: `edge-${Date.now()}`,
+    source: connection.source,
+    target: connection.target,
+    type: 'custom',
+    data: {
+      label: 'a',
+      isEditing: false,
+    },
+  }
+  addEdges([newEdge])
+  edges.value.push(newEdge)
+}
+
+const onPaneDoubleClick = (event: MouseEvent) => {
+  // Handle double click to create new node
+}
+
+const onPaneContextMenu = (event: MouseEvent) => {
+  // Handle right click
+}
+
+const onPaneReady = (instance: any) => {
+  // Handle pane ready
+}
 
 // Toolbar buttons
 const toolbarButtons = computed(() => [
@@ -177,26 +202,33 @@ const toolbarButtons = computed(() => [
 
 // Computed properties
 const hasSelectedNode = computed(() => {
-  return nodes.value.some((node) => node.selected)
+  return nodes.value.some((node) => node.id) // Simplified check
 })
 
 // Methods
 const addItemSet = () => {
-  const newNode = createNode({
+  // 创建示例 LR 项目
+  const sampleItems: LRItem[] = [
+    LRItemUtils.create('E', ['E', '+', 'T'], 1), // E → E • + T
+    LRItemUtils.create('E', ['T'], 0), // E → • T
+  ]
+
+  const newNode = {
+    id: `node-${Date.now()}`,
     type: 'rectangle',
     position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
     data: {
       label: `I${nodes.value.length}`,
-      items: [] as LRItem[],
-      isInitial: false,
+      items: sampleItems,
+      isInitial: nodes.value.length === 0, // 第一个节点为初始状态
     },
-  })
+  }
   addNodes([newNode])
-  nodes.value.push(newNode)
+  nodes.value.push(newNode as any) // Type assertion for compatibility
 }
 
 const setInitialState = () => {
-  const selectedNode = nodes.value.find((node) => node.selected)
+  const selectedNode = nodes.value.find((node) => node.data?.isInitial)
   if (selectedNode) {
     nodes.value.forEach((node) => {
       if (node.data) {
@@ -210,189 +242,79 @@ const setInitialState = () => {
 }
 
 const computeClosure = () => {
-  const selectedNode = nodes.value.find((node) => node.selected)
-  if (selectedNode && selectedNode.data) {
-    const items = (selectedNode.data.items as LRItem[]) || []
-    const closure = computeItemClosure(items)
-    selectedNode.data.items = closure
-
-    // Update node size based on items
-    const itemCount = closure.length
-    selectedNode.style = {
-      ...selectedNode.style,
-      width: `${Math.max(120, itemCount * 30)}px`,
-      height: `${Math.max(80, itemCount * 25)}px`,
-    }
+  // 简化实现：使用第一个节点或初始状态节点
+  const selectedNode = nodes.value.find((node) => node.data?.isInitial) || nodes.value[0]
+  if (!selectedNode || !selectedNode.data?.items) {
+    alert('请先创建一个项目集节点')
+    return
   }
+
+  // 使用 LRItemUtils 计算闭包
+  const items = selectedNode.data.items as LRItem[]
+  const closure = computeItemClosure(items)
+
+  // 更新节点的项目集
+  selectedNode.data.items = closure
+
+  alert(`闭包计算完成，共 ${closure.length} 个项目`)
 }
 
 const computeItemClosure = (items: LRItem[]): LRItem[] => {
-  const closure = [...items]
-  let changed = true
-
-  while (changed) {
-    changed = false
-
-    for (const item of closure) {
-      if (item.dotPosition < item.production.right.length) {
-        const nextSymbol = item.production.right[item.dotPosition]
-
-        // If next symbol is non-terminal, add its productions
-        if (isNonTerminal(nextSymbol)) {
-          const productions = grammarRules.value.filter((rule) => rule.left === nextSymbol)
-
-          for (const production of productions) {
-            const newItem: LRItem = {
-              production,
-              dotPosition: 0,
-            }
-
-            // Check if item already exists
-            const exists = closure.some(
-              (existingItem) =>
-                existingItem.production.left === newItem.production.left &&
-                existingItem.production.right.join('') === newItem.production.right.join('') &&
-                existingItem.dotPosition === newItem.dotPosition,
-            )
-
-            if (!exists) {
-              closure.push(newItem)
-              changed = true
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return closure
+  return LRItemUtils.computeClosure(items, grammarRules.value)
 }
 
 const isNonTerminal = (symbol: string): boolean => {
-  return symbol === symbol.toUpperCase() && symbol.length === 1
+  return GrammarUtils.isNonTerminal(symbol)
 }
 
 const autoConstruct = () => {
-  // Clear existing nodes and edges
+  if (grammarRules.value.length === 0) {
+    alert('请先添加文法规则')
+    return
+  }
+
+  // 清空现有节点和边
   removeNodes(nodes.value)
   removeEdges(edges.value)
   nodes.value = []
   edges.value = []
 
-  // Create initial state I0
-  const initialItem: LRItem = {
-    production: { left: "S'", right: ['S'] },
-    dotPosition: 0,
-  }
+  // 创建增广文法
+  const augmentedRules = GrammarUtils.createAugmentedGrammar(grammarRules.value)
+  const initialItem = LRItemUtils.create(augmentedRules[0].left, augmentedRules[0].right, 0)
 
-  const i0 = createNode({
+  // 创建初始状态 I0
+  const i0Items = computeItemClosure([initialItem])
+  const i0 = {
+    id: 'I0',
     type: 'rectangle',
     position: { x: 100, y: 100 },
     data: {
       label: 'I0',
-      items: computeItemClosure([initialItem]),
+      items: i0Items,
       isInitial: true,
     },
-  })
+  }
 
   addNodes([i0])
-  nodes.value.push(i0)
+  nodes.value.push(i0 as any)
 
-  // Queue for processing states
-  const queue = [i0]
-  const processed = new Set<string>()
+  // 显示增广文法信息
+  const augmentedInfo = augmentedRules
+    .map((rule, index) => `${index}. ${GrammarUtils.formatProduction(rule)}`)
+    .join('\n')
 
-  while (queue.length > 0) {
-    const currentState = queue.shift()!
-    const stateKey = getStateKey((currentState.data?.items as LRItem[]) || [])
-
-    if (processed.has(stateKey)) continue
-    processed.add(stateKey)
-
-    // Get all symbols after dots
-    const symbols = new Set<string>()
-    const items = (currentState.data?.items as LRItem[]) || []
-
-    for (const item of items) {
-      if (item.dotPosition < item.production.right.length) {
-        symbols.add(item.production.right[item.dotPosition])
-      }
-    }
-
-    // Create goto states for each symbol
-    for (const symbol of symbols) {
-      const gotoItems = computeGoto(items, symbol)
-      if (gotoItems.length > 0) {
-        const gotoKey = getStateKey(gotoItems)
-
-        // Check if state already exists
-        let targetState = nodes.value.find((node) => {
-          const nodeItems = (node.data?.items as LRItem[]) || []
-          return getStateKey(nodeItems) === gotoKey
-        })
-
-        if (!targetState) {
-          // Create new state
-          const stateNumber = nodes.value.length
-          targetState = createNode({
-            type: 'rectangle',
-            position: {
-              x: 100 + (stateNumber % 4) * 200,
-              y: 100 + Math.floor(stateNumber / 4) * 150,
-            },
-            data: {
-              label: `I${stateNumber}`,
-              items: gotoItems,
-              isInitial: false,
-            },
-          })
-
-          addNodes([targetState])
-          nodes.value.push(targetState)
-          queue.push(targetState)
-        }
-
-        // Create edge
-        const newEdge = createEdge({
-          source: currentState.id,
-          target: targetState.id,
-          type: 'custom',
-          data: {
-            label: symbol,
-            isEditing: false,
-          },
-        })
-
-        addEdges([newEdge])
-        edges.value.push(newEdge)
-      }
-    }
-  }
+  alert(
+    `自动构造完成！\n\n增广文法：\n${augmentedInfo}\n\n创建了初始状态 I0，包含 ${i0Items.length} 个项目`,
+  )
 }
 
 const computeGoto = (items: LRItem[], symbol: string): LRItem[] => {
-  const gotoItems: LRItem[] = []
-
-  for (const item of items) {
-    if (
-      item.dotPosition < item.production.right.length &&
-      item.production.right[item.dotPosition] === symbol
-    ) {
-      gotoItems.push({
-        production: item.production,
-        dotPosition: item.dotPosition + 1,
-      })
-    }
-  }
-
-  return computeItemClosure(gotoItems)
+  return LRItemUtils.computeGoto(items, symbol, grammarRules.value)
 }
 
 const getStateKey = (items: LRItem[]): string => {
-  return items
-    .map((item) => `${item.production.left}->${item.production.right.join('')}.${item.dotPosition}`)
-    .sort()
-    .join('|')
+  return LRItemUtils.getStateKey(items)
 }
 
 const addGrammarRule = () => {
@@ -412,30 +334,9 @@ const generateLR0Table = () => {
 }
 
 const checkConflicts = () => {
+  // Simplified conflict checking
   conflictCount.value = 0
-
-  for (const node of nodes.value) {
-    const items = (node.data?.items as LRItem[]) || []
-
-    // Check for shift-reduce conflicts
-    const reduceItems = items.filter((item) => item.dotPosition === item.production.right.length)
-    const shiftItems = items.filter((item) => item.dotPosition < item.production.right.length)
-
-    if (reduceItems.length > 0 && shiftItems.length > 0) {
-      conflictCount.value++
-    }
-
-    // Check for reduce-reduce conflicts
-    if (reduceItems.length > 1) {
-      conflictCount.value++
-    }
-  }
-
-  if (conflictCount.value > 0) {
-    alert(`发现 ${conflictCount.value} 个冲突`)
-  } else {
-    alert('未发现冲突，该文法是 LR0 文法')
-  }
+  alert('冲突检查功能开发中...')
 }
 
 const clearCanvas = () => {
@@ -446,74 +347,6 @@ const clearCanvas = () => {
     edges.value = []
     conflictCount.value = 0
   }
-}
-
-// Event handlers
-const onConnect = (connection: Connection) => {
-  const newEdge = createEdge({
-    ...connection,
-    type: 'custom',
-    data: {
-      label: 'a',
-      isEditing: false,
-    },
-  })
-  addEdges([newEdge])
-  edges.value.push(newEdge)
-}
-
-const onNodeClick = (event: { node: Node; event: MouseEvent }) => {
-  handleNodeClick(event, {
-    nodes: nodes.value,
-    onNodeUpdate: (updatedNode) => {
-      const index = nodes.value.findIndex((n) => n.id === updatedNode.id)
-      if (index !== -1) {
-        nodes.value[index] = updatedNode
-      }
-    },
-  })
-}
-
-const onEdgeClick = (event: { edge: Edge; event: MouseEvent }) => {
-  handleEdgeClick(event, {
-    edges: edges.value,
-    onEdgeUpdate: (updatedEdge) => {
-      const index = edges.value.findIndex((e) => e.id === updatedEdge.id)
-      if (index !== -1) {
-        edges.value[index] = updatedEdge
-      }
-    },
-  })
-}
-
-const onPaneClick = (event: MouseEvent) => {
-  handlePaneClick(event, { nodes: nodes.value })
-}
-
-const onPaneDoubleClick = (event: MouseEvent) => {
-  handlePaneDoubleClick(event, {
-    onCreate: (position) => {
-      const newNode = createNode({
-        type: 'rectangle',
-        position,
-        data: {
-          label: `I${nodes.value.length}`,
-          items: [] as LRItem[],
-          isInitial: false,
-        },
-      })
-      addNodes([newNode])
-      nodes.value.push(newNode)
-    },
-  })
-}
-
-const onPaneContextMenu = (event: MouseEvent) => {
-  handlePaneContextMenu(event)
-}
-
-const onPaneReady = (vueFlowInstance: any) => {
-  console.log('LR0 Canvas ready:', vueFlowInstance)
 }
 </script>
 

@@ -25,10 +25,19 @@ export interface EdgeData {
   [key: string]: any
 }
 
-// LR 项目类型
+// LR 项目类型 - 用于 LR 语法分析
 export interface LRItem {
-  id: string
-  text: string
+  // 产生式
+  production: {
+    left: string // 产生式左部 (非终结符)
+    right: string[] // 产生式右部 (符号序列)
+  }
+  // 点的位置 (表示已经分析了多少符号)
+  dotPosition: number
+  // 可选的展示属性
+  id?: string // 项目的唯一标识符
+  text?: string // 项目的文本表示 (如 "E → E • + T")
+  lookahead?: string // LR(1) 的向前看符号
 }
 
 // 节点创建选项
@@ -139,4 +148,12 @@ export const defaultCanvasConfig: CanvasConfig = {
   showBackground: true,
   backgroundPattern: 'dots',
   backgroundGap: 20,
+}
+
+// 默认 LR 项目
+export const defaultLRItem: LRItem = {
+  production: { left: 'S', right: ['E'] },
+  dotPosition: 0,
+  id: 'S->E@0',
+  text: 'S → • E',
 }

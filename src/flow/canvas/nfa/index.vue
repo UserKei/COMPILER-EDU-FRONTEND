@@ -204,7 +204,6 @@ const clearCanvas = () => {
   stroke: #f59e0b;
 }
 </style>
-</script>
 
 <style scoped>
 :deep(.nfa-mode) {
