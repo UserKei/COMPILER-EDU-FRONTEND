@@ -67,8 +67,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { VueFlow, Controls, Background } from '@vue-flow/core'
-import type { Node, Edge, Connection, CoordinateExtent } from '@vue-flow/core'
+import { VueFlow } from '@vue-flow/core'
+import { Controls } from '@vue-flow/controls'
+import { Background } from '@vue-flow/background'
+import type { Node, Edge, Connection, MouseTouchEvent } from '@vue-flow/core'
 
 // Props
 interface Props {
@@ -118,8 +120,8 @@ const props = withDefaults(defineProps<Props>(), {
 // Emits
 const emit = defineEmits<{
   connect: [connection: Connection]
-  nodeClick: [event: { node: Node; event: MouseEvent }]
-  edgeClick: [event: { edge: Edge; event: MouseEvent }]
+  nodeClick: [event: { node: Node; event: MouseTouchEvent }]
+  edgeClick: [event: { edge: Edge; event: MouseTouchEvent }]
   paneClick: [event: MouseEvent]
   paneContextMenu: [event: MouseEvent]
   paneReady: [vueFlowInstance: any]
@@ -134,11 +136,11 @@ const onConnect = (connection: Connection) => {
   emit('connect', connection)
 }
 
-const onNodeClick = (event: { node: Node; event: MouseEvent }) => {
+const onNodeClick = (event: { node: Node; event: MouseTouchEvent }) => {
   emit('nodeClick', event)
 }
 
-const onEdgeClick = (event: { edge: Edge; event: MouseEvent }) => {
+const onEdgeClick = (event: { edge: Edge; event: MouseTouchEvent }) => {
   emit('edgeClick', event)
 }
 
@@ -159,7 +161,7 @@ const onPaneDoubleClick = (event: MouseEvent) => {
 }
 
 // Button classes
-const getButtonClasses = (variant: string = 'primary'): Record<string, string> => {
+const getButtonClasses = (variant: string = 'primary'): string => {
   const classes: Record<string, string> = {
     primary: 'bg-blue-500 hover:bg-blue-600',
     secondary: 'bg-gray-500 hover:bg-gray-600',
