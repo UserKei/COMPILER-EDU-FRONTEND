@@ -18,7 +18,7 @@
             <input
               v-if="isEditing"
               ref="inputRef"
-              v-model="editingText"
+              v-model="nodeText"
               class="text-center bg-transparent border-none outline-none w-full text-xs"
               @blur="finishEditing"
               @keyup.enter="finishEditing"
@@ -50,8 +50,6 @@ const emit = defineEmits<{
   'update:data': [data: NodeData]
   'node-click': [event: MouseEvent]
 }>()
-
-const editingText = ref('')
 
 // 圆形节点的特定handles配置
 const circleHandles = [
@@ -97,7 +95,7 @@ const handleNodeClick = (event: MouseEvent) => {
 
 // 编辑开始
 const onEditingStart = () => {
-  editingText.value = props.data.text || ''
+  // 由base组件管理编辑状态
 }
 
 // 编辑结束

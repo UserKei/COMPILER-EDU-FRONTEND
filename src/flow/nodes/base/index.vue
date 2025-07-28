@@ -157,10 +157,19 @@ const nodeStyle = computed(() => {
     style.height = `${nodeSize.value.height}px`
     const handleOffset = Math.round((nodeSize.value.width / 2) * 0.707)
     style['--handle-offset'] = `${handleOffset}px`
+    style['--node-size'] = `${nodeSize.value.width}px`
   } else {
     style.width = `${nodeSize.value.width}px`
     style.minHeight = `${nodeSize.value.height}px`
   }
+
+  // 添加箭头图标
+  const arrowIconDataUri =
+    'data:image/svg+xml;base64,' +
+    btoa(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="white" d="m11.93 5l2.83 2.83L5 17.59L6.42 19l9.76-9.75L19 12.07V5z"/></svg>',
+    )
+  style['--arrow-icon'] = `url(${arrowIconDataUri})`
 
   return style
 })
@@ -258,6 +267,14 @@ defineExpose({
 .center-handle {
   opacity: 0 !important;
   pointer-events: none !important;
+  position: absolute !important;
+  width: 4px !important;
+  height: 4px !important;
+  background: transparent !important;
+  border: none !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
 }
 
 .handle-interactive {
@@ -268,8 +285,109 @@ defineExpose({
   opacity: 1 !important;
 }
 
+/* 右上角Handle精确定位 - Handle中心在圆的边界线上 */
 .handle-top-right {
-  top: 10px;
-  right: 10px;
+  position: absolute !important;
+  top: calc(50% - var(--handle-offset, 34px)) !important;
+  right: calc(50% - var(--handle-offset, 34px)) !important;
+  transform: translate(50%, -50%) !important;
+}
+
+/* 右上角Handle样式 - 未选中状态 (使用灰色系) */
+:deep(.vue-flow__handle[data-handleid='top-right'])::before,
+:deep(.vue-flow__handle[data-handleid='top-right-target'])::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #6b7280; /* gray-500 */
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  cursor: crosshair;
+}
+
+/* 选中状态下的Handle样式 - 深灰色 */
+.ring-2:deep(.vue-flow__handle[data-handleid='top-right'])::before {
+  width: 16px;
+  height: 16px;
+  background: #374151; /* gray-700 */
+}
+
+/* 选中状态下显示箭头图标 */
+.ring-2:deep(.vue-flow__handle[data-handleid='top-right'])::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-image: var(--arrow-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
+}
+
+/* Target Handle 样式 (浅灰色) */
+:deep(.vue-flow__handle[data-handleid='top-right-target'])::before {
+  background: #9ca3af; /* gray-400 */
+}
+
+.ring-2:deep(.vue-flow__handle[data-handleid='top-right-target'])::before {
+  width: 16px;
+  height: 16px;
+  background: #6b7280; /* gray-500 */
+}
+
+/* Target Handle 选中时也显示图标 */
+.ring-2:deep(.vue-flow__handle[data-handleid='top-right-target'])::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-image: var(--arrow-icon);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
+}
+
+/* Hover效果 */
+:deep(.vue-flow__handle[data-handleid='top-right']:hover)::before,
+:deep(.vue-flow__handle[data-handleid='top-right-target']:hover)::before {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* 矩形节点Handle样式 */
+.rectangle-handle-interactive {
+  position: absolute !important;
+  top: -8px !important;
+  right: -8px !important;
+  background: transparent !important;
+  border: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  pointer-events: auto !important;
+  transform: translate(0%, 0%) !important;
+}
+
+/* 输入框文本选中样式优化 */
+input::selection {
+  background-color: rgba(59, 130, 246, 0.3); /* 蓝色半透明选中背景 */
+  color: inherit;
+}
+
+input::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
 }
 </style>

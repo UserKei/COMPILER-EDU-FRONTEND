@@ -100,28 +100,28 @@ const originalText = ref('')
 // 矩形节点的特定handles配置
 const rectangleHandles = [
   {
-    id: 'top',
-    type: 'target' as const,
-    position: Position.Top,
-    class: 'handle-interactive !w-3 !h-3 !bg-blue-500 !border-2 !border-white',
-  },
-  {
-    id: 'bottom',
-    type: 'source' as const,
-    position: Position.Bottom,
-    class: 'handle-interactive !w-3 !h-3 !bg-blue-500 !border-2 !border-white',
-  },
-  {
-    id: 'left',
-    type: 'target' as const,
-    position: Position.Left,
-    class: 'handle-interactive !w-3 !h-3 !bg-blue-500 !border-2 !border-white',
-  },
-  {
-    id: 'right',
+    id: 'top-right',
     type: 'source' as const,
     position: Position.Right,
-    class: 'handle-interactive !w-3 !h-3 !bg-blue-500 !border-2 !border-white',
+    class: 'rectangle-handle-interactive',
+  },
+  {
+    id: 'top-right-target',
+    type: 'target' as const,
+    position: Position.Right,
+    class: 'rectangle-handle-interactive',
+  },
+  {
+    id: 'center-source',
+    type: 'source' as const,
+    position: Position.Top,
+    class: 'center-handle',
+  },
+  {
+    id: 'center-target',
+    type: 'target' as const,
+    position: Position.Top,
+    class: 'center-handle',
   },
 ]
 
@@ -294,4 +294,6 @@ const onEditingEnd = (text: string) => {
 .handle-interactive:hover {
   opacity: 1;
 }
+
+/* 矩形节点的Handle样式继承base组件的通用样式 */
 </style>
